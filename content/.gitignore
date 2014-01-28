@@ -1,0 +1,14 @@
+*.aux
+*.dvi
+*.log
+*.out
+*.pdf
+*.png
+*.tex
+*.tmp
+*.tuc
+*.top
+*.tui
+*.tuo
+*.tst
+*mpgraph*
