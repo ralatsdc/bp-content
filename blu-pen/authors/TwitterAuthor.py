@@ -28,7 +28,7 @@ from BluePeninsulaUtility import BluePeninsulaUtility
 from ServiceError import ServiceError
 from TwitterShortwing import TwitterShortwing
 
-class TwitterAuthors:
+class TwitterAuthor:
     """Represents authors on Twitter by their creative output. Authors
     are selected by name or tag. Books are named after birds.
 
@@ -36,7 +36,7 @@ class TwitterAuthors:
     def __init__(self, blu_pen, source_words_string, content_dir,
                  start_date=date(2006, 07, 15) - timedelta(2), stop_date=date.today() + timedelta(2),
                  max_length=3200, max_frequency=20, number_of_api_attempts=4, seconds_between_api_attempts=1):
-        """Constructs a TwitterAuthors instance given source words.
+        """Constructs a TwitterAuthor instance given source words.
 
         """
         self.blu_pen = blu_pen

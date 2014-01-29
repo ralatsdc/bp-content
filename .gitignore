@@ -1,1 +1,6 @@
 *~
+*.pyc
+lib/*/build
+lib/*/dist
+lib/*/doc
+lib/*/*.egg-info
