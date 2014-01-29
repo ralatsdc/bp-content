@@ -1,0 +1,40 @@
+Metadata-Version: 1.0
+Name: webcolors
+Version: 1.4
+Summary: A library for working with color names and color value formats defined by the HTML and CSS specifications for use in documents on the Web.
+Home-page: http://www.bitbucket.org/ubernostrum/webcolors/overview/
+Author: James Bennett
+Author-email: james@b-list.org
+License: UNKNOWN
+Download-URL: http://bitbucket.org/ubernostrum/webcolors/downloads/webcolors-1.4.tar.gz
+Description: Support is included for the following formats (RGB colorspace only;
+        conversion to/from HSL can be handled by the ``colorsys`` module in
+        the Python standard library):
+        
+        * Specification-defined color names
+        
+        * Six-digit hexadecimal
+        
+        * Three-digit hexadecimal
+        
+        * Integer rgb() triplet
+        
+        * Percentage rgb() triplet
+        
+        For example::
+        
+            >>> import webcolors
+            >>> webcolors.hex_to_name('#daa520')
+            'goldenrod'
+        
+        Full documentation is `available online
+        <http://docs.b-list.org/webcolors/1.4/>`_.
+        
+Platform: UNKNOWN
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: Web Environment
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Topic :: Utilities

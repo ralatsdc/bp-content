@@ -26,7 +26,7 @@ from FeedAuthor import FeedAuthor
 from FlickrAuthor import FlickrAuthor
 from ProcessingError import ProcessingError
 from TumblrAuthor import TumblrAuthor
-from TwitterAuthors import TwitterAuthors
+from TwitterAuthor import TwitterAuthor
 from TwitterUtility import TwitterUtility
 
 class BluePeninsula:

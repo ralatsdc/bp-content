@@ -7,7 +7,6 @@ import re
 import zipfile
 
 # Third-party imports
-from python_twitter import twitter
 
 # Local imports
 from ServiceError import ServiceError

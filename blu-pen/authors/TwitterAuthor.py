@@ -21,12 +21,11 @@ import webcolors
 from PIL import Image
 import lxml.html
 import numpy as np
-from python_twitter import twitter as python_twitter
+import twitter
 
 # Local imports
 from BluePeninsulaUtility import BluePeninsulaUtility
 from ServiceError import ServiceError
-from TwitterShortwing import TwitterShortwing
 
 class TwitterAuthor:
     """Represents authors on Twitter by their creative output. Authors
@@ -682,199 +681,6 @@ class TwitterAuthor:
 
         pickle_file.close()
 
-    def write_shortwing_contents(self, book_title, file_name, register={}, start_page=0,
-                                 empty_pages=int(0), min_frequency=int(0)):
-        """Writes context file to produce Shortwing contents.
-        
-        """
-        # Initialize TwitterShortwing
-        twitter_shortwing = TwitterShortwing(self)
-
-        # Write contents set up TeX
-        out = codecs.open(file_name, mode='w', encoding='utf-8', errors='ignore')
-        self.logger.debug("{0} requested datetime is {1}".format(self.source_log, self.blu_pen.requested_dt))
-        out.write(twitter_shortwing.get_book_set_up_tex(book_title, self.created_dt, self.blu_pen.requested_dt))
-
-        # Write front matter TeX
-        out.write(twitter_shortwing.get_frontmatter_tex())
-
-        # Write index TeX
-        do_write_register = False
-        if len(register) > 0:
-            do_write_register = True
-
-            # Write index set up TeX
-            out.write(twitter_shortwing.get_index_set_up_tex())
-        
-            # Write index entry TeX
-            def add_sort_prefix(word):
-                if word[0] == "@":
-                    return "1" + word
-                elif word.find(r"\\letterhash") == 0:
-                    return "2" + word
-                elif word[0].upper() == "A":
-                    return "A" + word
-                elif word[0].upper() == "B":
-                    return "B" + word
-                elif word[0].upper() == "C":
-                    return "C" + word
-                elif word[0].upper() == "D":
-                    return "D" + word
-                elif word[0].upper() == "E":
-                    return "E" + word
-                elif word[0].upper() == "F":
-                    return "F" + word
-                elif word[0].upper() == "G":
-                    return "G" + word
-                elif word[0].upper() == "H":
-                    return "H" + word
-                elif word[0].upper() == "I":
-                    return "I" + word
-                elif word[0].upper() == "J":
-                    return "J" + word
-                elif word[0].upper() == "K":
-                    return "K" + word
-                elif word[0].upper() == "L":
-                    return "L" + word
-                elif word[0].upper() == "M":
-                    return "M" + word
-                elif word[0].upper() == "N":
-                    return "N" + word
-                elif word[0].upper() == "O":
-                    return "O" + word
-                elif word[0].upper() == "P":
-                    return "P" + word
-                elif word[0].upper() == "Q":
-                    return "Q" + word
-                elif word[0].upper() == "R":
-                    return "R" + word
-                elif word[0].upper() == "S":
-                    return "S" + word
-                elif word[0].upper() == "T":
-                    return "T" + word
-                elif word[0].upper() == "U":
-                    return "U" + word
-                elif word[0].upper() == "V":
-                    return "V" + word
-                elif word[0].upper() == "W":
-                    return "W" + word
-                elif word[0].upper() == "X":
-                    return "X" + word
-                elif word[0].upper() == "Y":
-                    return "Y" + word
-                elif word[0].upper() == "Z":
-                    return "Z" + word
-            first = True
-            label = ""
-            for word in sorted(register.keys(), key=add_sort_prefix):
-                if (word in self.frequency
-                    and self.frequency[word] < min_frequency):
-                    continue
-                clean_word = self.blu_pen_utility.escape_special_characters(word, for_use_in="index")
-                if clean_word[0:11].find(r"\letterhash") != -1:
-                    clean_label = r"\letterhash"
-                else:
-                    clean_label = clean_word[0]
-                clean_label = clean_label.lower()
-                # TODO: Find a way to replace quotes here.
-                # clean_word = self.blu_pen_utility.replace_quotation_marks(word).replace(r"\ ", r"\\")
-                real_pages = sorted(register[word])
-                user_pages = [p - start_page + 1 for p in real_pages]
-                clean_pages = str(user_pages).replace("[", "").replace("]", "")
-                if clean_label != label:
-                    label = clean_label
-                    if first:
-                        first = False
-                        out.write(twitter_shortwing.get_index_section_tex("", "neither"))
-                    else:
-                        out.write(twitter_shortwing.get_index_section_tex("", "both"))
-                out.write(twitter_shortwing.get_index_entry_tex(clean_word, clean_pages))
-
-            # Write index tear down TeX
-            out.write(twitter_shortwing.get_index_tear_down_tex())
-
-        # Write contents set up TeX
-        out.write(twitter_shortwing.get_contents_set_up_tex())
-
-        # Write text for each tweet in chapters by month
-        cur_month = 0;
-        for iTwt in range(len(self.created_dt)):
-            if iTwt == 0:
-                do_start_page_number = True
-            else:
-                do_start_page_number = False
-            
-            # Convert created datetime to needed formats
-            twt_month = self.created_dt[iTwt].strftime("%m")
-
-            # Write contents title TeX
-            if twt_month != cur_month:
-                out.write(twitter_shortwing.get_contents_title_tex(self.created_dt[iTwt]))
-                cur_month = twt_month
-                dont_leave_h_mode = True
-            else:
-                dont_leave_h_mode = False
-
-            # Write contents tweet TeX
-            text = ""
-            words = self.clean_text[iTwt].replace("@", " @").replace("#", " #").split()
-            for word in words:
-                # clean_word = self.blu_pen_utility.escape_special_characters(
-                #     word, link_color="\LinkColor")
-                clean_word = self.blu_pen_utility.escape_special_characters(
-                    word, link_style="\it")
-                if (not do_write_register
-                    and word in self.frequency
-                    and self.frequency[word] <= self.max_frequency):
-                    index_word = self.blu_pen_utility.escape_special_characters(word)
-                    index_word = index_word.replace("'", "SINGLEQUOTE")
-                    index_word = index_word.replace('"', "DOUBLEQUOTE")
-                    text += "\index{" + index_word + "}" + clean_word + " "
-                else:
-                    text += clean_word + " "
-            text = self.blu_pen_utility.replace_quotation_marks(text)
-            if not do_write_register:
-                text = text.replace("SINGLEQUOTE", "'")
-                text = text.replace("DOUBLEQUOTE", '"')
-            if len(self.clean_text[iTwt]) < 75:
-                do_stamp = False
-            else:
-                do_stamp = True
-            out.write(twitter_shortwing.get_contents_tweet_tex(
-                self.created_dt[iTwt], self.text_symbol[iTwt], text,
-                do_stamp, do_start_page_number, dont_leave_h_mode))
-
-        # Write contents tear down TeX
-        out.write(twitter_shortwing.get_contents_tear_down_tex())
-
-        # Write empty pages
-        for page in range(empty_pages):
-            out.write(twitter_shortwing.get_contents_empty_page_tex())
-            
-        # Write back matter TeX
-        out.write(twitter_shortwing.get_backmatter_tex())
-
-        # Write contents tear down TeX
-        out.write(twitter_shortwing.get_book_tear_down_tex())
-        out.close()
-
-    def write_shortwing_cover(self, book_title, cover_size, file_name):
-        """Writes context file to produce Shortwing cover.
-        
-        """
-        # Initialize TwitterShortwing
-        twitter_shortwing = TwitterShortwing(self)
-
-        # Write set up TeX
-        out = codecs.open(file_name, mode='w', encoding='utf-8', errors='ignore')
-        out.write(twitter_shortwing.get_cover_set_up_tex(cover_size, self.sidebar_fill_rgb))
-
-        # Write tear down TeX
-        self.logger.debug("{0} requested datetime is {1}".format(self.source_log, self.blu_pen.requested_dt))
-        out.write(twitter_shortwing.get_cover_tear_down_tex(
-            book_title, self.created_dt, self.sidebar_fill_rgb, self.blu_pen.requested_dt))
-        out.close()
-
     def get_source_content(self, source_type, source_word, count=0, page=0, max_id=0, since_id=0):
         """Makes multiple attempts to get source content, sleeping
         before attempts.
@@ -882,7 +688,7 @@ class TwitterAuthor:
         """
         iAttempts = 1
         credentials = self.get_credentials()
-        api = python_twitter.Api(
+        api = twitter.Api(
             consumer_key=credentials['consumer-key'],
             consumer_secret=credentials['consumer-secret'],
             access_token_key=credentials['access-token'],
@@ -930,7 +736,7 @@ class TwitterAuthor:
         while len(tweets) == 0 and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
             credentials = self.get_credentials()
-            api = python_twitter.Api(
+            api = twitter.Api(
                 consumer_key=credentials['consumer-key'],
                 consumer_secret=credentials['consumer-secret'],
                 access_token_key=credentials['access-token'],

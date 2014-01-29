@@ -17,11 +17,10 @@ import uuid
 
 # Third-party imports
 from lxml.html import soupparser
-from python_tumblr_0_1 import tumblr
+import tumblr
 
 # Local imports
 from BluePeninsulaUtility import BluePeninsulaUtility
-from TumblrWheat import TumblrWheat
 
 class TumblrAuthor:
     """Represents an author on Tumblr by their creative output. Books
@@ -230,92 +229,6 @@ class TumblrAuthor:
                 self.subdomain, self.len_posts, pickle_file_name))
 
         pickle_file.close()
-
-    def write_wheat_contents(self, book_title, file_name, empty_pages=int(0)):
-        """Write context file to produce Wheat contents.
-        
-        """
-        # Initialize TumblrWheat
-        tumblr_wheat = TumblrWheat(self)
-
-        # Write contents set up TeX
-        out = codecs.open(file_name, mode='w', encoding='utf-8', errors='ignore')
-        out.write(tumblr_wheat.get_contents_set_up_tex(book_title, self.created_dt, self.requested_dt))
-
-        # Write front matter TeX
-        out.write(tumblr_wheat.get_frontmatter_tex(datetime.now()))
-
-        # Write TeX for each post in chapters by month
-        cur_month = 0
-        n_posts = len(self.posts)
-        for i_post in range(n_posts):
-
-            # Convert post timestamp to datetime and needed format
-            posted_dt = datetime.fromtimestamp(self.posts[i_post]["unix-timestamp"])
-            pst_month = posted_dt.strftime("%m")
-
-            # Write contents title and first post, or post TeX
-            if pst_month != cur_month:
-
-                # Assign an UUID for the title page
-                title_page_uuid = uuid.uuid4()
-
-                # Convert posted date-time to needed format
-                month_label = posted_dt.strftime("%B").upper()
-
-                # Get post TeX, skipping empty posts
-                post_tex = tumblr_wheat.get_contents_post_tex(
-                    self.posts[i_post], title_page_uuid=title_page_uuid, month_label=month_label)
-                if len(post_tex) == 0:
-                    self.logger.warning("{0} empty post on {1}".format(
-                        self.subdomain, posted_dt))
-                    continue
-                cur_month = pst_month
-
-                # Write contents title TeX
-                out.write(tumblr_wheat.get_contents_title_tex(self.posts[i_post], title_page_uuid))
-
-                # Write contents first post TeX
-                out.write(post_tex)
-
-            else:
-
-                # Get post TeX, skipping empty posts
-                post_tex = tumblr_wheat.get_contents_post_tex(self.posts[i_post])
-                if len(post_tex) == 0:
-                    self.logger.warning("{0} empty post on {1}".format(
-                        self.subdomain, posted_dt))
-                    continue
-
-                # Write contents post TeX
-                out.write(post_tex)
-
-        # Write empty pages TeX
-        for page in range(empty_pages):
-            out.write(tumblr_wheat.get_contents_empty_page_tex())
-
-        # Write back matter TeX
-        out.write(tumblr_wheat.get_backmatter_tex())
-
-        # Write contents tear down TeX
-        out.write(tumblr_wheat.get_contents_tear_down_tex())
-        out.close()
-
-    def write_wheat_cover(self, book_title, cover_size, file_name):
-        """Writes context file to produce Wheat cover.
-        
-        """
-        # Initialize TumblrWheat
-        tumblr_wheat = TumblrWheat(self)
-
-        # Write set up TeX
-        out = codecs.open(file_name, mode='w', encoding='utf-8', errors='ignore')
-        out.write(tumblr_wheat.get_cover_set_up_tex(cover_size, self.cover_rgb))
-
-        # Write tear down TeX
-        out.write(tumblr_wheat.get_cover_tear_down_tex(
-                book_title, self.created_dt, self.cover_rgb, self.requested_dt))
-        out.close()
 
     def convert_image_posts(self):
         """Convert a regular post containing images to a photo post.

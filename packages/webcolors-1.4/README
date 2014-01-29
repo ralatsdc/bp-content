@@ -1,0 +1,22 @@
+Support is included for the following formats (RGB colorspace only;
+conversion to/from HSL can be handled by the ``colorsys`` module in
+the Python standard library):
+
+* Specification-defined color names
+
+* Six-digit hexadecimal
+
+* Three-digit hexadecimal
+
+* Integer rgb() triplet
+
+* Percentage rgb() triplet
+
+For example::
+
+    >>> import webcolors
+    >>> webcolors.hex_to_name('#daa520')
+    'goldenrod'
+
+Full documentation is `available online
+<http://docs.b-list.org/webcolors/1.4/>`_.
