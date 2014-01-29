@@ -1,6 +1,6 @@
 *~
 *.pyc
-lib/*/build
-lib/*/dist
-lib/*/doc
-lib/*/*.egg-info
+packages/*/build
+packages/*/dist
+packages/*/doc
+packages/*/*.egg-info
