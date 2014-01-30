@@ -7,6 +7,7 @@ from datetime import datetime, date, timedelta
 import logging
 import os
 import pickle
+from pprint import pprint
 from urlparse import urlparse
 
 # Third-party imports
@@ -31,7 +32,7 @@ class FeedAuthor:
         self.blu_pen_utl = BluePeninsulaUtility()
         self.source_url = source_url
         self.source_netloc = urlparse(self.source_url).netloc
-
+        
         self.content_dir = content_dir
         self.pickle_file_name = os.path.join(self.content_dir, self.source_netloc + ".pkl")
 
@@ -40,10 +41,8 @@ class FeedAuthor:
         self.content = None
         self.content_set = False
 
-        self.authors = []
-        self.start_dt = None
-        self.stop_dt = None
-        self.tags = set()
+        self.feed = {}
+        self.entries = []
 
         self.logger = logging.getLogger("blu-pen.FeedAuthor")
 
@@ -59,29 +58,38 @@ class FeedAuthor:
             raise Exception("Problem with feed")
         self.content_set = True
 
-        # Determine authors
-        self.authors = []
-        for author in self.content['feed']['authors']:
-            self.authors.append(author['name'])
-            
-        # Determine start and stop datetime, and unique tags
-        self.start_dt = datetime(2500, 1, 1)
-        self.stop_dt = datetime(1500, 1, 1)
-        for entry in self.content['entries']:
-            root = etree.fromstring(entry['content'][0]['value'])
-            for element in root.iter():
+        if 'feed' in self.content:
 
-                # Determine start and stop time
-                updated_dt = datetime.strptime(entry['updated'][0:19], '%Y-%m-%dT%H:%M:%S')
-                if updated_dt < self.start_dt:
-                    self.start_dt = updated_dt
-                if updated_dt > self.stop_dt:
-                    self.stop_dt = updated_dt
+            feed_keys = ["title", "author", "publisher",
+                         "published_parsed", "update_parsed",
+                         "license"]
 
-                # Determine unique tags
-                if not element.tag in self.tags and not element.tag == etree.Comment:
-                    self.tags.add(element.tag)
-        
+            def set_feed_value_by_key(key):
+                if key in self.content['feed']:
+                    self.feed[key] = self.content['feed'][key]
+                else:
+                    self.feed[key] = None
+
+            for key in feed_keys:
+                set_feed_value_by_key(key)
+
+        if 'entries' in self.content:
+
+            entry_keys = ["title", "author", "publisher",
+                          "published_parsed", "created_parsed", "expired_parsed", "updated_parsed",
+                          "license"]
+
+            def set_entry_value_by_key(key, entry):
+                if key in entry:
+                    self.entries[-1][key] = entry[key]
+                else:
+                    self.entries[-1][key] = None
+
+            for entry in self.content['entries']:
+                self.entries.append({})
+                for key in entry_keys:
+                    set_entry_value_by_key(key, entry)
+
     def download_images(self):
         """Download all images by this author from the feed.
 
@@ -117,10 +125,8 @@ class FeedAuthor:
         p['content'] = self.content
         p['content_set'] = self.content_set
 
-        p['authors'] = self.authors
-        p['start_dt'] = self.start_dt
-        p['stop_dt'] = self.stop_dt
-        p['tags'] = self.tags
+        p['feed'] = self.feed
+        p['entries'] = self.entries
 
         pickle.dump(p, pickle_file)
 
@@ -149,10 +155,8 @@ class FeedAuthor:
         self.content = p['content']
         self.content_set = p['content_set']
 
-        self.authors = p['authors']
-        self.start_dt = p['start_dt']
-        self.stop_dt = p['stop_dt']
-        self.tags = p['tags']
+        self.feed = p['feed']
+        self.entries = ['entries']
 
         self.logger.info("{0} loaded content from {1}".format(self.source_netloc, pickle_file_name))
 

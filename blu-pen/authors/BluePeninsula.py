@@ -100,7 +100,7 @@ class BluePeninsula:
         root.setLevel(self.log_level)
         self.logger = logging.getLogger(__name__)
 
-    def publish_feed_author(self, book_title, source_url, contents, do_purge, only_print, notify):
+    def publish_feed_author(self, source_url, do_purge, notify):
         """Publish a feed author.
         
         """
@@ -121,12 +121,12 @@ class BluePeninsula:
         result = self.get_feed_content(source_url, do_purge=do_purge)
 
         # Notify the Feed author that their book is being published
-        if not only_print and notify:
+        if notify:
             self.send_notification(self.to_email_address, "Your book is being published...",
                                    result['text_file_name'], result['html_file_name'])
 
         # Notify the feed author that their book is ready
-        if not only_print and notify:
+        if notify:
             self.send_notification(self.to_email_address, "Your book is ready!",
                                    result['text_file_name'], result['html_file_name'])
 
@@ -165,7 +165,7 @@ class BluePeninsula:
 
         return {'text_file_name': result['text_file_name'], 'html_file_name': result['html_file_name']}
 
-    def publish_flickr_author(self, username, contents, do_purge, only_print, notify):
+    def publish_flickr_author(self, username, do_purge, notify):
         """Publish a Flickr author.
         
         """
@@ -184,12 +184,12 @@ class BluePeninsula:
         result = self.get_flickr_content(username, do_purge=do_purge)
 
         # Notify the Flickr author that their book is being published
-        if not only_print and notify:
+        if notify:
             self.send_notification(self.to_email_address, "Your book is being published...",
                                    result['text_file_name'], result['html_file_name'])
 
         # Notify the Flickr author that their book is ready
-        if not only_print and notify:
+        if notify:
             self.send_notification(self.to_email_address, "Your book is ready!",
                                    result['text_file_name'], result['html_file_name'])
 
@@ -225,7 +225,7 @@ class BluePeninsula:
 
         return {'text_file_name': result['text_file_name'], 'html_file_name': result['html_file_name']}
 
-    def publish_tumblr_author(self, book_title, subdomain, contents, do_purge, only_print, notify):
+    def publish_tumblr_author(self, subdomain, do_purge, notify):
         """Publish a Tumblr author.
         
         """
@@ -244,12 +244,12 @@ class BluePeninsula:
         result = self.get_tumblr_content(subdomain, do_purge=do_purge)
 
         # Notify the Tumblr author that their book is being published
-        if not only_print and notify:
+        if notify:
             self.send_notification(self.to_email_address, "Your book is being published...",
                                    result['text_file_name'], result['html_file_name'])
 
         # Notify the Tumblr author that their book is ready
-        if not only_print and notify:
+        if notify:
             self.send_notification(self.to_email_address, "Your book is ready!",
                                    result['text_file_name'], result['html_file_name'])
 
@@ -284,8 +284,7 @@ class BluePeninsula:
 
         return {'text_file_name': result['text_file_name'], 'html_file_name': result['html_file_name']}
 
-    def publish_twitter_authors(self, book_title, source_words_string, contents, do_purge,
-                                use_archive, zip_file_name, only_print, notify):
+    def publish_twitter_author(self, source_words_string, do_purge, use_archive, zip_file_name, notify):
         """Publish Twitter authors.
         
         """
@@ -309,21 +308,21 @@ class BluePeninsula:
             os.makedirs(content_dir)
         
         # Get content for the Twitter authors, pickling as needed
-        result = self.get_twitter_content(book_title, source_words_string, do_purge=do_purge,
+        result = self.get_twitter_content(source_words_string, do_purge=do_purge,
                                           use_archive=use_archive, zip_file_name=zip_file_name)
 
         # Notify the Blue Peninsula user that their book is being
         # published.
-        if not only_print and notify:
+        if notify:
             self.send_notification(self.to_email_address, "Your book is being published...",
                                    result['text_file_name'], result['html_file_name'])
 
         # Notify the Blue Peninsula user that their book is ready
-        if not only_print and notify:
+        if notify:
             self.send_notification(self.to_email_address, "Your book is ready!",
                                    result['text_file_name'], result['html_file_name'])
 
-    def get_twitter_content(self, book_title, source_words_string, do_purge=True,
+    def get_twitter_content(self, source_words_string, do_purge=True,
                             use_archive=False, zip_file_name="", task_id=0):
         """Get content for the Twitter authors, pickling as needed.
 
@@ -337,56 +336,50 @@ class BluePeninsula:
          output_words,
          output_urls) = self.blu_pen_utility.process_source_words(source_words_string)
 
-        # Create a TwitterAuthors instance for full content
+        # Create a TwitterAuthor instance for full content
         if self.use_uuid:
             content_dir = os.path.join(self.twitter_content_dir, source_path, self.uuid)
         else:
             content_dir = os.path.join(self.twitter_content_dir, source_path)
-        twitter_authors = TwitterAuthors(self, source_words_string, content_dir)
+        twitter_author = TwitterAuthor(self, source_words_string, content_dir)
 
         # Remove pickle file, if needed
-        if do_purge and os.path.exists(twitter_authors.pickle_file_name):
-            os.remove(twitter_authors.pickle_file_name)
+        if do_purge and os.path.exists(twitter_author.pickle_file_name):
+            os.remove(twitter_author.pickle_file_name)
 
         # Extract zip archive, if needed
         if use_archive:
             TwitterUtility.extract_tweets_from_archive(zip_file_name, content_dir)
 
         # Get and dump, or first load, tweets and images
-        if not os.path.exists(twitter_authors.pickle_file_name):
+        if not os.path.exists(twitter_author.pickle_file_name):
             if not use_archive:
-                twitter_authors.set_tweets_as_recent()
-                twitter_authors.set_images_as_recent(self.flickr_author)
+                twitter_author.set_tweets_as_recent()
+                twitter_author.set_images_as_recent(self.flickr_author)
             else:
-                twitter_authors.set_tweets_from_archive()
-            twitter_authors.content_set = True
-            twitter_authors.dump()
+                twitter_author.set_tweets_from_archive()
+            twitter_author.content_set = True
+            twitter_author.dump()
         else:
-            twitter_authors.load()
-            if not twitter_authors.content_set:
+            twitter_author.load()
+            if not twitter_author.content_set:
                 if not use_archive:
-                    twitter_authors.set_tweets_as_recent()
-                    twitter_authors.set_images_as_recent(self.flickr_author)
+                    twitter_author.set_tweets_as_recent()
+                    twitter_author.set_images_as_recent(self.flickr_author)
                 else:
-                    twitter_authors.set_tweets_from_archive()
-                twitter_authors.content_set = True
-                twitter_authors.dump()
+                    twitter_author.set_tweets_from_archive()
+                twitter_author.content_set = True
+                twitter_author.dump()
 
-        # Convert datetime to needed formats
-        title_start_date = twitter_authors.created_dt[0].strftime("%B %d, %Y").replace(" 0", " ")
-        title_stop_date = twitter_authors.created_dt[-1].strftime("%B %d, %Y").replace(" 0", " ")
-        
         # Write pending email message
         source_str = output_types[0] + source_header.replace("and ", "and " + output_types[0])
-        result = self.write_email_message("twitter", self.twitter_content_dir, content_dir, "pending", source_str, task_id,
-                                          book_title=book_title, date_from=title_start_date, date_to=title_stop_date)
+        result = self.write_email_message("twitter", self.twitter_content_dir, content_dir, "pending", source_str, task_id)
 
         self.logger.info("{0} ({1}) set tweets and images".format(source_log, self.uuid))
 
         return {'text_file_name': result['text_file_name'], 'html_file_name': result['html_file_name']}
 
-    def publish_twitter_edition(self, book_title, source_words_string, contents,
-                                do_purge, only_print, notify):
+    def publish_twitter_edition(self, source_words_string, do_purge, notify):
         """Publish a Twitter edition.
         
         """
@@ -408,9 +401,9 @@ class BluePeninsula:
         
         # Check that the common content pickle for the Twitter edition
         # exists
-        twitter_authors_full = TwitterAuthors(self, source_words_string, content_dir)
-        if not os.path.exists(twitter_authors_full.pickle_file_name):
-            raise IOError("File {0} does not exist.".format(twitter_authors_full.pickle_file_name))
+        twitter_author_full = TwitterAuthor(self, source_words_string, content_dir)
+        if not os.path.exists(twitter_author_full.pickle_file_name):
+            raise IOError("File {0} does not exist.".format(twitter_author_full.pickle_file_name))
         
         # Trim the common content length for the Twitter edition, if
         # needed
@@ -420,16 +413,15 @@ class BluePeninsula:
         self.use_uuid = False
         
         # Notify the Blue Peninsula user that their edition is ready
-        if not only_print and notify:
+        if notify:
             self.send_notification(self.to_email_address, "Your edition is ready!",
                                    result['text_file_name'], result['html_file_name'])
 
         # Remove the common content pickle for the Twitter edition
         if do_purge:
-            os.remove(twitter_authors.pickle_file_name)
+            os.remove(twitter_author.pickle_file_name)
 
-    def register_twitter_edition(self, book_title, source_words_string, contents,
-                                 do_purge, only_print, notify):
+    def register_twitter_edition(self, source_words_string, do_purge, notify):
         """Register a Twitter edition.
 
         """
@@ -456,15 +448,15 @@ class BluePeninsula:
             os.makedirs(content_dir)
 
         # Add content to the Twitter edition, pickling as needed
-        result = self.add_twitter_content(book_title, source_words_string, do_purge=do_purge)
+        result = self.add_twitter_content(source_words_string, do_purge=do_purge)
 
         # Notify the Blue Peninsula user that their edition has been
         # registered
-        if not only_print and notify:
+        if notify:
             self.send_notification(self.to_email_address, "Your edition has been registered...",
                                    result['text_file_name'], result['html_file_name'])
 
-    def add_twitter_content(self, book_title, source_words_string, do_purge=False, task_id=0, add_length=300):
+    def add_twitter_content(self, source_words_string, do_purge=False, task_id=0, add_length=300):
         """Add content to the Twitter edition, pickling as needed.
 
         """
@@ -478,127 +470,121 @@ class BluePeninsula:
          output_urls) = self.blu_pen_utility.process_source_words(source_words_string)
 
         # Remove pickle file, if requested
-        if do_purge and os.path.exists(twitter_authors_full.pickle_file_name):
-            os.remove(twitter_authors_full.pickle_file_name)
+        if do_purge and os.path.exists(twitter_author_full.pickle_file_name):
+            os.remove(twitter_author_full.pickle_file_name)
 
-        # Create a TwitterAuthors instance for full content
+        # Create a TwitterAuthor instance for full content
         content_dir = os.path.join(self.twitter_content_dir, source_path)
-        twitter_authors_full = TwitterAuthors(self, source_words_string, content_dir)
-        if os.path.exists(twitter_authors_full.pickle_file_name):
-            twitter_authors_full.load()
+        twitter_author_full = TwitterAuthor(self, source_words_string, content_dir)
+        if os.path.exists(twitter_author_full.pickle_file_name):
+            twitter_author_full.load()
 
         # Get and dump tweets and images, loading the pickle file if
         # it exists
-        if not os.path.exists(twitter_authors_full.pickle_file_name):
+        if not os.path.exists(twitter_author_full.pickle_file_name):
             # This version of the edition is new
-            # Not needed: twitter_authors_full.set_tweets_as_recent()
-            twitter_authors_full.set_images_as_recent(self.flickr_author)
-            twitter_authors_full.content_set = True
-            twitter_authors_full.dump()
+            # Not needed: twitter_author_full.set_tweets_as_recent()
+            twitter_author_full.set_images_as_recent(self.flickr_author)
+            twitter_author_full.content_set = True
+            twitter_author_full.dump()
         else:
             # This version of the edition is not new
-            twitter_authors_full.load()
-            if not twitter_authors_full.content_set:
+            twitter_author_full.load()
+            if not twitter_author_full.content_set:
                 # Creation of the new version was interrupted
-                # Not needed: twitter_authors_full.set_tweets_as_recent()
-                twitter_authors_full.set_images_as_recent(self.flickr_author)
-                twitter_authors_full.content_set = True
-                twitter_authors_full.dump()
+                # Not needed: twitter_author_full.set_tweets_as_recent()
+                twitter_author_full.set_images_as_recent(self.flickr_author)
+                twitter_author_full.content_set = True
+                twitter_author_full.dump()
 
-        # Create a TwitterAuthors instance for partial content
+        # Create a TwitterAuthor instance for partial content
         content_dir = os.path.join(self.twitter_content_dir, source_path, self.uuid)
-        twitter_authors_part = TwitterAuthors(self, source_words_string, content_dir,
-                                              max_length=np.max(twitter_authors_full.length) + add_length,
-                                              number_of_api_attempts=2)
+        twitter_author_part = TwitterAuthor(self, source_words_string, content_dir,
+                                            max_length=np.max(twitter_author_full.length) + add_length,
+                                            number_of_api_attempts=2)
 
         # Add and dump tweets and images, loading the pickle file if
         # it exists, or assigning full content to partial content if
         # not
-        if not os.path.exists(twitter_authors_part.pickle_file_name):
+        if not os.path.exists(twitter_author_part.pickle_file_name):
             # This addition of content is new
             # Assign full content to partial content
-            twitter_authors_part.page = twitter_authors_full.page
-            twitter_authors_part.max_id = twitter_authors_full.max_id
-            twitter_authors_part.since_id = twitter_authors_full.since_id
-            twitter_authors_part.tweets = twitter_authors_full.tweets
-            twitter_authors_part.tweet_id = twitter_authors_full.tweet_id
-            twitter_authors_part.created_dt = twitter_authors_full.created_dt
-            twitter_authors_part.text_symbol = twitter_authors_full.text_symbol
-            twitter_authors_part.clean_text = twitter_authors_full.clean_text
-            twitter_authors_part.sidebar_fill_rgb = twitter_authors_full.sidebar_fill_rgb
-            twitter_authors_part.link_rgb = twitter_authors_full.link_rgb
-            twitter_authors_part.text_rgb = twitter_authors_full.text_rgb
-            twitter_authors_part.background_rgb = twitter_authors_full.background_rgb
-            twitter_authors_part.length = twitter_authors_full.length
-            twitter_authors_part.count = twitter_authors_full.count
-            twitter_authors_part.volume = twitter_authors_full.volume
-            twitter_authors_part.frequency = twitter_authors_full.frequency
-            twitter_authors_part.profile_image_file_name = twitter_authors_full.profile_image_file_name
-            twitter_authors_part.background_image_file_name = twitter_authors_full.background_image_file_name
-            twitter_authors_part.content_set = twitter_authors_full.content_set
+            twitter_author_part.page = twitter_author_full.page
+            twitter_author_part.max_id = twitter_author_full.max_id
+            twitter_author_part.since_id = twitter_author_full.since_id
+            twitter_author_part.tweets = twitter_author_full.tweets
+            twitter_author_part.tweet_id = twitter_author_full.tweet_id
+            twitter_author_part.created_dt = twitter_author_full.created_dt
+            twitter_author_part.text_symbol = twitter_author_full.text_symbol
+            twitter_author_part.clean_text = twitter_author_full.clean_text
+            twitter_author_part.sidebar_fill_rgb = twitter_author_full.sidebar_fill_rgb
+            twitter_author_part.link_rgb = twitter_author_full.link_rgb
+            twitter_author_part.text_rgb = twitter_author_full.text_rgb
+            twitter_author_part.background_rgb = twitter_author_full.background_rgb
+            twitter_author_part.length = twitter_author_full.length
+            twitter_author_part.count = twitter_author_full.count
+            twitter_author_part.volume = twitter_author_full.volume
+            twitter_author_part.frequency = twitter_author_full.frequency
+            twitter_author_part.profile_image_file_name = twitter_author_full.profile_image_file_name
+            twitter_author_part.background_image_file_name = twitter_author_full.background_image_file_name
+            twitter_author_part.content_set = twitter_author_full.content_set
 
             # Add and dump tweets and images
-            if not max(twitter_authors_full.since_id) > 0:
+            if not max(twitter_author_full.since_id) > 0:
                 # Get earlier tweets
-                twitter_authors_part.set_tweets_as_recent()
+                twitter_author_part.set_tweets_as_recent()
             else:
                 # Get later tweets
-                twitter_authors_part.set_tweets_as_recent(parameter="since_id")
-            twitter_authors_part.set_images_as_recent(self.flickr_author)
-            twitter_authors_part.content_set = True
-            twitter_authors_part.dump()
+                twitter_author_part.set_tweets_as_recent(parameter="since_id")
+            twitter_author_part.set_images_as_recent(self.flickr_author)
+            twitter_author_part.content_set = True
+            twitter_author_part.dump()
         else:
             # This addition of content is not new
-            twitter_authors_part.load()
-            if not twitter_authors_part.content_set:
+            twitter_author_part.load()
+            if not twitter_author_part.content_set:
                 # Creation of the new content was interrupted
-                if not max(twitter_authors_full.since_id) > 0:
+                if not max(twitter_author_full.since_id) > 0:
                     # Get earlier tweets
-                    twitter_authors_part.set_tweets_as_recent()
+                    twitter_author_part.set_tweets_as_recent()
                 else:
                     # Get later tweets
-                    twitter_authors_part.set_tweets_as_recent(parameter="since_id")
-                twitter_authors_part.set_images_as_recent(self.flickr_author)
-                twitter_authors_part.content_set = True
-                twitter_authors_part.dump()
+                    twitter_author_part.set_tweets_as_recent(parameter="since_id")
+                twitter_author_part.set_images_as_recent(self.flickr_author)
+                twitter_author_part.content_set = True
+                twitter_author_part.dump()
 
         # Assign updated partial to original full content, and dump
-        twitter_authors_full.page = twitter_authors_part.page
-        twitter_authors_full.max_id = twitter_authors_part.max_id
-        twitter_authors_full.since_id = twitter_authors_part.since_id
-        twitter_authors_full.tweets = twitter_authors_part.tweets
-        twitter_authors_full.tweet_id = twitter_authors_part.tweet_id
-        twitter_authors_full.created_dt = twitter_authors_part.created_dt
-        twitter_authors_full.text_symbol = twitter_authors_part.text_symbol
-        twitter_authors_full.clean_text = twitter_authors_part.clean_text
-        twitter_authors_full.sidebar_fill_rgb = twitter_authors_part.sidebar_fill_rgb
-        twitter_authors_full.link_rgb = twitter_authors_part.link_rgb
-        twitter_authors_full.text_rgb = twitter_authors_part.text_rgb
-        twitter_authors_full.background_rgb = twitter_authors_part.background_rgb
-        twitter_authors_full.length = twitter_authors_part.length
-        twitter_authors_full.count = twitter_authors_part.count
-        twitter_authors_full.volume = twitter_authors_part.volume
-        twitter_authors_full.frequency = twitter_authors_part.frequency
-        twitter_authors_full.profile_image_file_name = twitter_authors_part.profile_image_file_name
-        twitter_authors_full.background_image_file_name = twitter_authors_part.background_image_file_name
-        twitter_authors_full.content_set = twitter_authors_part.content_set
-        twitter_authors_full.dump()
+        twitter_author_full.page = twitter_author_part.page
+        twitter_author_full.max_id = twitter_author_part.max_id
+        twitter_author_full.since_id = twitter_author_part.since_id
+        twitter_author_full.tweets = twitter_author_part.tweets
+        twitter_author_full.tweet_id = twitter_author_part.tweet_id
+        twitter_author_full.created_dt = twitter_author_part.created_dt
+        twitter_author_full.text_symbol = twitter_author_part.text_symbol
+        twitter_author_full.clean_text = twitter_author_part.clean_text
+        twitter_author_full.sidebar_fill_rgb = twitter_author_part.sidebar_fill_rgb
+        twitter_author_full.link_rgb = twitter_author_part.link_rgb
+        twitter_author_full.text_rgb = twitter_author_part.text_rgb
+        twitter_author_full.background_rgb = twitter_author_part.background_rgb
+        twitter_author_full.length = twitter_author_part.length
+        twitter_author_full.count = twitter_author_part.count
+        twitter_author_full.volume = twitter_author_part.volume
+        twitter_author_full.frequency = twitter_author_part.frequency
+        twitter_author_full.profile_image_file_name = twitter_author_part.profile_image_file_name
+        twitter_author_full.background_image_file_name = twitter_author_part.background_image_file_name
+        twitter_author_full.content_set = twitter_author_part.content_set
+        twitter_author_full.dump()
 
-        # Convert datetime to needed formats
-        title_start_date = twitter_authors_full.created_dt[0].strftime("%B %d, %Y").replace(" 0", " ")
-        title_stop_date = twitter_authors_full.created_dt[-1].strftime("%B %d, %Y").replace(" 0", " ")
-        
         # Write pending email message
         source_str = output_types[0] + source_header.replace("and ", "and " + output_types[0])
-        result = self.write_email_message("twitter", self.twitter_content_dir, content_dir, "pending", source_str, task_id,
-                                          book_title=book_title, date_from=title_start_date, date_to=title_stop_date)
+        result = self.write_email_message("twitter", self.twitter_content_dir, content_dir, "pending", source_str, task_id)
 
         self.logger.info("{0} ({1}) set tweets and images".format(source_log, self.uuid))
 
         return {'text_file_name': result['text_file_name'], 'html_file_name': result['html_file_name']}
 
-    def write_email_message(self, source, source_dir, content_dir, file_root, source_str, task_id,
-                            book_title="", date_from="", date_to="", url_at_lulu=""):
+    def write_email_message(self, source, source_dir, content_dir, file_root, source_str, task_id):
         """Read, update and write email message text and HTML
         templates in oder to create files needed to send a multipart
         email message.
@@ -611,7 +597,6 @@ class BluePeninsula:
         text_file.close()
         text_file_name = os.path.join(content_dir, file_root + ".text")
         text_file = codecs.open(text_file_name, mode='w', encoding='ascii', errors='ignore')
-        text = text.replace("{book_title}", book_title.encode('ascii', 'ignore'))
         if source == "feed":
             text = text.replace("{source_url}", source_str)
             url_at_ep = "http://" + self.host_name + "/feed/status/" + str(task_id) + "/"
@@ -628,10 +613,6 @@ class BluePeninsula:
             url_at_ep = "http://" + self.host_name + "/twitter/status/" + str(task_id) + "/"
         else:
             raise Exception("Unknown source.")
-        if task_id == 0:
-            text = text.replace("{url_at_ep}", url_at_lulu)
-        else:
-            text = text.replace("{url_at_ep}", url_at_ep)
         text_file.write(text)
         text_file.close()
 
@@ -642,7 +623,6 @@ class BluePeninsula:
         html_file.close()
         html_file_name = os.path.join(content_dir, file_root + ".html")
         html_file = codecs.open(html_file_name, mode='w', encoding='ascii', errors='ignore')
-        html = html.replace("{book_title}", book_title.encode('ascii', 'ignore'))
         if source == "feed":
             html = html.replace("{source_url}", source_str)
         elif source == "flickr":
@@ -653,10 +633,6 @@ class BluePeninsula:
             html = html.replace("{screen_name}", source_str)
             html = html.replace("{date_from}", date_from)
             html = html.replace("{date_to}", date_to)
-        if task_id == 0:
-            html = html.replace("{url_at_ep}", url_at_lulu)
-        else:
-            html = html.replace("{url_at_ep}", url_at_ep)
         html_file.write(html)
         html_file.close()
 
@@ -683,20 +659,15 @@ if __name__ == "__main__":
     # Parse command line arguments
     blu_pen = BluePeninsula("BluePeninsula.cfg")
      
-    parser = argparse.ArgumentParser(description="Publish a Twitter, Tumblr, or Flickr author.")
+    parser = argparse.ArgumentParser(description="Collect Feed, Flickr, Instagram, Tumblr, or Twitter content")
      
     parser.add_argument("service", metavar="service",
-                        choices=["feed", "flickr", "tumblr", "twitter"],
-                        help="the service to publish: feed, flickr, tumblr, or twitter")
+                        choices=["feed", "flickr", "instagram", "tumblr", "twitter"],
+                        help="the service from which to collect content: feed, flickr, instagram, tumblr, or twitter")
 
     parser.add_argument("publication", metavar="publication",
                         choices=["book", "edition"],
-                        help="the publication to create: book or edition")
-
-    default=u'Skitsnack p\xe5 140 tecken.'
-    parser.add_argument("-t", "--title",
-                        default="The Digital Life: A Memoir",
-                        help="the title of the Feed, Flickr, Tumblr, or Twitter")
+                        help="collect co: book or edition")
 
     parser.add_argument("-w", "--source-words-string",
                         default="ladygaga",
@@ -732,11 +703,8 @@ if __name__ == "__main__":
             pass
     
         else: # publication = "book"
-            blu_pen.publish_feed_author(blu_pen.args.title,
-                                        blu_pen.args.source_words_string,
-                                        blu_pen.args.contents,
+            blu_pen.publish_feed_author(blu_pen.args.source_words_string,
                                         blu_pen.args.do_purge,
-                                        blu_pen.args.only_print,
                                         blu_pen.args.notify)
 
     elif blu_pen.args.service == "flickr":
@@ -745,9 +713,7 @@ if __name__ == "__main__":
 
         else: # publication = "book"
             blu_pen.publish_flickr_author(blu_pen.args.source_words_string,
-                                          blu_pen.args.contents,
                                           blu_pen.args.do_purge,
-                                          blu_pen.args.only_print,
                                           blu_pen.args.notify)
 
 
@@ -756,47 +722,23 @@ if __name__ == "__main__":
             pass
 
         else: # publication = "book"
-            blu_pen.publish_tumblr_author(blu_pen.args.title,
-                                          blu_pen.args.source_words_string,
-                                          blu_pen.args.contents,
+            blu_pen.publish_tumblr_author(blu_pen.args.source_words_string,
                                           blu_pen.args.do_purge,
-                                          blu_pen.args.only_print,
                                           blu_pen.args.notify)
 
     elif blu_pen.args.service == "twitter":
         if blu_pen.args.publication == "edition":
             if not blu_pen.args.only_publish_edition:
-                blu_pen.register_twitter_edition(blu_pen.args.title,
-                                                 blu_pen.args.source_words_string,
-                                                 blu_pen.args.contents,
+                blu_pen.register_twitter_edition(blu_pen.args.source_words_string,
                                                  blu_pen.args.do_purge,
-                                                 blu_pen.args.only_print,
                                                  blu_pen.args.notify)
 
             if not blu_pen.args.only_add_content:
-                blu_pen.publish_twitter_edition(blu_pen.args.title,
-                                                blu_pen.args.source_words_string,
-                                                blu_pen.args.contents,
+                blu_pen.publish_twitter_edition(blu_pen.args.source_words_string,
                                                 blu_pen.args.do_purge,
-                                                blu_pen.args.only_print,
                                                 blu_pen.args.notify)
 
         else: # publication = "book"
-            if len(blu_pen.args.zip_file_name) == 0:
-                use_archive = False
-                zip_file_name = ""
-                source_words_string = blu_pen.args.source_words_string
-
-            else:
-                use_archive = True
-                zip_file_name = blu_pen.args.zip_file_name
-                source_words_string = "@" + TwitterUtility.get_name_from_archive(zip_file_name)
-
-            blu_pen.publish_twitter_authors(blu_pen.args.title,
-                                            source_words_string,
-                                            blu_pen.args.contents,
+            blu_pen.publish_twitter_author(source_words_string,
                                             blu_pen.args.do_purge,
-                                            use_archive,
-                                            zip_file_name,
-                                            blu_pen.args.only_print,
                                             blu_pen.args.notify)
