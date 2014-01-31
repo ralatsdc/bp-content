@@ -100,14 +100,14 @@ class BluePeninsula:
         root.setLevel(self.log_level)
         self.logger = logging.getLogger(__name__)
 
-    def publish_feed_author(self, source_url, do_purge, notify):
-        """Publish a feed author.
+    def collect_feed_author_content(self, source_url, do_purge, notify):
+        """Collect content created by a feed author.
         
         """
         # Process source URL
         source_netloc = urlparse(source_url).netloc
         source_path = source_netloc.replace(".", "_")
-        self.logger.info("{0} ({1}) == publish feed author ==".format(source_netloc, self.uuid))
+        self.logger.info("{0} ({1}) == collect feed author content ==".format(source_netloc, self.uuid))
 
         # Create the content directory for the feed author, if needed
         if self.use_uuid:
@@ -703,9 +703,9 @@ if __name__ == "__main__":
             pass
     
         else: # publication = "book"
-            blu_pen.publish_feed_author(blu_pen.args.source_words_string,
-                                        blu_pen.args.do_purge,
-                                        blu_pen.args.notify)
+            blu_pen.collect_feed_author_content(blu_pen.args.source_words_string,
+                                                blu_pen.args.do_purge,
+                                                blu_pen.args.notify)
 
     elif blu_pen.args.service == "flickr":
         if blu_pen.args.publication == "edition":

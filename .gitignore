@@ -1,6 +1,7 @@
 *~
 *.log
 *.pyc
+content/feed/*
 packages/*/build
 packages/*/dist
 packages/*/doc
