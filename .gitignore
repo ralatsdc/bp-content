@@ -2,6 +2,7 @@
 *.log
 *.pyc
 content/feed/*
+content/flickr/*
 packages/*/build
 packages/*/dist
 packages/*/doc

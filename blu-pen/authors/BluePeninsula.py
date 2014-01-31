@@ -145,7 +145,7 @@ class BluePeninsula:
             content_dir = os.path.join(self.feed_content_dir, source_path)
         feed_author = FeedAuthor(self, source_url, content_dir)
 
-        # Remove pickle file, get content, and download images
+        # Remove pickle file, if requested
         if do_purge and os.path.exists(feed_author.pickle_file_name):
             os.remove(feed_author.pickle_file_name)
 
@@ -165,11 +165,11 @@ class BluePeninsula:
 
         return {'text_file_name': result['text_file_name'], 'html_file_name': result['html_file_name']}
 
-    def publish_flickr_author(self, username, do_purge, notify):
-        """Publish a Flickr author.
+    def collect_flickr_author_content(self, username, do_purge, notify):
+        """Collect content created by a Flickr author.
         
         """
-        self.logger.info("{0} ({1}) == publish flickr author ==".format(username, self.uuid))
+        self.logger.info("{0} ({1}) == collect flickr author content ==".format(username, self.uuid))
 
         # Create the content directory for the Flickr author, if
         # needed
@@ -204,7 +204,7 @@ class BluePeninsula:
             content_dir = os.path.join(self.flickr_content_dir, username)
         flickr_author = FlickrAuthor(self, username, content_dir)
 
-        # Remove pickle file, get photosets, and download photos
+        # Remove pickle file, if requested
         if do_purge and os.path.exists(flickr_author.pickle_file_name):
             os.remove(flickr_author.pickle_file_name)
 
@@ -712,10 +712,9 @@ if __name__ == "__main__":
             pass
 
         else: # publication = "book"
-            blu_pen.publish_flickr_author(blu_pen.args.source_words_string,
-                                          blu_pen.args.do_purge,
-                                          blu_pen.args.notify)
-
+            blu_pen.collect_flickr_author_content(blu_pen.args.source_words_string,
+                                                  blu_pen.args.do_purge,
+                                                  blu_pen.args.notify)
 
     elif blu_pen.args.service == "tumblr":
         if blu_pen.args.publication == "edition":

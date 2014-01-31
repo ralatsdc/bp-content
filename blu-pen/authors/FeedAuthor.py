@@ -52,7 +52,6 @@ class FeedAuthor:
         except Exception as exc:
             self.logger.info("{0} could not parse feed content from {1}".format(self.source_netloc, self.source_url))
             raise Exception("Problem with feed")
-        self.content_set = True
 
         # Set feed content, if it exsits
         if 'feed' in self.content:
@@ -85,6 +84,8 @@ class FeedAuthor:
                         self.entries[-1][key] = entry[key]
                     else:
                         self.entries[-1][key] = None
+
+        self.content_set = True
 
     def download_images(self):
         """Downloads all images by this author from the feed.
