@@ -32,22 +32,21 @@ class TwitterAuthor:
     are selected by name or tag. Books are named after birds.
 
     """
-    def __init__(self, blu_pen, source_words_string, content_dir,
+    def __init__(self, blu_pen, source_words_str, content_dir,
                  start_date=date(2006, 07, 15) - timedelta(2), stop_date=date.today() + timedelta(2),
                  max_length=3200, max_frequency=20, number_of_api_attempts=4, seconds_between_api_attempts=1):
         """Constructs a TwitterAuthor instance given source words.
 
         """
         self.blu_pen = blu_pen
-        self.blu_pen_utility = BluePeninsulaUtility()
+        self.blu_pen_utl = BluePeninsulaUtility()
 
         (self.source_log,
          self.source_path,
          self.source_header,
          self.source_label,
          self.source_types,
-         self.source_words,
-         self.source_urls) = self.blu_pen_utility.process_source_words(source_words_string)
+         self.source_words) = self.blu_pen_utl.process_source_words(source_words_str)
 
         self.content_dir = content_dir
         self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
@@ -432,11 +431,11 @@ class TwitterAuthor:
                     root, ext = os.path.splitext(tweet.user.profile_image_url)
                     self.profile_image_file_name.append(self.source_words[iSrc] + ext.lower())
                     image_file_name = os.path.join(self.content_dir, self.profile_image_file_name[iSrc])
-                    self.blu_pen_utility.download_file(
+                    self.blu_pen_utl.download_file(
                         tweet.user.profile_image_url.replace("normal", "bigger"), image_file_name)
                     Image.open(image_file_name)
                 except Exception as exc:
-                    random_photo_file_name = self.blu_pen_utility.draw_random_flickr_photo(flickr_author)
+                    random_photo_file_name = self.blu_pen_utl.draw_random_flickr_photo(flickr_author)
                     root, ext = os.path.splitext(random_photo_file_name)
                     self.profile_image_file_name.append(self.source_words[iSrc] + ext.lower())
                     image_file_name = os.path.join(self.content_dir, self.profile_image_file_name[iSrc])
@@ -448,11 +447,11 @@ class TwitterAuthor:
                     root, ext = os.path.splitext(tweet.user.profile_background_image_url)
                     self.background_image_file_name.append(self.source_words[iSrc] + "_background" + ext.lower())
                     image_file_name = os.path.join(self.content_dir, self.background_image_file_name[iSrc])
-                    self.blu_pen_utility.download_file(
+                    self.blu_pen_utl.download_file(
                         tweet.user.profile_background_image_url, image_file_name)
                     Image.open(image_file_name)
                 except Exception as exc:
-                    random_photo_file_name = self.blu_pen_utility.draw_random_flickr_photo(flickr_author)
+                    random_photo_file_name = self.blu_pen_utl.draw_random_flickr_photo(flickr_author)
                     root, ext = os.path.splitext(random_photo_file_name)
                     self.background_image_file_name.append(self.source_words[iSrc] + "_background" + ext.lower())
                     image_file_name = os.path.join(self.content_dir, self.background_image_file_name[iSrc])

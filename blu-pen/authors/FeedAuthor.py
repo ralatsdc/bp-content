@@ -3,13 +3,13 @@
 # Standard library imports
 from datetime import datetime, date, timedelta
 import logging
+import math
 import os
 import pickle
+from time import sleep
 from urlparse import urlparse
 
 # Third-party imports
-import sys
-sys.path.append('../../lib/feedparser/feedparser')
 import feedparser
 
 # Local imports
@@ -20,19 +20,24 @@ class FeedAuthor:
     are selected by URL.
 
     """
-    def __init__(self, blu_pen, source_url, content_dir, requested_dt=datetime.utcnow()):
+    def __init__(self, blu_pen, source_url, content_dir, requested_dt=datetime.utcnow(),
+                 number_of_api_attempts=1, seconds_between_api_attempts=1):
         """Constructs a FeedAuthor instance.
 
         """
         self.blu_pen = blu_pen
         self.blu_pen_utl = BluePeninsulaUtility()
 
+        self.source_log = urlparse(source_url).netloc
+        self.source_path = urlparse(source_url).netloc
         self.source_url = source_url
+
         self.content_dir = content_dir
         self.requested_dt = requested_dt
+        self.number_of_api_attempts = number_of_api_attempts
+        self.seconds_between_api_attempts = seconds_between_api_attempts
 
-        self.source_netloc = urlparse(self.source_url).netloc
-        self.pickle_file_name = os.path.join(self.content_dir, self.source_netloc + ".pkl")
+        self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
 
         self.content = None
         self.feed = {}
@@ -46,20 +51,17 @@ class FeedAuthor:
         values to selected keys.
 
         """
-        # Get feed content
-        try:
-            self.content = feedparser.parse(self.source_url)
-        except Exception as exc:
-            self.logger.info("{0} could not parse feed content from {1}".format(self.source_netloc, self.source_url))
-            raise Exception("Problem with feed")
+        # Get recent feed content
+        self.get_content_by_url(self.source_url)
+        if self.content is None:
+            return
 
         # Set feed content, if it exsits
         if 'feed' in self.content:
 
             # Assign feed keys to set
             feed_keys = ["title", "author", "publisher",
-                         "published_parsed", "update_parsed",
-                         "license"]
+                         "published_parsed", "update_parsed", "license"]
 
             # Assign value for key, if in feed, or None
             for key in feed_keys:
@@ -73,8 +75,7 @@ class FeedAuthor:
 
             # Assign entry keys to set
             entry_keys = ["title", "author", "publisher",
-                          "published_parsed", "created_parsed", "expired_parsed", "updated_parsed",
-                          "license"]
+                          "published_parsed", "created_parsed", "expired_parsed", "updated_parsed", "license"]
 
             # Assign value for key, if in entry, or None
             for entry in self.content['entries']:
@@ -87,19 +88,30 @@ class FeedAuthor:
 
         self.content_set = True
 
-    def download_images(self):
-        """Downloads all images by this author from the feed.
+    def get_content_by_url(self, source_url):
+        """Makes multiple attempts to get content by URL, sleeping
+        before attempts.
 
         """
-        for entry in self.content['entries']:
-            for link in entry['links']:
-                if link['type'].find('image/') != -1:
-                    image_url = link['href']
-                    head, tail = os.path.split(image_url)
-                    image_file_name = os.path.join(self.content_dir, tail)
-                    self.blu_pen_utl.download_file(image_url, image_file_name)
-                    self.logger.info("{0} downloaded image to file {1}".format(
-                        self.source_netloc, image_file_name))
+        self.content = None
+
+        # Make multiple attempts
+        exc = None
+        iAttempts = 0
+        while self.content is None and iAttempts < self.number_of_api_attempts:
+            iAttempts += 1
+
+            # Sleep longer before each attempt
+            seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
+            self.logger.info("{0} sleeping for {1} seconds".format(self.source_log, seconds_between_api_attempts))
+            sleep(seconds_between_api_attempts)
+
+            # Attempt to get content by URL
+            try:
+                self.content = feedparser.parse(source_url)
+            except Exception as exc:
+                self.content = None
+                self.logger.warning("{0} couldn't get content for {1}: {2}".format(self.source_log, source_url, exc))
 
     def dump(self, pickle_file_name=None):
         """Dumps FeedAuthor attributes pickle.
@@ -111,12 +123,14 @@ class FeedAuthor:
 
         p = {}
 
+        p['source_log'] = self.source_log
+        p['source_path'] = self.source_path
         p['source_url'] = self.source_url
+
         p['content_dir'] = self.content_dir
         p['requested_dt'] = self.requested_dt
-
-        p['source_netloc'] = self.source_netloc
-        p['pickle_file_name'] = self.pickle_file_name
+        p['number_of_api_attempts'] = self.number_of_api_attempts
+        p['seconds_between_api_attempts'] = self.seconds_between_api_attempts
 
         p['content'] = self.content
         p['feed'] = self.feed
@@ -125,7 +139,7 @@ class FeedAuthor:
 
         pickle.dump(p, pickle_file)
 
-        self.logger.info("{0} dumped content to {1}".format(self.source_netloc, pickle_file_name))
+        self.logger.info("{0} dumped content to {1}".format(self.source_log, pickle_file_name))
 
         pickle_file.close()
         
@@ -139,18 +153,20 @@ class FeedAuthor:
 
         p = pickle.load(pickle_file)
 
+        self.source_log = p['source_log']
+        self.source_path = p['source_path']
         self.source_url = p['source_url']
+
         self.content_dir = p['content_dir']
         self.requested_dt = p['requested_dt']
-
-        self.source_netloc = p['source_netloc']
-        self.pickle_file_name = p['pickle_file_name']
+        self.number_of_api_attempts = p['number_of_api_attempts']
+        self.seconds_between_api_attempts = p['seconds_between_api_attempts']
 
         self.content = p['content']
         self.feed = p['feed']
         self.entries = p['entries']
         self.content_set = p['content_set']
 
-        self.logger.info("{0} loaded content from {1}".format(self.source_netloc, pickle_file_name))
+        self.logger.info("{0} loaded content from {1}".format(self.source_log, pickle_file_name))
 
         pickle_file.close()

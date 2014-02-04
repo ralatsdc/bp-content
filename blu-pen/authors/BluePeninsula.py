@@ -24,6 +24,7 @@ import numpy as np
 from BluePeninsulaUtility import BluePeninsulaUtility
 from FeedAuthor import FeedAuthor
 from FlickrAuthor import FlickrAuthor
+from InstagramAuthor import InstagramAuthor
 from ProcessingError import ProcessingError
 from TumblrAuthor import TumblrAuthor
 from TwitterAuthor import TwitterAuthor
@@ -76,10 +77,11 @@ class BluePeninsula:
         self.use_batch_mode = self.config.getboolean("blu-pen", "use_batch_mode")
         self.use_uuid = self.config.getboolean("blu-pen", "use_uuid")
 
-        self.twitter_content_dir = self.config.get("twitter", "content_dir")
-        self.flickr_content_dir = self.config.get("flickr", "content_dir")
-        self.tumblr_content_dir = self.config.get("tumblr", "content_dir")
         self.feed_content_dir = self.config.get("feed", "content_dir")
+        self.flickr_content_dir = self.config.get("flickr", "content_dir")
+        self.instagram_content_dir = self.config.get("instagram", "content_dir")
+        self.tumblr_content_dir = self.config.get("tumblr", "content_dir")
+        self.twitter_content_dir = self.config.get("twitter", "content_dir")
 
         self.blu_pen_utility = BluePeninsulaUtility()
 
@@ -152,7 +154,6 @@ class BluePeninsula:
         # Get and dump, or load, content and download images
         if not os.path.exists(feed_author.pickle_file_name):
             feed_author.set_content_as_recent()
-            feed_author.download_images()
             feed_author.dump()
         else:
             feed_author.load()
@@ -222,6 +223,80 @@ class BluePeninsula:
         result = self.write_email_message("flickr", self.flickr_content_dir, content_dir, "pending", source_str, task_id)
 
         self.logger.info("{0} ({1}) set photosets".format(username, self.uuid))
+
+        return {'text_file_name': result['text_file_name'], 'html_file_name': result['html_file_name']}
+
+    # abc
+    def collect_instagram_author_content(self, source_words_str, do_purge, notify):
+        """Collect content created by a Instagram author.
+        
+        """
+        # Process source words
+        (source_log,
+         source_path,
+         source_header,
+         source_label,
+         source_types,
+         source_words) = self.blu_pen_utility.process_source_words(source_words_str)
+        self.logger.info("{0} ({1}) == collect instagram author conent ==".format(source_log, self.uuid))
+
+        # Create the content directory for the Instagram author, if needed
+        if self.use_uuid:
+            content_dir = os.path.join(self.instagram_content_dir, source_path, self.uuid)
+        else:
+            content_dir = os.path.join(self.instagram_content_dir, source_path)
+        if not os.path.exists(content_dir):
+            os.makedirs(content_dir)
+
+        # Get content for the Instagram Author, pickling as needed
+        result = self.get_instagram_content(source_words_str, do_purge=do_purge)
+
+        # Notify the Instagram author that their book is being published
+        if notify:
+            self.send_notification(self.to_email_address, "Your book is being published...",
+                                   result['text_file_name'], result['html_file_name'])
+
+        # Notify the Instagram author that their book is ready
+        if notify:
+            self.send_notification(self.to_email_address, "Your book is ready!",
+                                   result['text_file_name'], result['html_file_name'])
+
+    def get_instagram_content(self, source_words_str, do_purge=True, task_id=0):
+        """Get content for the Instagram author, pickling as needed.
+
+        """
+        # Process source words
+        (source_log,
+         source_path,
+         source_header,
+         source_label,
+         source_types,
+         source_words) = self.blu_pen_utility.process_source_words(source_words_str)
+
+        # Get content for the Instagram author
+        if self.use_uuid:
+            content_dir = os.path.join(self.instagram_content_dir, source_path, self.uuid)
+        else:
+            content_dir = os.path.join(self.instagram_content_dir, source_path)
+        instagram_author = InstagramAuthor(self, source_words_str, content_dir)
+
+        # Remove pickle file, if requested
+        if do_purge and os.path.exists(instagram_author.pickle_file_name):
+            os.remove(instagram_author.pickle_file_name)
+
+        # Get and dump, or load, content
+        if not os.path.exists(instagram_author.pickle_file_name): 
+            instagram_author.set_media_as_recent()
+            instagram_author.dump()
+        else:
+            instagram_author.load()
+
+        # Write pending email message
+        source_str = instagram_author.source_types[0] + instagram_author.source_words[0]
+        result = self.write_email_message(
+            "instagram", self.instagram_content_dir, content_dir, "pending", source_str, task_id)
+
+        self.logger.info("{0} ({1}) set content".format(source_words, self.uuid))
 
         return {'text_file_name': result['text_file_name'], 'html_file_name': result['html_file_name']}
 
@@ -603,6 +678,9 @@ class BluePeninsula:
         elif source == "flickr":
             text = text.replace("{username}", source_str)
             url_at_ep = "http://" + self.host_name + "/flickr/status/" + str(task_id) + "/"
+        elif source == "instagram":
+            text = text.replace("{username}", source_str)
+            url_at_ep = "http://" + self.host_name + "/instagram/status/" + str(task_id) + "/"
         elif source == "tumblr":
             text = text.replace("{subdomain}", source_str)
             url_at_ep = "http://" + self.host_name + "/tumblr/status/" + str(task_id) + "/"
@@ -626,6 +704,8 @@ class BluePeninsula:
         if source == "feed":
             html = html.replace("{source_url}", source_str)
         elif source == "flickr":
+            html = html.replace("{username}", source_str)
+        elif source == "instagram":
             html = html.replace("{username}", source_str)
         elif source == "tumblr":
             html = html.replace("{subdomain}", source_str)
@@ -715,6 +795,15 @@ if __name__ == "__main__":
             blu_pen.collect_flickr_author_content(blu_pen.args.source_words_string,
                                                   blu_pen.args.do_purge,
                                                   blu_pen.args.notify)
+
+    elif blu_pen.args.service == "instagram":
+        if blu_pen.args.publication == "edition":
+            pass
+
+        else: # publication = "book"
+            blu_pen.collect_instagram_author_content(blu_pen.args.source_words_string,
+                                                     blu_pen.args.do_purge,
+                                                     blu_pen.args.notify)
 
     elif blu_pen.args.service == "tumblr":
         if blu_pen.args.publication == "edition":

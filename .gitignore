@@ -3,6 +3,7 @@
 *.pyc
 content/feed/*
 content/flickr/*
+content/instagram/*
 packages/*/build
 packages/*/dist
 packages/*/doc

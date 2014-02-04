@@ -322,40 +322,33 @@ class BluePeninsulaUtility:
         # only two of each, and words only if of the first type
         source_types = []
         source_words = []
-        source_urls = []
         for word in source_words_string.split("+"):
             if len(source_types) == 0:
                 if word[0] == "@":
                     # First author explicit
                     source_types.append("@")
                     source_words.append(word[1:])
-                    source_urls.append("https://twitter.com/search/%40" + word[1:])
                 elif word[0] == "#":
                     # First hashtag explicit
                     source_types.append("#")
                     source_words.append(word[1:])
-                    source_urls.append("https://twitter.com/search/%23" + word[1:])
                 else:
                     # First author assumed
                     source_types.append("@")
                     source_words.append(word)
-                    source_urls.append("https://twitter.com/search/%40" + word)
             else:
                 if word[0] == "@" and source_types[0] == "@":
                     # Second author explicit if first author found
                     source_types.append("@")
                     source_words.append(word[1:])
-                    source_urls.append("https://twitter.com/search/%40" + word[1:])
                 elif word[0] == "#" and source_types[0] == "#":
                     # Second hashtag explicit if first hashtag found
                     source_types.append("#")
                     source_words.append(word[1:])
-                    source_urls.append("https://twitter.com/search/%23" + word[1:])
                 elif word[0] != "#" and source_types[0] == "@":
                     # Second author assumed if first author found
                     source_types.append("@")
                     source_words.append(word)
-                    source_urls.append("https://twitter.com/search/%40" + word)
             if len(source_words) == 2:
                 break
         
@@ -398,5 +391,4 @@ class BluePeninsulaUtility:
                 source_header,
                 source_label,
                 source_types,
-                source_words,
-                source_urls)
+                source_words)
