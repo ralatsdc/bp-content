@@ -9,11 +9,12 @@ import math
 import os
 import pickle
 import shutil
+from time import sleep
 from urlparse import urlparse
 
 # Third-party imports
 from lxml.html import soupparser
-import tumblr
+import pytumblr
 
 # Local imports
 from BluePeninsulaUtility import BluePeninsulaUtility
@@ -23,7 +24,10 @@ class TumblrAuthor:
     output. Authors are selected by their subdomain.
 
     """
-    def __init__(self, blu_pen, subdomain, content_dir, requested_dt=datetime.now()):
+    def __init__(self, blu_pen, subdomain, content_dir, requested_dt=datetime.now(),
+                 consumer_key="7c3XQwWIUJS9hjJ9EPzhx2qlySQ5J2sIRgXRN89Ld03AGtK1KP",
+                 secret_key="R8Y1Qj7wODcorDid3A24Ct1bfUg0wGoT9iB4n2GgXwKcTb6csb",
+                 number_of_api_attempts=1, seconds_between_api_attempts=1):
         """Constructs a TumblrAuthor given a subdomain.
 
         """
@@ -33,43 +37,55 @@ class TumblrAuthor:
         self.subdomain = subdomain
         self.content_dir = content_dir
         self.requested_dt = requested_dt
+        self.consumer_key = consumer_key
+        self.secret_key = secret_key
+        self.number_of_api_attempts = number_of_api_attempts
+        self.seconds_between_api_attempts = seconds_between_api_attempts
 
         self.pickle_file_name = os.path.join(self.content_dir, self.subdomain + ".pkl")
         
+        self.info = None
         self.posts = []
         
-        self.api = tumblr.Api(subdomain + ".tumblr.com")
+        self.client = client = pytumblr.TumblrRestClient(self.consumer_key, self.secret_key)
         self.logger = logging.getLogger(__name__)
         
-    def set_posts_as_recent(self):
+    def set_posts_as_recent(self, limit=20):
         """Gets recent posts by this author from Tumblr.
 
         """
-        # Get posts by subdomain
-        self.posts = get_posts_by_subdomain(subdomain)
-        if self.posts is None:
+        # Get blog information, including the total number of posts
+        self.info = self.get_info_by_subdomain(self.subdomain)
+        if self.info is None:
             return
+        
+        # Get sets of posts, containing the maximum number of posts,
+        # until all posts are collected
+        for offset in range(len(self.posts), self.info['posts'], limit):
+            self.posts.extend(self.get_posts_by_subdomain(self.subdomain, limit=limit, offset=offset))
+        self.logger.warning("{0} collected {1} total posts for {2}".format(
+            self.subdomain, len(self.posts), self.subdomain))
 
         # Put posts in chronological order
         def convert_string_datetime(post):
-            posted_dt = datetime.fromtimestamp(post["unix-timestamp"])
+            posted_dt = datetime.fromtimestamp(post["timestamp"])
             return posted_dt
         self.posts.sort(key=convert_string_datetime)
-        
-        # Convert regular posts containing images to photo posts.
-        self.convert_image_posts()
 
-    def get_posts_by_subdomain(self, subdomain):
-        """Makes multiple attempts to get posts by subdomain, sleeping
+        # Convert regular posts containing images to photo posts.
+        self.convert_text_posts()
+
+    def get_info_by_subdomain(self, subdomain):
+        """Makes multiple attempts to get info by subdomain, sleeping
         before attempts.
 
         """
-        posts = []
+        info = None
 
         # Make multiple attempts
         exc = None
         iAttempts = 0
-        while length(posts) == 0 and iAttempts < self.number_of_api_attempts:
+        while info is None and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
 
             # Sleep longer before each attempt
@@ -78,11 +94,42 @@ class TumblrAuthor:
                 self.subdomain, seconds_between_api_attempts))
             sleep(seconds_between_api_attempts)
 
-            # Attempt to get poste by subdomain
+            # Attempt to get info by subdomain
             try:
-                posts_iter = self.api.read()
-                for post in posts_iter:
-                    posts.append(post)
+                info = self.client.blog_info(subdomain)['blog']
+                self.logger.warning("{0} collected info for {1}".format(
+                    self.subdomain, subdomain))
+            except Exception as exc:
+                info = None
+                self.logger.warning("{0} couldn't get info for {1}: {2}".format(
+                    self.subdomain, subdomain, exc))
+
+        return info
+
+    def get_posts_by_subdomain(self, subdomain, limit=20, offset=0):
+        """Makes multiple attempts to get posts by subdomain, sleeping
+        before attempts. The maximum number of posts is requested.
+
+        """
+        posts = []
+
+        # Make multiple attempts
+        exc = None
+        iAttempts = 0
+        while len(posts) == 0 and iAttempts < self.number_of_api_attempts:
+            iAttempts += 1
+
+            # Sleep longer before each attempt
+            seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
+            self.logger.info("{0} sleeping for {1} seconds".format(
+                self.subdomain, seconds_between_api_attempts))
+            sleep(seconds_between_api_attempts)
+
+            # Attempt to get post by subdomain
+            try:
+                posts = self.client.posts(subdomain, limit=limit, offset=offset)['posts']
+                self.logger.warning("{0} collected {1} posts for {2}".format(
+                    self.subdomain, len(posts), subdomain))
             except Exception as exc:
                 posts = []
                 self.logger.warning("{0} couldn't get posts for {1}: {2}".format(
@@ -102,36 +149,32 @@ class TumblrAuthor:
 
             # Consider each photo
             n_photos = len(self.posts[i_post]['photos'])
-            if n_photos == 0:
-                n_photos = 1
             for i_photo in range(n_photos):
 
-                # Assign the photo URL
-                if n_photos == 1:
-                    photo_url = self.posts[i_post]['photo-url-500']
-                else:
-                    photo_url = self.posts[i_post]['photos'][i_photo]['photo-url-500']
-                print "photo_url: ", photo_url
+                # Assign the photo URL by index
+                self.posts[i_post]['photos'][i_photo]['alt_sizes_idx'] = 0
+                iAS = -1
+                for alt_size in self.posts[i_post]['photos'][i_photo]['alt_sizes']:
+                    iAS += 1
+                    if alt_size['url'].find("_500") != -1:
+                        self.posts[i_post]['photos'][i_photo]['alt_sizes_idx'] = iAS
+                        break
 
-                if photo_url != None:
-                    
+                # Download the photo, if the photo URL is not empty
+                iAS = self.posts[i_post]['photos'][i_photo]['alt_sizes_idx']
+                if iAS > -1:
+                    photo_url = self.posts[i_post]['photos'][i_photo]['alt_sizes'][iAS]['url']
+
                     # Create the photo file name
                     head, tail = os.path.split(urlparse(photo_url).path)
-                    print "head: ", head
-                    print "tail: ", tail
                     root, ext = os.path.splitext(tail)
-                    print "root: ", root
-                    print "ext: ", ext
                     if (len(ext) == 0
                         or not ext.lower() in ['.rgb', '.gif', '.pbm', '.pgm', '.ppm', '.tiff', '.tif',
                                                '.rast', '.xbm', '.jpeg', '.jpg', '.bmp', '.png']):
                         ext = ".tmp"
-                    print "ext: ", ext
                     if self.posts[i_post]['converted']:
                         tail = hashlib.sha224(photo_url).hexdigest() + ext
-                    print "tail: ", tail
                     photo_file_name = os.path.join(self.content_dir, tail)
-                    print "photo_file_name: ", photo_file_name
 
                     # Download the photo
                     if not os.path.exists(photo_file_name):
@@ -177,10 +220,7 @@ class TumblrAuthor:
                             photo_file_name = ""
 
                     # Assign the photo file name
-                    if n_photos == 1:
-                        self.posts[i_post]['photo-file-name'] = photo_file_name
-                    else:
-                        self.posts[i_post]['photos'][i_photo]['photo-file-name'] = photo_file_name
+                    self.posts[i_post]['photos'][i_photo]['photo-file-name'] = photo_file_name
 
     def dump(self, pickle_file_name=None):
         """Dump TumblrAuthor attributes pickle.
@@ -195,13 +235,17 @@ class TumblrAuthor:
         p['subdomain'] = self.subdomain
         p['content_dir'] = self.content_dir
         p['requested_dt'] = self.requested_dt
+        p['consumer_key'] = self.consumer_key
+        p['secret_key'] = self.secret_key
+        p['number_of_api_attempts'] = self.number_of_api_attempts
+        p['seconds_between_api_attempts'] = self.seconds_between_api_attempts
 
         p['posts'] = self.posts
         
         pickle.dump(p, pickle_file)
 
         self.logger.info("{0} dumped {1} posts to {2}".format(
-            self.subdomain, length(self.posts), pickle_file_name))
+            self.subdomain, len(self.posts), pickle_file_name))
 
         pickle_file.close()
         
@@ -218,16 +262,20 @@ class TumblrAuthor:
         self.subdomain = p['subdomain']
         self.content_dir = p['content_dir']
         self.requested_dt = p['requested_dt']
+        self.consumer_key = p['consumer_key']
+        self.secret_key = p['secret_key']
+        self.number_of_api_attempts = p['number_of_api_attempts']
+        self.seconds_between_api_attempts = p['seconds_between_api_attempts']
 
         self.posts = p['posts']
 
         self.logger.info("{0} loaded {1} posts from {2}".format(
-            self.subdomain, length(self.posts), pickle_file_name))
+            self.subdomain, len(self.posts), pickle_file_name))
 
         pickle_file.close()
 
-    def convert_image_posts(self):
-        """Convert a regular post containing images to a photo post.
+    def convert_text_posts(self):
+        """Convert a text post containing images to a photo post.
 
         """
         # Consider each post
@@ -236,10 +284,10 @@ class TumblrAuthor:
             self.posts[i_post]['converted'] = False
 
             # Convert regular posts only
-            if self.posts[i_post]['type'] == "regular":
+            if self.posts[i_post]['type'] == "text":
 
                 # Parse the HTML content and consider each element
-                root = soupparser.fromstring(self.posts[i_post]['regular-body'])
+                root = soupparser.fromstring(self.posts[i_post]['body'])
                 for element in root.iter():
 
                     # Process image elements only
@@ -247,11 +295,11 @@ class TumblrAuthor:
 
                         # Convert the regular post to a photo post and
                         # create the photo caption once
-                        if self.posts[i_post]['type'] == "regular":
+                        if self.posts[i_post]['type'] == "text":
                             self.posts[i_post]['type'] = 'photo'
-                            self.posts[i_post]['photo-caption'] = (
-                                '<p>' + self.posts[i_post]['regular-title'] + '</p>'
-                                + self.posts[i_post]['regular-body'])
+                            self.posts[i_post]['caption'] = (
+                                '<p>' + self.posts[i_post]['title'] + '</p>'
+                                + self.posts[i_post]['body'])
                             self.posts[i_post]['photos'] = []
                             self.posts[i_post]['converted'] = True
                             self.logger.info("{0} converted regular post to photo post ({1})".format(
@@ -259,10 +307,9 @@ class TumblrAuthor:
 
                         # Append the photo URL
                         self.posts[i_post]['photos'].append({})
-                        self.posts[i_post]['photos'][-1]['photo-url-500'] = element.get('src')
-
-            # Assign photo URL as a post, rather than a photo, key, if
-            # a photo post, and there is only one photo
-            if self.posts[i_post]['type'] == "photo" and len(self.posts[i_post]['photos']) == 1:
-                self.posts[i_post]['photo-url-500'] = self.posts[i_post]['photos'][0]['photo-url-500']
-                self.posts[i_post]['photos'] = []
+                        self.posts[i_post]['photos'][-1]['caption'] = ""
+                        self.posts[i_post]['photos'][-1]['alt_sizes'] = []
+                        self.posts[i_post]['photos'][-1]['alt_sizes'].append({})
+                        self.posts[i_post]['photos'][-1]['alt_sizes'][-1]['width'] = 0
+                        self.posts[i_post]['photos'][-1]['alt_sizes'][-1]['height'] = 0
+                        self.posts[i_post]['photos'][-1]['alt_sizes'][-1]['url'] = element.get('src')

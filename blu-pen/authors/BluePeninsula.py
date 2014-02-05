@@ -346,10 +346,11 @@ class BluePeninsula:
         # Get and dump, or load, posts and download photos
         if not os.path.exists(tumblr_author.pickle_file_name):
             tumblr_author.set_posts_as_recent()
-            tumblr_author.download_photos()
             tumblr_author.dump()
         else:
             tumblr_author.load()
+        # TODO: Fix...
+        tumblr_author.download_photos()
 
         # Write pending email message
         source_str = "@" + subdomain

@@ -1,9 +1,11 @@
 *~
 *.log
+*.out
 *.pyc
 content/feed/*
 content/flickr/*
 content/instagram/*
+content/tumblr/*
 packages/*/build
 packages/*/dist
 packages/*/doc

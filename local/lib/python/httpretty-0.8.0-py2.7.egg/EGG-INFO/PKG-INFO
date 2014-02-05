@@ -1,0 +1,13 @@
+Metadata-Version: 1.1
+Name: httpretty
+Version: 0.8.0
+Summary: HTTP client mock for Python
+Home-page: http://github.com/gabrielfalcao/httpretty
+Author: Gabriel Falcao
+Author-email: gabriel@nacaolivre.org
+License: MIT
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Topic :: Software Development :: Testing

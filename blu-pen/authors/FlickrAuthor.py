@@ -20,7 +20,7 @@ class FlickrAuthor:
 
     """
     def __init__(self, blu_pen, source_words_str, content_dir, requested_dt=datetime.utcnow(),
-                 max_photo_sets=100, api_key='71ae5bd2b331d44649161f6d3ff7e6b6', api_secret='45f1be4bd59f9155',
+                 max_photosets=100, api_key='71ae5bd2b331d44649161f6d3ff7e6b6', api_secret='45f1be4bd59f9155',
                  number_of_api_attempts=1, seconds_between_api_attempts=1):
         """Constructs a FlickrAuthor instance.
 
@@ -41,7 +41,7 @@ class FlickrAuthor:
             
         self.content_dir = content_dir
         self.requested_dt = requested_dt
-        self.max_photo_sets = max_photo_sets
+        self.max_photosets = max_photosets
         self.api_key = api_key
         self.api_secret = api_secret
         self.number_of_api_attempts = number_of_api_attempts
@@ -75,7 +75,7 @@ class FlickrAuthor:
         iPS = -1
         for photoset in photosets:
             iPS += 1
-            if iPS > self.max_photo_sets - 1:
+            if iPS > self.max_photosets - 1:
                 break
             self.photosets.append({})
             self.photosets[-1]['id'] = photoset.get("id")
@@ -175,7 +175,7 @@ class FlickrAuthor:
             iPS += 1
 
             # Get photos in the current photoset
-            photos = self.get_photos_in_photoset(photoset):
+            photos = self.get_photos_in_photoset(photoset)
             if photos is None:
                 continue
 
@@ -210,7 +210,7 @@ class FlickrAuthor:
             self.created_dt.append(
                 datetime.strptime(self.photosets[-1]['photos'][-1]['datetaken'], "%Y-%m-%d %H:%M:%S"))
 
-    def get_photos_in_photoset(self, photoset):
+    def get_photos_in_photoset(self, photoset, per_page=500, page=1):
         """Makes multiple attempts to get photos in the specified
         photoset, sleeping before attempts.
 
@@ -231,7 +231,7 @@ class FlickrAuthor:
             # Attempt to get content by URL
             try:
                 photos = self.api.photosets_getPhotos(
-                    photoset_id=photo_set['id'],
+                    photoset_id=photoset['id'],
                     extras='date_upload, date_taken, geo, tags, url_m',
                     privacy_filter=1, per_page=per_page, page=page, media='photo').find('photoset').findall('photo')
             except Exception as exc:
@@ -245,10 +245,10 @@ class FlickrAuthor:
 
         """
         iPS = -1
-        for photo_set in self.photosets:
+        for photoset in self.photosets:
             iPS += 1
             iPh = -1
-            for photo in photo_set['photos']:
+            for photo in photoset['photos']:
                 iPh += 1
                 photo_url = photo['url_m']
                 if photo_url != None:
@@ -278,7 +278,7 @@ class FlickrAuthor:
         p['user_id'] = self.user_id
         p['content_dir'] = self.content_dir
         p['requested_dt'] = self.requested_dt
-        p['max_photo_sets'] = self.max_photo_sets
+        p['max_photosets'] = self.max_photosets
         p['api_key'] = self.api_key
         p['api_secret'] = self.api_secret
         p['number_of_api_attempts'] = self.number_of_api_attempts
@@ -315,7 +315,7 @@ class FlickrAuthor:
         self.user_id = p['user_id']
         self.content_dir = p['content_dir']
         self.requested_dt = p['requested_dt']
-        self.max_photo_sets = p['max_photo_sets']
+        self.max_photosets = p['max_photosets']
         self.api_key = p['api_key']
         self.api_secret = p['api_secret']
         self.number_of_api_attempts = p['number_of_api_attempts']
