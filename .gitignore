@@ -6,6 +6,7 @@ content/feed/*
 content/flickr/*
 content/instagram/*
 content/tumblr/*
+content/twitter/*
 packages/*/build
 packages/*/dist
 packages/*/doc

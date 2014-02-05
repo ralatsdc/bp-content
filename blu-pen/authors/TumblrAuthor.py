@@ -63,7 +63,7 @@ class TumblrAuthor:
         # until all posts are collected
         for offset in range(len(self.posts), self.info['posts'], limit):
             self.posts.extend(self.get_posts_by_subdomain(self.subdomain, limit=limit, offset=offset))
-        self.logger.warning("{0} collected {1} total posts for {2}".format(
+        self.logger.info("{0} collected {1} total posts for {2}".format(
             self.subdomain, len(self.posts), self.subdomain))
 
         # Put posts in chronological order
@@ -97,7 +97,7 @@ class TumblrAuthor:
             # Attempt to get info by subdomain
             try:
                 info = self.client.blog_info(subdomain)['blog']
-                self.logger.warning("{0} collected info for {1}".format(
+                self.logger.info("{0} collected info for {1}".format(
                     self.subdomain, subdomain))
             except Exception as exc:
                 info = None
@@ -128,7 +128,7 @@ class TumblrAuthor:
             # Attempt to get post by subdomain
             try:
                 posts = self.client.posts(subdomain, limit=limit, offset=offset)['posts']
-                self.logger.warning("{0} collected {1} posts for {2}".format(
+                self.logger.info("{0} collected {1} posts for {2}".format(
                     self.subdomain, len(posts), subdomain))
             except Exception as exc:
                 posts = []

@@ -11,6 +11,7 @@ from urlparse import urlparse
 
 # Third-party imports
 import feedparser
+from lxml.html import soupparser
 
 # Local imports
 from BluePeninsulaUtility import BluePeninsulaUtility
@@ -52,7 +53,7 @@ class FeedAuthor:
 
         """
         # Get recent feed content
-        self.content = get_content_by_url(self.source_url)
+        self.content = self.get_content_by_url(self.source_url)
         if self.content is None:
             return
 
@@ -74,7 +75,7 @@ class FeedAuthor:
         if 'entries' in self.content:
 
             # Assign entry keys to set
-            entry_keys = ["title", "author", "publisher",
+            entry_keys = ["title", "author", "publisher", "content",
                           "published_parsed", "created_parsed", "expired_parsed", "updated_parsed", "license"]
 
             # Assign value for key, if in entry, or None
@@ -103,17 +104,71 @@ class FeedAuthor:
 
             # Sleep longer before each attempt
             seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-            self.logger.info("{0} sleeping for {1} seconds".format(self.source_log, seconds_between_api_attempts))
+            self.logger.info("{0} sleeping for {1} seconds".format(
+                self.source_log, seconds_between_api_attempts))
             sleep(seconds_between_api_attempts)
 
             # Attempt to get content by URL
             try:
                 content = feedparser.parse(source_url)
+                self.logger.info("{0} collected content for {1}".format(
+                    self.source_log, source_url))
             except Exception as exc:
                 content = None
-                self.logger.warning("{0} couldn't get content for {1}: {2}".format(self.source_log, source_url, exc))
+                self.logger.warning("{0} couldn't get content for {1}: {2}".format(
+                    self.source_log, source_url, exc))
 
         return content
+
+    def set_image_urls_as_recent(self):
+        """Find and set image URLs for each entry of type 'text/html'.
+
+        """
+        # Consider each entry
+        for entry in self.entries:
+            content = entry['content'][0]
+            content['image_urls'] = []
+
+            # Convert 'text/html' entries only
+            if content['type'] == 'text/html':
+
+                # Parse the HTML content
+                root = soupparser.fromstring(content['value'])
+
+                # Consider each element
+                for element in root.iter():
+
+                    # Process image elements only
+                    if element.tag == 'img':
+
+                        # Append the image URL
+                        content['image_urls'].append(element.get('src'))
+
+    def download_images(self):
+        """Download all content images for each entry.
+
+        """
+        # Consider each entry
+        for entry in self.entries:
+            content = entry['content'][0]
+            content['image_file_names'] = []
+
+            # Consider each image URLs
+            for image_url in content['image_urls']:
+
+                # Append the image file name
+                head, tail = os.path.split(image_url)
+                image_file_name = os.path.join(self.content_dir, tail)
+                content['image_file_names'].append(image_file_name)
+
+                # Download image to file
+                if not os.path.exists(image_file_name):
+                    self.blu_pen_utl.download_file(image_url, image_file_name)
+                    self.logger.info("{0} image downloaded to file {1}".format(
+                        self.source_path, image_file_name))
+                else:
+                    self.logger.info("{0} image already downloaded to file {1}".format(
+                        self.source_path, image_file_name))
 
     def dump(self, pickle_file_name=None):
         """Dumps FeedAuthor attributes pickle.
@@ -141,7 +196,8 @@ class FeedAuthor:
 
         pickle.dump(p, pickle_file)
 
-        self.logger.info("{0} dumped content to {1}".format(self.source_log, pickle_file_name))
+        self.logger.info("{0} dumped content to {1}".format(
+            self.source_log, pickle_file_name))
 
         pickle_file.close()
         
@@ -169,6 +225,7 @@ class FeedAuthor:
         self.entries = p['entries']
         self.content_set = p['content_set']
 
-        self.logger.info("{0} loaded content from {1}".format(self.source_log, pickle_file_name))
+        self.logger.info("{0} loaded content from {1}".format(
+            self.source_log, pickle_file_name))
 
         pickle_file.close()

@@ -31,7 +31,8 @@ class TwitterUtility:
         try:
             self.tweets = self.api.GetSearch(term)
         except Exception as exc:
-            raise ServiceError("Couldn't complete Twitter search: {0}".format(exc))
+            raise ServiceError("Couldn't complete Twitter search: {0}".format(
+                exc))
             
         screen_names = []
         for t in self.tweets:

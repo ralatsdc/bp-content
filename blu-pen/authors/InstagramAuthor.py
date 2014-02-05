@@ -36,7 +36,8 @@ class InstagramAuthor:
          self.source_types,
          self.source_words) = self.blu_pen_utl.process_source_words(source_words_str)
         if len(self.source_words) > 1:
-            err_msg = "{0} only one source word accepted".format(self.source_path)
+            err_msg = "{0} only one source word accepted".format(
+                self.source_path)
             self.logger.error(err_msg)
             raise Exception(msg)
 
@@ -49,6 +50,8 @@ class InstagramAuthor:
 
         self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
 
+        self.media_dicts = []
+
         self.api = InstagramAPI(client_id=client_id, client_secret=client_secret)
         self.logger = logging.getLogger(__name__)
         
@@ -57,25 +60,25 @@ class InstagramAuthor:
         and parses the result.
 
         """
-        # TODO: Get, parse, assign, etc.
-        envelope = self.get_media_by_source(self.source_types[0], self.source_words[0])
+        self.media_dicts = self.get_media_by_source(self.source_types[0], self.source_words[0])
         self.content_set = True
 
     def get_media_by_source(self, source_type, source_word, count=None, max_id=None):
-        """Makes multiple attempts to get source content, sleeping
+        """Makes multiple attempts to get source media, sleeping
         before attempts.
 
         """
-        envelope = None
+        media_dicts = []
 
         # Make multiple attempts
         iAttempts = 0
-        while envelope is None and iAttempts < self.number_of_api_attempts:
+        while len(media_dicts) == 0 and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
 
             # Sleep longer before each attempt
             seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-            self.logger.info("{0} sleeping for {1} seconds".format(self.source_log, seconds_between_api_attempts))
+            self.logger.info("{0} sleeping for {1} seconds".format(
+                self.source_log, seconds_between_api_attempts))
             sleep(seconds_between_api_attempts)
 
             # Handle errors
@@ -92,22 +95,58 @@ class InstagramAuthor:
 
                     # Get a list of recently tagged media
                     if count is not None and max_id is not None:
-                        envelope = self.api.tag_recent_media(tag_name=source_word, count=count, max_id=max_id)
+                        (media_models, url) = self.api.tag_recent_media(tag_name=source_word, count=count, max_id=max_id)
 
                     elif count is not None:
-                        envelope = self.api.tag_recent_media(tag_name=source_word, count=count)
+                        (media_models, url) = self.api.tag_recent_media(tag_name=source_word, count=count)
 
                     elif max_id is not None:
-                        envelope = self.api.tag_recent_media(tag_name=source_word, max_id=max_id)
+                        (media_models, url) = self.api.tag_recent_media(tag_name=source_word, max_id=max_id)
 
                     else:
-                        envelope = self.api.tag_recent_media(tag_name=source_word)
+                        (media_models, url) = self.api.tag_recent_media(tag_name=source_word)
+                        
+                    # Append to list of media and assign relevant values
+                    for media_model in media_models:
+                        media_dicts.append({})
+                        if media_model.images is not None:
+                            media_dicts[-1]['width'] = media_model.images['standard_resolution'].width
+                            media_dicts[-1]['height'] = media_model.images['standard_resolution'].height
+                            media_dicts[-1]['image_url'] = media_model.images['standard_resolution'].url
+                        if media_model.caption is not None:
+                            media_dicts[-1]['text'] = media_model.caption.text
+                            media_dicts[-1]['created_at'] = media_model.caption.created_at
+
+                    self.logger.info("{0} collected {1} media object(s) for {2}{3}".format(
+                        self.source_log, len(media_dicts), source_type, source_word))
 
             except Exception as exc:
                 self.logger.warning("{0} couldn't get content for {1}{2}: {3}".format(
                         self.source_log, source_type, source_word, exc))
 
-        return envelope
+        return media_dicts
+
+    def download_images(self):
+        """Download images for each media dictionary.
+
+        """
+        # Consider each media dictionary
+        for media_dict in self.media_dicts:
+
+            # Assign the image file name
+            image_url = media_dict['image_url']
+            head, tail = os.path.split(image_url)
+            image_file_name = os.path.join(self.content_dir, tail)
+            media_dict['image_file_name'] = image_file_name
+
+            # Download image to file
+            if not os.path.exists(image_file_name):
+                self.blu_pen_utl.download_file(image_url, image_file_name)
+                self.logger.info("{0} image downloaded to file {1}".format(
+                    self.source_path, image_file_name))
+            else:
+                self.logger.info("{0} image already downloaded to file {1}".format(
+                    self.source_path, image_file_name))
 
     def dump(self, pickle_file_name=None):
         """Dump InstagramAuthor attributes pickle.
@@ -132,6 +171,8 @@ class InstagramAuthor:
         p['client_secret'] = self.client_secret
         p['number_of_api_attempts'] = self.number_of_api_attempts
         p['seconds_between_api_attempts'] = self.seconds_between_api_attempts
+
+        p['media_dicts'] = self.media_dicts
 
         pickle.dump(p, pickle_file)
 
@@ -163,6 +204,8 @@ class InstagramAuthor:
         self.client_secret = p['client_secret']
         self.number_of_api_attempts = p['number_of_api_attempts']
         self.seconds_between_api_attempts = p['seconds_between_api_attempts']
+
+        self.media_dicts = p['media_dicts']
 
         self.logger.info("{0} loaded {1} photosets from {2}".format(
                 self.source_log, len(self.photosets), pickle_file_name))

@@ -31,7 +31,7 @@ class TwitterAuthor:
     """
     def __init__(self, blu_pen, source_words_str, content_dir,
                  start_date=date(2006, 07, 15) - timedelta(2), stop_date=date.today() + timedelta(2),
-                 max_length=3200, max_frequency=20, number_of_api_attempts=4, seconds_between_api_attempts=1):
+                 max_length=320, max_frequency=20, number_of_api_attempts=4, seconds_between_api_attempts=1):
         """Constructs a TwitterAuthor instance given source words.
 
         """
@@ -467,6 +467,8 @@ class TwitterAuthor:
                                            per_page=count, since_id=since_id)
                 else:
                     raise Exception("A request should not use both max_id and since_id.")
+            self.logger.warning("{0} =6= collected content for {1}{2}".format(
+                    self.source_log, source_type, source_word))
         except Exception as exc:
             self.logger.warning("{0} =6= couldn't get content for {1}{2}: {3}".format(
                     self.source_log, source_type, source_word, exc))

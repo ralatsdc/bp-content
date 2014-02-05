@@ -53,7 +53,8 @@ class BluePeninsulaUtility:
             except Exception as exc:
                 sleep(self.seconds_between_download_attempts)
         if do_download:
-            raise ServiceError("Couldn't download URL {0}: {0}".format(req_file_url, exc))
+            raise ServiceError("Couldn't download URL {0}: {0}".format(
+                req_file_url, exc))
 
         # Write the response file to the output file
         out_file = open(out_file_name, 'w')
@@ -311,7 +312,7 @@ class BluePeninsulaUtility:
                 hyp_word = hyp_word.replace(rep_char, rep_char + "-")
         return hyp_word
 
-    def process_source_words(self, source_words_string):
+    def process_source_words(self, source_words_str):
         """Processes source words to identify types, and create log,
         path, header, and label strings. The source words are assumed
         to be contained in a single string and delimited by plus
@@ -322,7 +323,7 @@ class BluePeninsulaUtility:
         # only two of each, and words only if of the first type
         source_types = []
         source_words = []
-        for word in source_words_string.split("+"):
+        for word in source_words_str.split("+"):
             if len(source_types) == 0:
                 if word[0] == "@":
                     # First author explicit
