@@ -6,7 +6,6 @@ import logging
 import math
 import os
 import pickle
-from pprint import pprint
 from time import sleep
 
 # Third-party imports
@@ -16,7 +15,8 @@ from instagram.client import InstagramAPI
 from BluePeninsulaUtility import BluePeninsulaUtility
 
 class InstagramAuthor:
-    """Represents an author on Instagram by their creative output.
+    """Represents an author on Instagram by their creative
+    output. Authors are selected by tag.
 
     """
     def __init__(self, blu_pen, source_words_str, content_dir, requested_dt=datetime.utcnow(),
@@ -35,6 +35,10 @@ class InstagramAuthor:
          self.source_label,
          self.source_types,
          self.source_words) = self.blu_pen_utl.process_source_words(source_words_str)
+        if len(self.source_words) > 1:
+            err_msg = "{0} only one source word accepted".format(self.source_path)
+            self.logger.error(err_msg)
+            raise Exception(msg)
 
         self.content_dir = content_dir
         self.requested_dt = requested_dt
@@ -54,7 +58,7 @@ class InstagramAuthor:
 
         """
         # TODO: Get, parse, assign, etc.
-        self.get_source_media(self.source_types[0], self.source_words[0])
+        envelope = self.get_media_by_source(self.source_types[0], self.source_words[0])
         self.content_set = True
 
     def get_media_by_source(self, source_type, source_word, count=None, max_id=None):

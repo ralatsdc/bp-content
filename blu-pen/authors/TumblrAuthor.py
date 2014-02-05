@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
 # Standard library imports
-import base64
-import codecs
 from datetime import datetime
 import hashlib
 import imghdr
@@ -10,10 +8,8 @@ import logging
 import math
 import os
 import pickle
-import random
 import shutil
 from urlparse import urlparse
-import uuid
 
 # Third-party imports
 from lxml.html import soupparser
@@ -23,12 +19,11 @@ import tumblr
 from BluePeninsulaUtility import BluePeninsulaUtility
 
 class TumblrAuthor:
-    """Represents an author on Tumblr by their creative output. Books
-    are named after types of bread.
+    """Represents an author on Tumblr by their creative
+    output. Authors are selected by their subdomain.
 
     """
-    def __init__(self, blu_pen, subdomain, content_dir,
-                 requested_dt=datetime.now()):
+    def __init__(self, blu_pen, subdomain, content_dir, requested_dt=datetime.now()):
         """Constructs a TumblrAuthor given a subdomain.
 
         """
@@ -37,43 +32,23 @@ class TumblrAuthor:
 
         self.subdomain = subdomain
         self.content_dir = content_dir
-        self.pickle_file_name = os.path.join(self.content_dir, self.subdomain + ".pkl")
-
-        self.api = tumblr.Api(subdomain + ".tumblr.com")
-        
-        self.posts = []
-        self.len_posts = 0
-        
-        # TODO: Explicitly name start and stop date
-        self.created_dt = []
-        self.created_dt.append(datetime.now())
-        self.created_dt.append(datetime.now()) # Intentional
         self.requested_dt = requested_dt
 
-        self.profile_image_file_name = None
-        self.background_image_file_name = None
-        self.cover_rgb = [0.5, 0.5, 0.5]
-
+        self.pickle_file_name = os.path.join(self.content_dir, self.subdomain + ".pkl")
+        
+        self.posts = []
+        
+        self.api = tumblr.Api(subdomain + ".tumblr.com")
         self.logger = logging.getLogger(__name__)
         
     def set_posts_as_recent(self):
         """Gets recent posts by this author from Tumblr.
 
         """
-        # Get posts
-        try:
-            posts_iter = self.api.read()
-        except Exception as exc:
-            self.logger.error("{0} could not read posts".format(self.subdomain))
-        self.len_posts = 0
-        for post in posts_iter:
-            self.len_posts += 1
-            self.posts.append(post)
-            # TODO: Use start and stop date to select posts
-            if self.len_posts == 0:
-                self.created_dt[1] = datetime.fromtimestamp(post['unix-timestamp'])
-            else:
-                self.created_dt[0] = datetime.fromtimestamp(post['unix-timestamp'])
+        # Get posts by subdomain
+        self.posts = get_posts_by_subdomain(subdomain)
+        if self.posts is None:
+            return
 
         # Put posts in chronological order
         def convert_string_datetime(post):
@@ -83,6 +58,37 @@ class TumblrAuthor:
         
         # Convert regular posts containing images to photo posts.
         self.convert_image_posts()
+
+    def get_posts_by_subdomain(self, subdomain):
+        """Makes multiple attempts to get posts by subdomain, sleeping
+        before attempts.
+
+        """
+        posts = []
+
+        # Make multiple attempts
+        exc = None
+        iAttempts = 0
+        while length(posts) == 0 and iAttempts < self.number_of_api_attempts:
+            iAttempts += 1
+
+            # Sleep longer before each attempt
+            seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
+            self.logger.info("{0} sleeping for {1} seconds".format(
+                self.subdomain, seconds_between_api_attempts))
+            sleep(seconds_between_api_attempts)
+
+            # Attempt to get poste by subdomain
+            try:
+                posts_iter = self.api.read()
+                for post in posts_iter:
+                    posts.append(post)
+            except Exception as exc:
+                posts = []
+                self.logger.warning("{0} couldn't get posts for {1}: {2}".format(
+                    self.subdomain, subdomain, exc))
+
+        return posts
 
     def download_photos(self):
         """Download all photos by this author from Tumblr.
@@ -149,7 +155,8 @@ class TumblrAuthor:
                         self.logger.info("{0} photo already downloaded to file {1}".format(
                             self.subdomain, photo_file_name))
 
-                    # Recreate the photo file name, if the extension was not defined previously
+                    # Recreate the photo file name, if the extension
+                    # was not defined previously
                     if ext == ".tmp" and not photo_file_name == "":
                         try:
                             ext = "." + imghdr.what(photo_file_name)
@@ -175,13 +182,6 @@ class TumblrAuthor:
                     else:
                         self.posts[i_post]['photos'][i_photo]['photo-file-name'] = photo_file_name
 
-                    # Assign profile and background image file names
-                    if not photo_file_name == "":
-                        if self.profile_image_file_name == None:
-                            self.profile_image_file_name = photo_file_name
-                        else:
-                            self.background_image_file_name = photo_file_name
-
     def dump(self, pickle_file_name=None):
         """Dump TumblrAuthor attributes pickle.
 
@@ -192,18 +192,16 @@ class TumblrAuthor:
 
         p = {}
 
+        p['subdomain'] = self.subdomain
+        p['content_dir'] = self.content_dir
+        p['requested_dt'] = self.requested_dt
+
         p['posts'] = self.posts
-        p['len_posts'] = self.len_posts
         
-        p['created_dt'] = self.created_dt
-
-        p['profile_image_file_name'] = self.profile_image_file_name
-        p['background_image_file_name'] = self.background_image_file_name
-
         pickle.dump(p, pickle_file)
 
         self.logger.info("{0} dumped {1} posts to {2}".format(
-                self.subdomain, self.len_posts, pickle_file_name))
+            self.subdomain, length(self.posts), pickle_file_name))
 
         pickle_file.close()
         
@@ -217,16 +215,14 @@ class TumblrAuthor:
 
         p = pickle.load(pickle_file)
 
+        self.subdomain = p['subdomain']
+        self.content_dir = p['content_dir']
+        self.requested_dt = p['requested_dt']
+
         self.posts = p['posts']
-        self.len_posts = p['len_posts']
-
-        self.created_dt = p['created_dt']
-
-        self.profile_image_file_name = p['profile_image_file_name']
-        self.background_image_file_name = p['background_image_file_name']
 
         self.logger.info("{0} loaded {1} posts from {2}".format(
-                self.subdomain, self.len_posts, pickle_file_name))
+            self.subdomain, length(self.posts), pickle_file_name))
 
         pickle_file.close()
 
@@ -249,11 +245,13 @@ class TumblrAuthor:
                     # Process image elements only
                     if element.tag == 'img':
 
-                        # Convert the regular post to a photo post and create the photo caption once
+                        # Convert the regular post to a photo post and
+                        # create the photo caption once
                         if self.posts[i_post]['type'] == "regular":
                             self.posts[i_post]['type'] = 'photo'
                             self.posts[i_post]['photo-caption'] = (
-                                '<p>' + self.posts[i_post]['regular-title'] + '</p>' + self.posts[i_post]['regular-body'])
+                                '<p>' + self.posts[i_post]['regular-title'] + '</p>'
+                                + self.posts[i_post]['regular-body'])
                             self.posts[i_post]['photos'] = []
                             self.posts[i_post]['converted'] = True
                             self.logger.info("{0} converted regular post to photo post ({1})".format(
@@ -263,7 +261,8 @@ class TumblrAuthor:
                         self.posts[i_post]['photos'].append({})
                         self.posts[i_post]['photos'][-1]['photo-url-500'] = element.get('src')
 
-            # Assign photo URL as a post, rather than a photo, key, if a photo post, and there is only one photo
+            # Assign photo URL as a post, rather than a photo, key, if
+            # a photo post, and there is only one photo
             if self.posts[i_post]['type'] == "photo" and len(self.posts[i_post]['photos']) == 1:
                 self.posts[i_post]['photo-url-500'] = self.posts[i_post]['photos'][0]['photo-url-500']
                 self.posts[i_post]['photos'] = []

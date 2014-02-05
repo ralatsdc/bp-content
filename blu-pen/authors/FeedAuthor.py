@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Standard library imports
-from datetime import datetime, date, timedelta
+from datetime import datetime
 import logging
 import math
 import os
@@ -52,7 +52,7 @@ class FeedAuthor:
 
         """
         # Get recent feed content
-        self.get_content_by_url(self.source_url)
+        self.content = get_content_by_url(self.source_url)
         if self.content is None:
             return
 
@@ -93,12 +93,12 @@ class FeedAuthor:
         before attempts.
 
         """
-        self.content = None
+        content = None
 
         # Make multiple attempts
         exc = None
         iAttempts = 0
-        while self.content is None and iAttempts < self.number_of_api_attempts:
+        while content is None and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
 
             # Sleep longer before each attempt
@@ -108,10 +108,12 @@ class FeedAuthor:
 
             # Attempt to get content by URL
             try:
-                self.content = feedparser.parse(source_url)
+                content = feedparser.parse(source_url)
             except Exception as exc:
-                self.content = None
+                content = None
                 self.logger.warning("{0} couldn't get content for {1}: {2}".format(self.source_log, source_url, exc))
+
+        return content
 
     def dump(self, pickle_file_name=None):
         """Dumps FeedAuthor attributes pickle.

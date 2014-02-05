@@ -34,7 +34,11 @@ class FlickrAuthor:
          self.source_label,
          self.source_types,
          self.source_words) = self.blu_pen_utl.process_source_words(source_words_str)
-
+        if len(self.source_words) > 1:
+            err_msg = "{0} only one source word accepted".format(self.source_path)
+            self.logger.error(err_msg)
+            raise Exception(msg)
+            
         self.content_dir = content_dir
         self.requested_dt = requested_dt
         self.max_photo_sets = max_photo_sets
@@ -52,31 +56,26 @@ class FlickrAuthor:
         self.api = flickrapi.FlickrAPI(self.api_key)
         self.logger = logging.getLogger(__name__)
         try:
-            user_xml = self.api.people_findByUsername(username=self.username)
+            user_xml = self.api.people_findByUsername(username=self.source_words[0])
             self.user_id = user_xml.find("user").get("nsid")
         except Exception as exc:
-            self.logger.error("{0} could not get user XML or parse user ID".format(self.username))
+            self.logger.error("{0} could not get user XML or parse user ID".format(self.source_path))
             self.user_id = None
 
     def set_photosets_as_recent(self):
-        """Gets recent photosets for this author from Flickr and
+        """Gets recent photosets for this author from Flickr, and
         parses attributes and values.
 
         """
         # Get photosets list
-        photosets_list = self.get_photosets_list_by_source(self.user_id)
+        photosets = self.get_photosets_by_source(self.user_id)
 
         # Parse attributes and values
         self.photosets = []
-        iPS = 0
-        try:
-            photoset_list = photosets_list.find("photosets").findall("photoset")
-        except Exception as exc:
-            self.logger.error("{0} could not get photoset list for {1}".format(self.username, self.user_id))
-            return
-        for photoset in photoset_list:
+        iPS = -1
+        for photoset in photosets:
             iPS += 1
-            if iPS > self.max_photo_sets:
+            if iPS > self.max_photo_sets - 1:
                 break
             self.photosets.append({})
             self.photosets[-1]['id'] = photoset.get("id")
@@ -100,7 +99,7 @@ class FlickrAuthor:
         # Make multiple attempts
         exc = None
         iAttempts = 0
-        while photosets_list is None and iAttempts < self.number_of_api_attempts:
+        while photosets is None and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
 
             # Sleep longer before each attempt
@@ -115,7 +114,7 @@ class FlickrAuthor:
                 photosets = None
                 self.logger.warning("{0} couldn't get photosets for {1}: {2}".format(self.source_log, source_url, exc))
 
-        return photosets_list
+        return photosets
 
     def set_photos_as_recent(self, per_page=500, page=1):
         """Gets recent photos for each photoset for this author, then
@@ -172,42 +171,37 @@ class FlickrAuthor:
         """
         # Consider each photo set
         iPS = -1
-        for photo_set in self.photosets:
+        for photoset in self.photosets:
             iPS += 1
 
-            # Get photos
-            try:
-                photoset_xml = self.api.photosets_getPhotos(
-                    photoset_id=photo_set['id'],
-                    extras='date_upload, date_taken, geo, tags, url_m',
-                    privacy_filter=1, per_page=per_page, page=page, media='photo')
-            except Exception as exc:
-                self.logger.error("{0} could not get photoset XML for {1}".format(
-                        self.username, photo_set['id']))
+            # Get photos in the current photoset
+            photos = self.get_photos_in_photoset(photoset):
+            if photos is None:
+                continue
 
             # Parse attributes
             self.photosets[iPS]['photos'] = []
             iPh = 0
-            for photo_xml in photoset_xml.find('photoset').findall('photo'):
+            for photo in photos:
                 iPh += 1
                 if iPh > 10:
                     break
                 self.photosets[iPS]['photos'].append({})
                 
                 # Usual
-                self.photosets[iPS]['photos'][-1]['id'] = photo_xml.get("id")
-                self.photosets[iPS]['photos'][-1]['secret'] = photo_xml.get("secret")
-                self.photosets[iPS]['photos'][-1]['server'] = photo_xml.get("server")
-                self.photosets[iPS]['photos'][-1]['title'] = photo_xml.get("title")
-                self.photosets[iPS]['photos'][-1]['isprimary'] = photo_xml.get("isprimary")
+                self.photosets[iPS]['photos'][-1]['id'] = photo.get("id")
+                self.photosets[iPS]['photos'][-1]['secret'] = photo.get("secret")
+                self.photosets[iPS]['photos'][-1]['server'] = photo.get("server")
+                self.photosets[iPS]['photos'][-1]['title'] = photo.get("title")
+                self.photosets[iPS]['photos'][-1]['isprimary'] = photo.get("isprimary")
 
                 # Extras
-                self.photosets[iPS]['photos'][-1]['dateupload'] = photo_xml.get("dateupload")
-                self.photosets[iPS]['photos'][-1]['datetaken'] = photo_xml.get("datetaken")
-                self.photosets[iPS]['photos'][-1]['latitude'] = photo_xml.get("latitude")
-                self.photosets[iPS]['photos'][-1]['longitude'] = photo_xml.get("longitude")
-                self.photosets[iPS]['photos'][-1]['tags'] = photo_xml.get("tags")
-                self.photosets[iPS]['photos'][-1]['url_m'] = photo_xml.get("url_m")
+                self.photosets[iPS]['photos'][-1]['dateupload'] = photo.get("dateupload")
+                self.photosets[iPS]['photos'][-1]['datetaken'] = photo.get("datetaken")
+                self.photosets[iPS]['photos'][-1]['latitude'] = photo.get("latitude")
+                self.photosets[iPS]['photos'][-1]['longitude'] = photo.get("longitude")
+                self.photosets[iPS]['photos'][-1]['tags'] = photo.get("tags")
+                self.photosets[iPS]['photos'][-1]['url_m'] = photo.get("url_m")
 
         if iPS > -1:
             self.created_dt.append(
@@ -215,6 +209,36 @@ class FlickrAuthor:
 
             self.created_dt.append(
                 datetime.strptime(self.photosets[-1]['photos'][-1]['datetaken'], "%Y-%m-%d %H:%M:%S"))
+
+    def get_photos_in_photoset(self, photoset):
+        """Makes multiple attempts to get photos in the specified
+        photoset, sleeping before attempts.
+
+        """
+        photos = None
+
+        # Make multiple attempts
+        exc = None
+        iAttempts = 0
+        while photos is None and iAttempts < self.number_of_api_attempts:
+            iAttempts += 1
+
+            # Sleep longer before each attempt
+            seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
+            self.logger.info("{0} sleeping for {1} seconds".format(self.source_log, seconds_between_api_attempts))
+            sleep(seconds_between_api_attempts)
+
+            # Attempt to get content by URL
+            try:
+                photos = self.api.photosets_getPhotos(
+                    photoset_id=photo_set['id'],
+                    extras='date_upload, date_taken, geo, tags, url_m',
+                    privacy_filter=1, per_page=per_page, page=page, media='photo').find('photoset').findall('photo')
+            except Exception as exc:
+                photos = None
+                self.logger.warning("{0} couldn't get photos for {1}: {2}".format(self.source_log, "TODO", exc))
+
+        return photos
 
     def download_photos(self):
         """Download all photos by this author from Flickr.
@@ -232,8 +256,7 @@ class FlickrAuthor:
                     photo_file_name = os.path.join(self.content_dir, tail)
                     self.blu_pen_utl.download_file(photo_url, photo_file_name)
                     self.photosets[iPS]['photos'][iPh]['file_name'] = photo_file_name
-                    self.logger.info("{0} downloaded photo to file {1}".format(
-                            self.username, photo_file_name))
+                    self.logger.info("{0} downloaded photo to file {1}".format(self.source_path, photo_file_name))
 
     def dump(self, pickle_file_name=None):
         """Dump FlickrAuthor attributes pickle.
@@ -245,12 +268,21 @@ class FlickrAuthor:
 
         p = {}
 
-        p['username'] = self.username
+        p['source_log'] = self.source_log
+        p['source_path'] = self.source_path
+        p['source_header'] = self.source_header
+        p['source_label'] = self.source_label
+        p['source_types'] = self.source_types
+        p['source_words'] = self.source_words
+
+        p['user_id'] = self.user_id
         p['content_dir'] = self.content_dir
         p['requested_dt'] = self.requested_dt
         p['max_photo_sets'] = self.max_photo_sets
         p['api_key'] = self.api_key
         p['api_secret'] = self.api_secret
+        p['number_of_api_attempts'] = self.number_of_api_attempts
+        p['seconds_between_api_attempts'] = self.seconds_between_api_attempts
 
         p['photosets'] = self.photosets
         p['created_dt'] = self.created_dt
@@ -259,7 +291,7 @@ class FlickrAuthor:
         pickle.dump(p, pickle_file)
 
         self.logger.info("{0} dumped {1} photosets to {2}".format(
-                self.username, len(self.photosets), pickle_file_name))
+                self.source_path, len(self.photosets), pickle_file_name))
 
         pickle_file.close()
         
@@ -273,18 +305,27 @@ class FlickrAuthor:
 
         p = pickle.load(pickle_file)
 
-        self.username = p['username']
+        self.source_log = p['source_log']
+        self.source_path = p['source_path']
+        self.source_header = p['source_header']
+        self.source_label = p['source_label']
+        self.source_types = p['source_types']
+        self.source_words = p['source_words']
+
+        self.user_id = p['user_id']
         self.content_dir = p['content_dir']
         self.requested_dt = p['requested_dt']
         self.max_photo_sets = p['max_photo_sets']
         self.api_key = p['api_key']
         self.api_secret = p['api_secret']
+        self.number_of_api_attempts = p['number_of_api_attempts']
+        self.seconds_between_api_attempts = p['seconds_between_api_attempts']
 
         self.photosets = p['photosets']
         self.created_dt = p['created_dt']
         self.content_set = p['content_set']
 
         self.logger.info("{0} loaded {1} photosets from {2}".format(
-                self.username, len(self.photosets), pickle_file_name))
+                self.source_path, len(self.photosets), pickle_file_name))
 
         pickle_file.close()

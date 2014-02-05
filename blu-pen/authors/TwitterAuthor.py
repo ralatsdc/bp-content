@@ -1,20 +1,17 @@
 # -*- coding: utf-8 -*-
 
 # Standard library imports
-import codecs
 from datetime import datetime, date, timedelta
 from glob import glob
 import logging
 import math
 import os
 import pickle
-import pprint
 import random
 import re
 import shutil
 import simplejson as json
 from time import sleep
-import urllib, urllib2
 import webcolors
 
 # Third-party imports
@@ -29,7 +26,7 @@ from ServiceError import ServiceError
 
 class TwitterAuthor:
     """Represents authors on Twitter by their creative output. Authors
-    are selected by name or tag. Books are named after birds.
+    are selected by name or tag.
 
     """
     def __init__(self, blu_pen, source_words_str, content_dir,
@@ -49,22 +46,20 @@ class TwitterAuthor:
          self.source_words) = self.blu_pen_utl.process_source_words(source_words_str)
 
         self.content_dir = content_dir
-        self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
-        
-        self.twitter_start_date = date(2006, 07, 15) - timedelta(2)
-        self.twitter_stop_date = date.today() + timedelta(2)
-
         self.start_date = start_date
         self.stop_date = stop_date
+        self.max_length = max_length / len(self.source_words) # per source word
         self.max_frequency = max_frequency
         self.number_of_api_attempts = number_of_api_attempts
         self.seconds_between_api_attempts = seconds_between_api_attempts
 
-        self.max_length = max_length / len(self.source_words) # per source word
-
+        self.twitter_start_date = date(2006, 07, 15) - timedelta(2)
+        self.twitter_stop_date = date.today() + timedelta(2)
         self.page = [0] * len(self.source_words)
         self.max_id = [0] * len(self.source_words)
         self.since_id = [0] * len(self.source_words)
+
+        self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
 
         self.last_tweets = {}
 
@@ -85,9 +80,6 @@ class TwitterAuthor:
 
         self.frequency = {}
 
-        self.profile_image_file_name = []
-        self.background_image_file_name = []
-        
         self.content_set = False
 
         self.logger = logging.getLogger(__name__)
@@ -138,23 +130,27 @@ class TwitterAuthor:
                         # inclusive, it is reduced by one so the Tweet
                         # with the matching identifier will not be
                         # returned again.
-                        tweets = self.get_source_content(self.source_types[iSrc], self.source_words[iSrc],
-                                                         count=count, page=self.page[iSrc], max_id=self.max_id[iSrc] - 1)
+                        tweets = self.get_tweets_by_source(
+                            self.source_types[iSrc], self.source_words[iSrc],
+                            count=count, page=self.page[iSrc], max_id=self.max_id[iSrc] - 1)
                     elif parameter == "since_id":
                         # Note that since the since_id parameter is
                         # not inclusive, it is unchanged and the Tweet
                         # with the matching identifier will not be
                         # returned again.
-                        tweets = self.get_source_content(self.source_types[iSrc], self.source_words[iSrc],
-                                                         count=count, page=self.page[iSrc], since_id=self.since_id[iSrc])
+                        tweets = self.get_tweets_by_source(
+                            self.source_types[iSrc], self.source_words[iSrc],
+                            count=count, page=self.page[iSrc], since_id=self.since_id[iSrc])
                     if len(tweets) == 0 or tweets == self.last_tweets:
                         if self.length[iSrc] > 0:
-                            self.logger.debug("{0} =0= tweets found".format(self.source_log))
+                            self.logger.debug("{0} =0= tweets found".format(
+                                self.source_log))
                             do_get_source_content[iSrc] = False
                             continue
                         else:
                             # No tweets found, so raise an exception to catch below
-                            self.logger.warning("{0} =1= no tweets found".format(self.source_log))
+                            self.logger.warning("{0} =1= no tweets found".format(
+                                self.source_log))
                             raise Exception("No tweets found")
                     self.logger.debug(
                         "{0} got page {1} of {2} before {3} or after {4} for {5}{6} containing {7} tweets".format(
@@ -168,7 +164,8 @@ class TwitterAuthor:
                         # above, and raise the exception again so that the
                         # task can fail immediately, if considering
                         # the last source word
-                        self.logger.warning("{0} =2= no tweets found".format(self.source_log))
+                        self.logger.warning("{0} =2= no tweets found".format(
+                            self.source_log))
                         if iSrc == nSrc - 1:
                             raise Exception("No tweets found")
                     elif message.find("Rate limit exceeded") != -1:
@@ -176,18 +173,21 @@ class TwitterAuthor:
                         # raised by the Twitter API, and raise the
                         # exception again so that the task can handle
                         # it with the correct (very long) delay
-                        self.logger.warning("{0} =3= rate limit exceeded".format(self.source_log))
+                        self.logger.warning("{0} =3= rate limit exceeded".format(
+                            self.source_log))
                         raise Exception("Rate limit exceeded")
                     elif message.find("Capacity Error") != -1:
                         # Capacity exceeded, so catch the exception
                         # raised by the Twitter API, and raise the
                         # exception again so that the task can handle
                         # it with the correct (somewhat long) delay
-                        self.logger.warning("{0} =3= Capacity exceeded".format(self.source_log))
+                        self.logger.warning("{0} =3= Capacity exceeded".format(
+                            self.source_log))
                         raise Exception("Capacity exceeded")
                     else:
                         if self.length[iSrc] > 0:
-                            self.logger.debug("{0} =0= tweets found".format(self.source_log))
+                            self.logger.debug("{0} =0= tweets found".format(
+                                self.source_log))
                             do_get_source_content[iSrc] = False
                             continue
                         else:
@@ -195,8 +195,8 @@ class TwitterAuthor:
                             try:
                                 source_type = "@"
                                 source_word = "BluePeninsula"
-                                tweets = self.get_source_content(source_type, source_word,
-                                                                 count=count)
+                                tweets = self.get_tweets_by_source(
+                                    source_type, source_word, count=count)
                                 self.logger.debug("{0} got {1} tweets for {2}{3}".format(
                                         self.source_log, len(tweets), source_type, source_word))
                             except Exception as exc:
@@ -209,7 +209,8 @@ class TwitterAuthor:
                             # No tweets found, so raise an exception
                             # so that the task can fail immediately,
                             # if considering the last source word
-                            self.logger.warning("{0} =5= no tweets found".format(self.source_log))
+                            self.logger.warning("{0} =5= no tweets found".format(
+                                self.source_log))
                             if iSrc == nSrc - 1:
                                 raise Exception("No tweets found")
 
@@ -285,7 +286,8 @@ class TwitterAuthor:
 
                     # Watch for flash
                     if text.find("registerObject") != -1:
-                        self.logger.warning("{0} continuing: contains flash object".format(self.source_log))
+                        self.logger.warning("{0} continuing: contains flash object".format(
+                            self.source_log))
                         n_flash_objects_cur += 1
                         n_flash_objects_tot += 1
                         continue
@@ -293,7 +295,8 @@ class TwitterAuthor:
                     # Skip the current tweet, if it has already been
                     # processed
                     if tweet.id in self.tweet_id:
-                        self.logger.debug("{0} continuing: duplicate tweet text {1}".format(self.source_log, text))
+                        self.logger.debug("{0} continuing: duplicate tweet text {1}".format(
+                            self.source_log, text))
                         n_duplicate_texts_cur += 1
                         n_duplicate_texts_tot += 1
                         continue
@@ -380,9 +383,12 @@ class TwitterAuthor:
                         self.source_log, n_after_twitter_stop_cur, self.twitter_stop_date))
                 self.logger.debug("{0} found {1} tweets after stop date {2}".format(
                         self.source_log, n_after_stop_cur, self.stop_date))
-                self.logger.debug("{0} found {1} tweets with convert exceptions".format(self.source_log, n_convert_exceptions_cur))
-                self.logger.debug("{0} found {1} tweets with flash objects".format(self.source_log, n_flash_objects_cur))
-                self.logger.debug("{0} found {1} tweets with duplicate texts".format(self.source_log, n_duplicate_texts_cur))
+                self.logger.debug("{0} found {1} tweets with convert exceptions".format(
+                    self.source_log, n_convert_exceptions_cur))
+                self.logger.debug("{0} found {1} tweets with flash objects".format(
+                    self.source_log, n_flash_objects_cur))
+                self.logger.debug("{0} found {1} tweets with duplicate texts".format(
+                    self.source_log, n_duplicate_texts_cur))
 
             # Dump attributes pickle after each source word
             self.dump()
@@ -392,9 +398,12 @@ class TwitterAuthor:
                     self.source_log, n_after_twitter_stop_tot, self.twitter_stop_date))
             self.logger.info("{0} found {1} tweets after stop date {2}".format(
                     self.source_log, n_after_stop_tot, self.stop_date))
-            self.logger.info("{0} found {1} tweets with convert exceptions".format(self.source_log, n_convert_exceptions_tot))
-            self.logger.info("{0} found {1} tweets with flash objects".format(self.source_log, n_flash_objects_tot))
-            self.logger.info("{0} found {1} tweets with duplicate texts".format(self.source_log, n_duplicate_texts_tot))
+            self.logger.info("{0} found {1} tweets with convert exceptions".format(
+                self.source_log, n_convert_exceptions_tot))
+            self.logger.info("{0} found {1} tweets with flash objects".format(
+                self.source_log, n_flash_objects_tot))
+            self.logger.info("{0} found {1} tweets with duplicate texts".format(
+                self.source_log, n_duplicate_texts_tot))
 
         # Compare length of found tweets to length of expected tweets
         length_fnd = len(self.clean_text)
@@ -409,58 +418,108 @@ class TwitterAuthor:
         # Compute word frequency
         self.compute_word_frequency()
 
-    def set_images_as_recent(self, flickr_author):
-        """Downloads a recent profile and background image for each
-        source word, if an author, from Twitter.
+    def get_tweets_by_source(self, source_type, source_word, count=0, page=0, max_id=0, since_id=0):
+        """Makes multiple attempts to get source content, sleeping
+        before attempts.
 
         """
-        # Consider each source word
-        nSrc = len(self.source_words)
-        for iSrc in range(nSrc):
-
-            # Download images for authors only
-            if self.source_types[iSrc] == "@":
-
-                # Find a tweet by this author
-                for tweet in self.tweets:
-                    if tweet.user.screen_name == self.source_words[iSrc]:
-                        break
-                
-                # Download a profile image
-                try:
-                    root, ext = os.path.splitext(tweet.user.profile_image_url)
-                    self.profile_image_file_name.append(self.source_words[iSrc] + ext.lower())
-                    image_file_name = os.path.join(self.content_dir, self.profile_image_file_name[iSrc])
-                    self.blu_pen_utl.download_file(
-                        tweet.user.profile_image_url.replace("normal", "bigger"), image_file_name)
-                    Image.open(image_file_name)
-                except Exception as exc:
-                    random_photo_file_name = self.blu_pen_utl.draw_random_flickr_photo(flickr_author)
-                    root, ext = os.path.splitext(random_photo_file_name)
-                    self.profile_image_file_name.append(self.source_words[iSrc] + ext.lower())
-                    image_file_name = os.path.join(self.content_dir, self.profile_image_file_name[iSrc])
-                    shutil.copyfile(random_photo_file_name, image_file_name)
-                self.logger.debug("{0} saved profile image file {1}".format(self.source_log, image_file_name))
-
-                # Download a profile background image
-                try:
-                    root, ext = os.path.splitext(tweet.user.profile_background_image_url)
-                    self.background_image_file_name.append(self.source_words[iSrc] + "_background" + ext.lower())
-                    image_file_name = os.path.join(self.content_dir, self.background_image_file_name[iSrc])
-                    self.blu_pen_utl.download_file(
-                        tweet.user.profile_background_image_url, image_file_name)
-                    Image.open(image_file_name)
-                except Exception as exc:
-                    random_photo_file_name = self.blu_pen_utl.draw_random_flickr_photo(flickr_author)
-                    root, ext = os.path.splitext(random_photo_file_name)
-                    self.background_image_file_name.append(self.source_words[iSrc] + "_background" + ext.lower())
-                    image_file_name = os.path.join(self.content_dir, self.background_image_file_name[iSrc])
-                    shutil.copyfile(random_photo_file_name, image_file_name)
-                self.logger.debug("{0} saved background image file {1}".format(self.source_log, image_file_name))
-
-            else:
-                self.profile_image_file_name.append(None)
-                self.background_image_file_name.append(None)
+        iAttempts = 1
+        credentials = self.get_credentials()
+        api = twitter.Api(
+            consumer_key=credentials['consumer-key'],
+            consumer_secret=credentials['consumer-secret'],
+            access_token_key=credentials['access-token'],
+            access_token_secret=credentials['access-token-secret'])
+        seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
+        self.logger.info("{0} sleeping for {1} seconds".format(
+            self.source_log, seconds_between_api_attempts))
+        sleep(seconds_between_api_attempts)
+        try:
+            exc = None
+            if source_type == "@":
+                if not max_id > 0 and not since_id > 0:
+                    tweets = api.GetUserTimeline(screen_name=source_word,
+                                                 count=count,
+                                                 include_rts=True);
+                    # include_rts=True, include_entities=True);
+                elif max_id > 0 and not since_id > 0:
+                    tweets = api.GetUserTimeline(screen_name=source_word,
+                                                 count=count, max_id=max_id,
+                                                 include_rts=True);
+                    # include_rts=True, include_entities=True);
+                elif not max_id > 0 and since_id > 0:
+                    tweets = api.GetUserTimeline(screen_name=source_word,
+                                                 count=count, since_id=since_id,
+                                                 include_rts=True);
+                    # include_rts=True, include_entities=True);
+                else:
+                    raise Exception("A request should not use both max_id and since_id.")
+            else: # source_type == "#":
+                term = source_type + source_word
+                if not max_id > 0 and not since_id > 0:
+                    tweets = api.GetSearch(term=term,
+                                           per_page=count)
+                elif max_id > 0 and not since_id > 0:
+                    tweets = api.GetSearch(term=term,
+                                           per_page=count, max_id=max_id)
+                elif not max_id > 0 and since_id > 0:
+                    tweets = api.GetSearch(term=term,
+                                           per_page=count, since_id=since_id)
+                else:
+                    raise Exception("A request should not use both max_id and since_id.")
+        except Exception as exc:
+            self.logger.warning("{0} =6= couldn't get content for {1}{2}: {3}".format(
+                    self.source_log, source_type, source_word, exc))
+            tweets = []
+        while len(tweets) == 0 and iAttempts < self.number_of_api_attempts:
+            iAttempts += 1
+            credentials = self.get_credentials()
+            api = twitter.Api(
+                consumer_key=credentials['consumer-key'],
+                consumer_secret=credentials['consumer-secret'],
+                access_token_key=credentials['access-token'],
+                access_token_secret=credentials['access-token-secret'])
+            seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
+            self.logger.info("{0} =7= sleeping for {1} seconds".format(
+                self.source_log, seconds_between_api_attempts))
+            sleep(seconds_between_api_attempts)
+            try:
+                exc = None
+                if source_type == "@":
+                    if not max_id > 0 and not since_id > 0:
+                        tweets = api.GetUserTimeline(screen_name=source_word,
+                                                     count=count,
+                                                     include_rts=True);
+                        # include_rts=True, include_entities=True);
+                    elif max_id > 0 and not since_id > 0:
+                        tweets = api.GetUserTimeline(screen_name=source_word,
+                                                     count=count, max_id=max_id,
+                                                     include_rts=True);
+                        # include_rts=True, include_entities=True);
+                    elif not max_id > 0 and since_id > 0:
+                        tweets = api.GetUserTimeline(screen_name=source_word,
+                                                     count=count, since_id=since_id,
+                                                     include_rts=True);
+                        # include_rts=True, include_entities=True);
+                else: # source_type == "#":
+                    term = source_type + source_word
+                    if not max_id > 0 and not since_id > 0:
+                        tweets = api.GetSearch(term=term,
+                                               per_page=count)
+                    elif max_id > 0 and not since_id > 0:
+                        tweets = api.GetSearch(term=term,
+                                               per_page=count, max_id=max_id)
+                    elif not max_id > 0 and since_id > 0:
+                        tweets = api.GetSearch(term=term,
+                                               per_page=count, since_id=since_id)
+            except Exception as exc:
+                self.logger.warning("{0} =8= couldn't get content for {1}{2}: {3}".format(
+                    self.source_log, source_type, source_word, exc))
+                tweets = []
+        if exc != None:
+            # Raise exception raised by api.GetUserTimeline or api.GetSearch
+            raise exc
+        return tweets
 
     def set_tweets_from_archive(self):
         """Gets content from JSON tweet data files extracted from a
@@ -486,7 +545,7 @@ class TwitterAuthor:
             try:
                 tweets = json.loads(json_str)
             except Exception as exc:
-                pprint.pprint(json_str)
+                # TODO: Add logging message.
                 continue
             for tweet in tweets:
 
@@ -507,14 +566,16 @@ class TwitterAuthor:
 
                 # Watch for flash
                 if text.find("registerObject") != -1:
-                    self.logger.warning("{0} continuing: contains flash object".format(self.source_log))
+                    self.logger.warning("{0} continuing: contains flash object".format(
+                        self.source_log))
                     n_flash_objects += 1
                     continue
 
                 # Skip the current tweet, if it has already been
                 # processed
                 if tweet['id'] in self.tweet_id:
-                    self.logger.debug("{0} continuing: duplicate tweet text {1}".format(self.source_log, text))
+                    self.logger.debug("{0} continuing: duplicate tweet text {1}".format(
+                        self.source_log, text))
                     n_duplicate_texts += 1
                     continue
                 else:
@@ -577,7 +638,8 @@ class TwitterAuthor:
         self.link_rgb = list(link_rgb)
         self.text_rgb = list(text_rgb)
         self.background_rgb = list(background_rgb)
-        self.logger.info("{0} set {1} tweets".format(self.source_log, len(self.clean_text)))
+        self.logger.info("{0} set {1} tweets".format(
+            self.source_log, len(self.clean_text)))
 
     def compute_word_frequency(self):
         """Counts the number of times a word appears.
@@ -628,9 +690,6 @@ class TwitterAuthor:
         p['volume'] = self.volume
         p['frequency'] = self.frequency
 
-        p['profile_image_file_name'] = self.profile_image_file_name
-        p['background_image_file_name'] = self.background_image_file_name
-
         p['content_set'] = self.content_set
 
         pickle.dump(p, pickle_file)
@@ -670,116 +729,12 @@ class TwitterAuthor:
         self.volume = p['volume']
         self.frequency = p['frequency']
 
-        self.profile_image_file_name = p['profile_image_file_name']
-        self.background_image_file_name = p['background_image_file_name']
-
         self.content_set = p['content_set']
 
         self.logger.info("{0} loaded {1} tweets from {2}".format(
                 self.source_log, len(self.clean_text), pickle_file_name))
 
         pickle_file.close()
-
-    def get_source_content(self, source_type, source_word, count=0, page=0, max_id=0, since_id=0):
-        """Makes multiple attempts to get source content, sleeping
-        before attempts.
-
-        """
-        iAttempts = 1
-        credentials = self.get_credentials()
-        api = twitter.Api(
-            consumer_key=credentials['consumer-key'],
-            consumer_secret=credentials['consumer-secret'],
-            access_token_key=credentials['access-token'],
-            access_token_secret=credentials['access-token-secret'])
-        seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-        self.logger.info("{0} sleeping for {1} seconds".format(self.source_log, seconds_between_api_attempts))
-        sleep(seconds_between_api_attempts)
-        try:
-            exc = None
-            if source_type == "@":
-                if not max_id > 0 and not since_id > 0:
-                    tweets = api.GetUserTimeline(screen_name=source_word,
-                                                 count=count,
-                                                 include_rts=True);
-                    # include_rts=True, include_entities=True);
-                elif max_id > 0 and not since_id > 0:
-                    tweets = api.GetUserTimeline(screen_name=source_word,
-                                                 count=count, max_id=max_id,
-                                                 include_rts=True);
-                    # include_rts=True, include_entities=True);
-                elif not max_id > 0 and since_id > 0:
-                    tweets = api.GetUserTimeline(screen_name=source_word,
-                                                 count=count, since_id=since_id,
-                                                 include_rts=True);
-                    # include_rts=True, include_entities=True);
-                else:
-                    raise Exception("A request should not use both max_id and since_id.")
-            else: # source_type == "#":
-                term = source_type + source_word
-                if not max_id > 0 and not since_id > 0:
-                    tweets = api.GetSearch(term=term,
-                                           per_page=count)
-                elif max_id > 0 and not since_id > 0:
-                    tweets = api.GetSearch(term=term,
-                                           per_page=count, max_id=max_id)
-                elif not max_id > 0 and since_id > 0:
-                    tweets = api.GetSearch(term=term,
-                                           per_page=count, since_id=since_id)
-                else:
-                    raise Exception("A request should not use both max_id and since_id.")
-        except Exception as exc:
-            self.logger.warning("{0} =6= couldn't get content for {1}{2}: {3}".format(
-                    self.source_log, source_type, source_word, exc))
-            tweets = []
-        while len(tweets) == 0 and iAttempts < self.number_of_api_attempts:
-            iAttempts += 1
-            credentials = self.get_credentials()
-            api = twitter.Api(
-                consumer_key=credentials['consumer-key'],
-                consumer_secret=credentials['consumer-secret'],
-                access_token_key=credentials['access-token'],
-                access_token_secret=credentials['access-token-secret'])
-            seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-            self.logger.info("{0} =7= sleeping for {1} seconds".format(self.source_log, seconds_between_api_attempts))
-            sleep(seconds_between_api_attempts)
-            try:
-                exc = None
-                if source_type == "@":
-                    if not max_id > 0 and not since_id > 0:
-                        tweets = api.GetUserTimeline(screen_name=source_word,
-                                                     count=count,
-                                                     include_rts=True);
-                        # include_rts=True, include_entities=True);
-                    elif max_id > 0 and not since_id > 0:
-                        tweets = api.GetUserTimeline(screen_name=source_word,
-                                                     count=count, max_id=max_id,
-                                                     include_rts=True);
-                        # include_rts=True, include_entities=True);
-                    elif not max_id > 0 and since_id > 0:
-                        tweets = api.GetUserTimeline(screen_name=source_word,
-                                                     count=count, since_id=since_id,
-                                                     include_rts=True);
-                        # include_rts=True, include_entities=True);
-                else: # source_type == "#":
-                    term = source_type + source_word
-                    if not max_id > 0 and not since_id > 0:
-                        tweets = api.GetSearch(term=term,
-                                               per_page=count)
-                    elif max_id > 0 and not since_id > 0:
-                        tweets = api.GetSearch(term=term,
-                                               per_page=count, max_id=max_id)
-                    elif not max_id > 0 and since_id > 0:
-                        tweets = api.GetSearch(term=term,
-                                               per_page=count, since_id=since_id)
-            except Exception as exc:
-                self.logger.warning("{0} =8= couldn't get content for {1}{2}: {3}".format(
-                    self.source_log, source_type, source_word, exc))
-                tweets = []
-        if exc != None:
-            # Raise exception raised by api.GetUserTimeline or api.GetSearch
-            raise exc
-        return tweets
 
     def get_credentials(self):
         """Draw random credentials.
