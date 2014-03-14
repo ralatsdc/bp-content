@@ -2539,13 +2539,18 @@ class Api(object):
     if term is not None:
       parameters['q'] = term
 
-    if include_entities:
-      parameters['include_entities'] = 1
+    try:
+      parameters['page'] = int(page)
+    except ValueError:
+      raise TwitterError("page must be an integer")
 
     try:
       parameters['count'] = int(count)
     except ValueError:
       raise TwitterError("count must be an integer")
+
+    if include_entities:
+      parameters['include_entities'] = 1
 
     # Make and send requests
     url  = '%s/users/search.json' % self.base_url

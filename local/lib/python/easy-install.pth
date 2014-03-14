@@ -15,6 +15,8 @@ import sys; sys.__plen = len(sys.path)
 ./urllib3-1.7.1-py2.7.egg
 ./webcolors-1.4-py2.7.egg-info
 ./requests_oauthlib-0.4.0-py2.7.egg
-./requests-2.2.1-py2.7.egg
 /Library/Python/2.7/site-packages/distribute-0.6.30-py2.7.egg
+./pybing-0.1dev_r0-py2.7.egg
+./wikipedia-1.1-py2.7.egg
+./requests-1.2.3-py2.7.egg
 import sys; new=sys.path[sys.__plen:]; del sys.path[sys.__plen:]; p=getattr(sys,'__egginsert',0); sys.path[p:p]=new; sys.__egginsert = p+len(new)
