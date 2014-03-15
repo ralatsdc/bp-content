@@ -21,6 +21,7 @@ from PIL import Image
 import numpy as np
 
 # Local imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from BluePeninsulaUtility import BluePeninsulaUtility
 from FeedAuthor import FeedAuthor
 from FlickrAuthor import FlickrAuthor

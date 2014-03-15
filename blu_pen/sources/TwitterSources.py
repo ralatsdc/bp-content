@@ -11,6 +11,7 @@ import math
 import os
 import pickle
 import random
+import sys
 import time
 
 # Third-party imports
@@ -18,16 +19,18 @@ import numpy as np
 import twitter
 
 # Local imports
-from BluePeninsulaUtility import BluePeninsulaUtility
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from authors.BluePeninsulaUtility import BluePeninsulaUtility
 
-class TwitterUsers:
+class TwitterSources:
     """Represents a collection of Twitter users selected by searching
-    for users (the default) or tweets using a query term.
+    for users (the default) or tweets (then looking up users) using a
+    query term.
 
     """
     def __init__(self, config_file, source_word_str,
                  number_of_api_attempts=4, seconds_between_api_attempts=1):
-        """Constructs a TwitterUsers instance given a source word.
+        """Constructs a TwitterSources instance given a source word.
 
         """
         self.blu_pen_utl = BluePeninsulaUtility()
@@ -45,6 +48,11 @@ class TwitterUsers:
          self.source_label,
          self.source_type,
          self.source_word) = self.blu_pen_utl.process_source_words(source_word_str)
+        if len(self.source_word) > 1:
+            err_msg = "{0} only one source word accepted".format(
+                self.source_path)
+            self.logger.error(err_msg)
+            raise Exception(err_msg)
 
         # Assign atributes
         self.number_of_api_attempts = number_of_api_attempts
@@ -61,15 +69,20 @@ class TwitterUsers:
         self.followers_count = []
 
         # Create a logger
-        # TODO: Prevent multiple console handlers when running in ipython
         root = logging.getLogger()
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            "%(asctime)s %(name)s %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S")
-        console_handler.setFormatter(formatter)
-        root.addHandler(console_handler)
         root.setLevel(logging.INFO)
-        self.logger = logging.getLogger(__name__)
+        formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S")
+        if len(root.handlers) == 0:
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            root.addHandler(console_handler)
+        else:
+            for handler in root.handlers:
+                if isinstance(handler, logging.StreamHandler):
+                    handler.setFormatter(formatter)
+                else:
+                    root.removeHandler(handler)
+        self.logger = logging.getLogger("TwitterSources")
 
     def get_users_by_source(self, source_type, source_word, count=20, page=0, max_id=0, since_id=0):
         """Makes multiple attempts to get users by source, sleeping
@@ -79,67 +92,11 @@ class TwitterUsers:
         # Initialize return value
         users = []
 
-        # Create an API instance with random credentials
-        credentials = self.get_credentials()
-        api = twitter.Api(consumer_key=credentials['consumer-key'],
-                          consumer_secret=credentials['consumer-secret'],
-                          access_token_key=credentials['access-token'],
-                          access_token_secret=credentials['access-token-secret'])
+        def make_attempt():
+            """Makes a single attempt to get users by source, sleeping
+            before the attempt.
 
-        # Make the first attempt to get users by source
-        iAttempts = 1
-        seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-        self.logger.info("{0}: sleeping for {1} seconds".format(
-            self.source_log, seconds_between_api_attempts))
-        time.sleep(seconds_between_api_attempts)
-        try:
-
-            # Select the API method by source type
-            exc = None
-            if source_type == "@":
-                if not max_id == 0 or not since_id == 0:
-                    raise Exception("A search for users cannot contain a max_id or since_id parameter.")
-
-                # Use of the page parameter, if present
-                if page == 0:
-                    users = api.GetUsersSearch(term=source_word, count=count)
-
-                else:
-                    users = api.GetUsersSearch(term=source_word, count=count, page=page)
-
-            else: # source_type == "#":
-                if not page == 0:
-                    raise Exception("A search for tweets cannot contain a page parameter.")
-
-                # Use of the page max_id or since_id parameter, if present
-                term = source_type + source_word
-                if max_id == 0 and since_id == 0:
-                    tweets = api.GetSearch(term=term, count=count)
-
-                elif max_id > 0 and since_id == 0:
-                    tweets = api.GetSearch(term=term, count=count, max_id=max_id)
-                                           
-                elif max_id == 0 and since_id > 0:
-                    tweets = api.GetSearch(term=term, count=count, since_id=since_id)
-                                           
-                else:
-                    raise Exception("A search for tweets cannot contain both a max_id and since_id parameter.")
-
-                # Lookup users given tweet screen names
-                if len(tweets) > 0:
-                    screen_names = self.get_names_from_tweets(tweets)
-                    users = api.UsersLookup(screen_name=screen_names)
-
-            self.logger.info("{0}: found users for {1}{2}".format(
-                self.source_log, source_type, source_word))
-
-        except Exception as exc:
-            self.logger.warning("{0}: couldn't find users for {1}{2}: {3}".format(
-                    self.source_log, source_type, source_word, exc))
-
-        # Make additional attempts to get users by source, if needed
-        while len(users) == 0 and iAttempts < self.number_of_api_attempts:
-
+            """
             # Create an API instance with random credentials
             credentials = self.get_credentials()
             api = twitter.Api(consumer_key=credentials['consumer-key'],
@@ -147,12 +104,13 @@ class TwitterUsers:
                               access_token_key=credentials['access-token'],
                               access_token_secret=credentials['access-token-secret'])
 
-            # Make the next attempt to get users by source
-            iAttempts += 1
+            # Sleep before the attempt
             seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
             self.logger.info("{0}: sleeping for {1} seconds".format(
                 self.source_log, seconds_between_api_attempts))
             time.sleep(seconds_between_api_attempts)
+
+            # Make an attempt to get users by source
             try:
 
                 # Select the API method by source type
@@ -161,18 +119,18 @@ class TwitterUsers:
                     if not max_id == 0 or not since_id == 0:
                         raise Exception("A search for users cannot contain a max_id or since_id parameter.")
 
-                    # Use of the page parameter, if present
+                    # Use the page parameter, if present
                     if page == 0:
-                        users = api.GetUsersSearch(source_word, count=count)
+                        users.extend(api.GetUsersSearch(term=source_word, count=count))
 
                     else:
-                        users = api.GetUsersSearch(source_word, count=count, page=page)
+                        users.extend(api.GetUsersSearch(term=source_word, count=count, page=page))
 
                 else: # source_type == "#":
                     if not page == 0:
                         raise Exception("A search for tweets cannot contain a page parameter.")
 
-                    # Use of the page max_id or since_id parameter, if present
+                    # Use the page max_id or since_id parameter, if present
                     term = source_type + source_word
                     if max_id == 0 and since_id == 0:
                         tweets = api.GetSearch(term=term, count=count)
@@ -189,7 +147,7 @@ class TwitterUsers:
                     # Lookup users given tweet screen names
                     if len(tweets) > 0:
                         screen_names = self.get_names_from_tweets(tweets)
-                        users = api.UsersLookup(screen_name=screen_names)
+                        users.extend(api.UsersLookup(screen_name=screen_names))
 
                 self.logger.info("{0}: found users for {1}{2}".format(
                     self.source_log, source_type, source_word))
@@ -197,6 +155,13 @@ class TwitterUsers:
             except Exception as exc:
                 self.logger.warning("{0}: couldn't find users for {1}{2}: {3}".format(
                         self.source_log, source_type, source_word, exc))
+
+        # Make attempts to get users by source
+        iAttempts = 1
+        make_attempt()
+        while len(users) == 0 and iAttempts < self.number_of_api_attempts:
+            iAttempts += 1
+            make_attempt()
 
         return users
 
@@ -338,7 +303,7 @@ class TwitterUsers:
         return np.array(strings)
 
     def dump(self, pickle_file_name=None):
-        """Dumps TwitterUsers attributes pickle.
+        """Dumps TwitterSources attributes pickle.
 
         """
         if pickle_file_name is None:
@@ -374,7 +339,7 @@ class TwitterUsers:
         pickle_file.close()
         
     def load(self, pickle_file_name=None):
-        """Loads TwitterUsers attributes pickle.
+        """Loads TwitterSources attributes pickle.
 
         """
         if pickle_file_name is None:
@@ -414,43 +379,43 @@ if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Select a set of Twitter users by searching using a query term")
     parser.add_argument("-c", "--config-file",
-                        default="BluePeninsula.cfg",
+                        default="../authors/BluePeninsula.cfg",
                         help="the configuration file")
     parser.add_argument("-w", "--source-words-str",
                         default="@Japan",
                         help="the query term, with leading '@' for users, or '#' for tweet, search")
     args = parser.parse_args()
 
-    # Create a TwitterUsers instance, and create the content
+    # Create a TwitterSources instance, and create the content
     # directory, if needed
-    tu = TwitterUsers(args.config_file, args.source_words_str)
-    if not os.path.exists(tu.content_dir):
-        os.makedirs(tu.content_dir)
+    ts = TwitterSources(args.config_file, args.source_words_str)
+    if not os.path.exists(ts.content_dir):
+        os.makedirs(ts.content_dir)
 
-    # Create and dump, or load, the TwitterUsers pickle
-    if not os.path.exists(tu.pickle_file_name):
+    # Create and dump, or load, the TwitterSources pickle
+    if not os.path.exists(ts.pickle_file_name):
 
         # Select one hundred users
         for page in range(1, 6):
-            tu.users.extend(tu.get_users_by_source(tu.source_type[0], tu.source_word[0], page=page))
+            ts.users.extend(ts.get_users_by_source(ts.source_type[0], ts.source_word[0], page=page))
         
         # Assign arrays of values for selecting users
-        for u in tu.users:
-            tu.name.append(u.name)
-            tu.description.append(u.description)
-            tu.screen_name.append(u.screen_name)
-            tu.created_at.append(u.created_at)
-            tu.statuses_count.append(u.statuses_count)
-            tu.followers_count.append(u.followers_count)
-        tu.dump()
+        for u in ts.users:
+            ts.name.append(u.name)
+            ts.description.append(u.description)
+            ts.screen_name.append(u.screen_name)
+            ts.created_at.append(u.created_at)
+            ts.statuses_count.append(u.statuses_count)
+            ts.followers_count.append(u.followers_count)
+        ts.dump()
 
     else:
-        tu.load()
+        ts.load()
 
     # Compute z-scores based on number of statuses, number of
     # followers, and the followers to statuses ratio
-    n_statuses = np.array(tu.statuses_count)
-    n_followers = np.array(tu.followers_count)
+    n_statuses = np.array(ts.statuses_count)
+    n_followers = np.array(ts.followers_count)
     n_trusting = n_followers / n_statuses
 
     l_statuses = np.log(n_statuses)
@@ -462,22 +427,22 @@ if __name__ == "__main__":
     z_trusting = (n_trusting - n_trusting.mean()) / n_trusting.std()
 
     # Convert the numeric scores to string scores
-    s_statuses = tu.z_to_s(z_statuses)
-    s_followers = tu.z_to_s(z_followers)
-    s_trusting = tu.z_to_s(z_trusting)
+    s_statuses = ts.z_to_s(z_statuses)
+    s_followers = ts.z_to_s(z_followers)
+    s_trusting = ts.z_to_s(z_trusting)
 
     # Create a dictionary of users in order to print a JSON document
     # to a file
     users = []
-    n_usr = len(tu.users)
+    n_usr = len(ts.users)
     for i_usr in range(n_usr):
         user = {}
-        user['name'] = tu.name[i_usr]
-        user['description'] = tu.description[i_usr]
-        user['screen_name'] = tu.screen_name[i_usr]
-        user['created_at'] = tu.created_at[i_usr]
-        user['statuses_count'] = tu.statuses_count[i_usr]
-        user['followers_count'] = tu.followers_count[i_usr]
+        user['name'] = ts.name[i_usr]
+        user['description'] = ts.description[i_usr]
+        user['screen_name'] = ts.screen_name[i_usr]
+        user['created_at'] = ts.created_at[i_usr]
+        user['statuses_count'] = ts.statuses_count[i_usr]
+        user['followers_count'] = ts.followers_count[i_usr]
         user['statuses'] = z_statuses[i_usr]
         user['followers'] = z_followers[i_usr]
         user['trusting'] = z_trusting[i_usr]
@@ -489,7 +454,7 @@ if __name__ == "__main__":
         users.append(user)
 
     # Print the selected users JSON document, preserving the encoding
-    users_file_name = tu.pickle_file_name.replace(".pkl", ".out")
+    users_file_name = ts.pickle_file_name.replace(".pkl", ".out")
     out = codecs.open(users_file_name, encoding='utf-8', mode='w')
     out.write(json.dumps(users, ensure_ascii=False, indent=4, separators=(',', ': ')))
     out.close()

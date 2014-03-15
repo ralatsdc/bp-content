@@ -38,7 +38,7 @@ class FlickrAuthor:
             err_msg = "{0} only one source word accepted".format(
                 self.source_path)
             self.logger.error(err_msg)
-            raise Exception(msg)
+            raise Exception(err_msg)
             
         self.content_dir = content_dir
         self.requested_dt = requested_dt
