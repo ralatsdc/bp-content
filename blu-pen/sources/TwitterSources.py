@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Standard library imports
+from __future__ import division
 import ConfigParser
 import argparse
 import codecs
@@ -285,8 +286,8 @@ class TwitterSources:
 
         return screen_names
 
-    def z_to_s(self, scores):
-        """Converts a numerical z-score to either a "-" if below the
+    def n_to_s(self, scores):
+        """Converts a numerical score to either a "-" if below the
         median, a "+" if above the median, or a "~" otherwise.
 
         """
@@ -407,29 +408,23 @@ if __name__ == "__main__":
             ts.created_at.append(u.created_at)
             ts.statuses_count.append(u.statuses_count)
             ts.followers_count.append(u.followers_count)
+
         ts.dump()
 
     else:
+
         ts.load()
 
-    # Compute z-scores based on number of statuses, number of
+    # Compute scores based on number of statuses, number of
     # followers, and the followers to statuses ratio
     n_statuses = np.array(ts.statuses_count)
     n_followers = np.array(ts.followers_count)
     n_trusting = n_followers / n_statuses
 
-    l_statuses = np.log(n_statuses)
-    l_followers = np.log(n_followers)
-    l_trusting = np.log(n_trusting)
-
-    z_statuses = (n_statuses - n_statuses.mean()) / n_statuses.std()
-    z_followers = (n_followers - n_followers.mean()) / n_followers.std()
-    z_trusting = (n_trusting - n_trusting.mean()) / n_trusting.std()
-
     # Convert the numeric scores to string scores
-    s_statuses = ts.z_to_s(z_statuses)
-    s_followers = ts.z_to_s(z_followers)
-    s_trusting = ts.z_to_s(z_trusting)
+    s_statuses = ts.n_to_s(n_statuses)
+    s_followers = ts.n_to_s(n_followers)
+    s_trusting = ts.n_to_s(n_trusting)
 
     # Create a dictionary of users in order to print a JSON document
     # to a file
@@ -443,9 +438,9 @@ if __name__ == "__main__":
         user['created_at'] = ts.created_at[i_usr]
         user['statuses_count'] = ts.statuses_count[i_usr]
         user['followers_count'] = ts.followers_count[i_usr]
-        user['statuses'] = z_statuses[i_usr]
-        user['followers'] = z_followers[i_usr]
-        user['trusting'] = z_trusting[i_usr]
+        user['statuses'] = n_statuses[i_usr]
+        user['followers'] = n_followers[i_usr]
+        user['trusting'] = n_trusting[i_usr]
         user['score'] = s_statuses[i_usr] + s_followers[i_usr] + s_trusting[i_usr]
         if user['score'] == "+++":
             user['include'] = True

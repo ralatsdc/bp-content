@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Standard library imports
+from __future__ import division
 import ConfigParser
 import argparse
 import codecs
@@ -66,6 +67,14 @@ class FlickrSources:
         # TODO: Add attributes
         self.groups = []
 
+        self.nsid = []
+        self.name = []
+        self.eighteenplus = []
+        self.members = []
+        self.pool_count = []
+        self.topic_count = []
+        self.description = []
+
         # Create an API
         self.api = flickrapi.FlickrAPI(self.api_key)
 
@@ -115,12 +124,15 @@ class FlickrSources:
                     groups_xml = self.api.groups_search(text=source_word, per_page=per_page, page=page)
 
                 # Parse the resulting XML
-                gs = groups_xml.find("groups").findall("group")
-                for g in gs:
+                grps = groups_xml.find("groups").findall("group")
+                for grp in grps:
                     group = {}
-                    group['nsid'] = g.get('nsid')
-                    group['name'] = g.get('name')
-                    group['eighteenplus'] = g.get('eighteenplus')
+                    group['nsid'] = grp.get('nsid')
+                    group['name'] = grp.get('name')
+                    group['eighteenplus'] = grp.get('eighteenplus')
+                    group['members'] = grp.get('members')
+                    group['pool_count'] = grp.get('pool_count')
+                    group['topic_count'] = grp.get('topic_count')
                     groups.append(group)
 
                 self.logger.info("{0}: found groups for {1}{2}".format(
@@ -138,6 +150,68 @@ class FlickrSources:
             make_attempt()
 
         return groups
+
+    def get_group_info_by_id(self, nsid):
+        """Makes multiple attempts to get group info by NSID, sleeping
+        before attempts.
+
+        """
+        # Initialize return value
+        info = {}
+
+        def make_attempt():
+            """Makes a single attempt to get group info by NSID,
+            sleeping before the attempt.
+
+            """
+            # Sleep before the attempt
+            seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
+            self.logger.info("{0}: sleeping for {1} seconds".format(
+                self.source_log, seconds_between_api_attempts))
+            time.sleep(seconds_between_api_attempts)
+
+            # Make an attempt to get group info by NSID
+            try:
+                group_info_xml = self.api.groups_getInfo(group_id=nsid)
+
+                # Parse the resulting XML
+                info['name'] = group_info_xml.find("group").find("name").text
+                info['description'] = group_info_xml.find("group").find("description").text
+                info['members'] = int(group_info_xml.find("group").find("members").text)
+                info['pool_count'] = int(group_info_xml.find("group").find("pool_count").text)
+                info['topic_count'] = int(group_info_xml.find("group").find("topic_count").text)
+                self.logger.info("{0}: found group info for {1}".format(
+                    self.source_log, nsid))
+
+            except Exception as exc:
+                self.logger.warning("{0}: couldn't find group info for {1}: {2}".format(
+                    self.source_log, nsid, exc))
+
+        # Make attempts to get group info by NSID
+        iAttempts = 1
+        make_attempt()
+        while len(info) == 0 and iAttempts < self.number_of_api_attempts:
+            iAttempts += 1
+            make_attempt()
+
+        return info
+
+    def n_to_s(self, scores):
+        """Converts a numerical score to either a "-" if below the
+        median, a "+" if above the median, or a "~" otherwise.
+
+        """
+        threshold = np.median(scores)
+        strings = []
+        for score in scores:
+            if score < threshold:
+                string = "-"
+            elif score > threshold:
+                string = "+"
+            else:
+                string = "~"
+            strings.append(string)
+        return np.array(strings)
 
     def dump(self, pickle_file_name=None):
         """Dumps FlickrUsers attributes pickle.
@@ -162,6 +236,14 @@ class FlickrSources:
         p['seconds_between_api_attempts'] = self.seconds_between_api_attempts
 
         p['groups'] = self.groups
+
+        p['nsid'] = self.nsid
+        p['name'] = self.name
+        p['eighteenplus'] = self.eighteenplus
+        p['members'] = self.members
+        p['pool_count'] = self.pool_count
+        p['topic_count'] = self.topic_count
+        p['description'] = self.description
 
         pickle.dump(p, pickle_file)
 
@@ -194,6 +276,14 @@ class FlickrSources:
 
         self.groups = p['groups']
 
+        self.nsid = p['nsid']
+        self.name = p['name']
+        self.eighteenplus = p['eighteenplus']
+        self.members = p['members']
+        self.pool_count = p['pool_count']
+        self.topic_count = p['topic_count']
+        self.description = p['description']
+
         self.logger.info("{0} loaded {1} groups from {2}".format(
             self.source_log, len(self.groups), pickle_file_name))
 
@@ -222,40 +312,61 @@ if __name__ == "__main__":
     # Create and dump, or load, the FlickrSources pickle
     if not os.path.exists(fs.pickle_file_name):
 
-        # Select one hundred groups
+        # Get one hundred groups
         fs.groups = fs.get_groups_by_source(fs.source_type[0], fs.source_word[0])
+
+        # Get information for each group
+        for grp in fs.groups:
+            info = fs.get_group_info_by_id(grp['nsid'])
+            grp.update(info)
+        
+        # Assign arrays of values for selecting groups
+        for grp in fs.groups:
+            fs.nsid.append(grp['nsid'])
+            fs.name.append(grp['name'])
+            fs.eighteenplus.append(grp['eighteenplus'])
+            fs.members.append(grp['members'])
+            fs.pool_count.append(grp['pool_count'])
+            fs.topic_count.append(grp['topic_count'])
+            fs.description.append(grp['description'])
+
         fs.dump()
 
     else:
+
         fs.load()
 
-    """
-    # Compute z-scores based on number of statuses, number of
-    # followers, and the followers to statuses ratio
-    n_statuses = np.array(fs.statuses_count)
-    n_followers = np.array(fs.followers_count)
-    n_trusting = n_followers / n_statuses
-
-    l_statuses = np.log(n_statuses)
-    l_followers = np.log(n_followers)
-    l_trusting = np.log(n_trusting)
-
-    z_statuses = (n_statuses - n_statuses.mean()) / n_statuses.std()
-    z_followers = (n_followers - n_followers.mean()) / n_followers.std()
-    z_trusting = (n_trusting - n_trusting.mean()) / n_trusting.std()
+    # Compute z-scores based on number of photos, number of members,
+    # and the members to photos ratio
+    n_photos = np.array(fs.pool_count)
+    n_members = np.array(fs.members)
+    n_trusting = n_members / n_photos
 
     # Convert the numeric scores to string scores
-    s_statuses = fs.z_to_s(z_statuses)
-    s_followers = fs.z_to_s(z_followers)
-    s_trusting = fs.z_to_s(z_trusting)
+    s_photos = fs.n_to_s(n_photos)
+    s_members = fs.n_to_s(n_members)
+    s_trusting = fs.n_to_s(n_trusting)
 
     # Create a dictionary of groups in order to print a JSON document
     # to a file
     groups = []
     n_grp = len(fs.groups)
-    for i_usr in range(n_grp):
+    for i_grp in range(n_grp):
         group = {}
+        group['nsid'] = fs.nsid[i_grp]
         group['name'] = fs.name[i_grp]
+        group['eighteenplus'] = fs.eighteenplus[i_grp]
+        group['members'] = fs.members[i_grp]
+        group['pool_count'] = fs.pool_count[i_grp]
+        group['topic_count'] = fs.topic_count[i_grp]
+        group['photos'] = n_photos[i_grp]
+        group['members'] = n_members[i_grp]
+        group['trusting'] = n_trusting[i_grp]
+        group['score'] = s_photos[i_grp] + s_members[i_grp] + s_trusting[i_grp]
+        if group['score'] == "+++":
+            group['include'] = True
+        else:
+            group['include'] = False
         groups.append(group)
 
     # Print the selected groups JSON document, preserving the encoding
@@ -263,4 +374,3 @@ if __name__ == "__main__":
     out = codecs.open(groups_file_name, encoding='utf-8', mode='w')
     out.write(json.dumps(groups, ensure_ascii=False, indent=4, separators=(',', ': ')))
     out.close()
-    """
