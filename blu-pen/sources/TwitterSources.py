@@ -49,18 +49,15 @@ class TwitterSources:
          self.source_label,
          self.source_type,
          self.source_word) = self.blu_pen_utl.process_source_words(source_word_str)
-        if len(self.source_word) > 1:
-            err_msg = "{0} only one source word accepted".format(
-                self.source_path)
-            self.logger.error(err_msg)
-            raise Exception(err_msg)
 
-        # Assign atributes
+        # Assign input atributes
         self.number_of_api_attempts = number_of_api_attempts
         self.seconds_between_api_attempts = seconds_between_api_attempts
         # TODO: Process a configuration file to set the pickle directory
         self.content_dir = os.path.join(self.config.get("twitter", "content_dir"), self.source_path)
         self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
+
+        # Initialize created atributes
         self.users = []
         self.name = []
         self.description = []
@@ -84,6 +81,13 @@ class TwitterSources:
                 else:
                     root.removeHandler(handler)
         self.logger = logging.getLogger("TwitterSources")
+
+        # Check input arguments
+        if len(self.source_word) > 1:
+            err_msg = "{0} only one source word accepted".format(
+                self.source_path)
+            self.logger.error(err_msg)
+            raise Exception(err_msg)
 
     def get_users_by_source(self, source_type, source_word, count=20, page=0, max_id=0, since_id=0):
         """Makes multiple attempts to get users by source, sleeping
@@ -374,17 +378,19 @@ class TwitterSources:
         pickle_file.close()
 
 if __name__ == "__main__":
-    """Selects a set of Twitter users by searching using a query term.
+    """Selects a collection of Twitter users by searching for users
+    using a query term.
 
     """
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Select a set of Twitter users by searching using a query term")
+    parser = argparse.ArgumentParser(
+        description="Selects a collection of Twitter users by searching for users using a query term.")
     parser.add_argument("-c", "--config-file",
                         default="../authors/BluePeninsula.cfg",
                         help="the configuration file")
     parser.add_argument("-w", "--source-words-str",
                         default="@Japan",
-                        help="the query term, with leading '@' for users, or '#' for tweet, search")
+                        help="the query term, with leading '@', to search for users, or '#', to search for tweets")
     args = parser.parse_args()
 
     # Create a TwitterSources instance, and create the content

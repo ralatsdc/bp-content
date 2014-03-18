@@ -31,7 +31,8 @@ class FlickrSources:
     def __init__(self, config_file, source_word_str,
                  api_key='71ae5bd2b331d44649161f6d3ff7e6b6', api_secret='45f1be4bd59f9155',
                  number_of_api_attempts=4, seconds_between_api_attempts=1):
-        """Constructs a FlickrUsers instance given a source word.
+        """Constructs a FlickrSources instance given a configuration
+        file and source word.
 
         """
         self.blu_pen_utl = BluePeninsulaUtility()
@@ -49,13 +50,8 @@ class FlickrSources:
          self.source_label,
          self.source_type,
          self.source_word) = self.blu_pen_utl.process_source_words(source_word_str)
-        if len(self.source_word) > 1:
-            err_msg = "{0} only one source word accepted".format(
-                self.source_path)
-            self.logger.error(err_msg)
-            raise Exception(err_msg)
 
-        # Assign atributes
+        # Assign input atributes
         self.api_key = api_key
         self.api_secret = api_secret
         self.number_of_api_attempts = number_of_api_attempts
@@ -64,9 +60,8 @@ class FlickrSources:
         self.content_dir = os.path.join(self.config.get("flickr", "content_dir"), self.source_path)
         self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
 
-        # TODO: Add attributes
+        # Initialize created attributes
         self.groups = []
-
         self.nsid = []
         self.name = []
         self.eighteenplus = []
@@ -93,6 +88,18 @@ class FlickrSources:
                 else:
                     root.removeHandler(handler)
         self.logger = logging.getLogger("FlickrSources")
+
+        # Check input arguments
+        if len(self.source_word) > 1:
+            err_msg = "{0} only one source word accepted".format(
+                self.source_path)
+            self.logger.error(err_msg)
+            raise Exception(err_msg)
+        if not self.source_type == "@":
+            err_msg = "{0} can only search by group (@)".format(
+                self.source_path)
+            self.logger.error(err_msg)
+            raise Exception(err_msg)
 
     def get_groups_by_source(self, source_type, source_word, per_page=100, page=0):
         """Makes multiple attempts to get groups by source, sleeping
@@ -214,7 +221,7 @@ class FlickrSources:
         return np.array(strings)
 
     def dump(self, pickle_file_name=None):
-        """Dumps FlickrUsers attributes pickle.
+        """Dumps FlickrSources attributes pickle.
 
         """
         if pickle_file_name is None:
@@ -253,7 +260,7 @@ class FlickrSources:
         pickle_file.close()
         
     def load(self, pickle_file_name=None):
-        """Loads FlickrUsers attributes pickle.
+        """Loads FlickrSources attributes pickle.
 
         """
         if pickle_file_name is None:
@@ -290,20 +297,22 @@ class FlickrSources:
         pickle_file.close()
 
 if __name__ == "__main__":
-    """Selects a set of Flickr groups by searching using a query term.
+    """Selects a collection of Flickr groups by searching for groups
+    using a query term.
 
     """
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Select a set of Flickr groups by searching using a query term")
+    parser = argparse.ArgumentParser(
+        description="Selects a collection of Flickr groups by searching for groups using a query term")
     parser.add_argument("-c", "--config-file",
                         default="../authors/BluePeninsula.cfg",
                         help="the configuration file")
     parser.add_argument("-w", "--source-words-str",
                         default="@Japan",
-                        help="the query term, with leading '@' for groups, or '#' for photos, search")
+                        help="the query term, with leading '@', to search for groups")
     args = parser.parse_args()
 
-    # Create a FlickrUsers instance, and create the content directory,
+    # Create a FlickrSources instance, and create the content directory,
     # if needed
     fs = FlickrSources(args.config_file, args.source_words_str)
     if not os.path.exists(fs.content_dir):

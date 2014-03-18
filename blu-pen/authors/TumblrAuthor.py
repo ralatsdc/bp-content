@@ -47,7 +47,7 @@ class TumblrAuthor:
         self.info = None
         self.posts = []
         
-        self.client = client = pytumblr.TumblrRestClient(self.consumer_key, self.secret_key)
+        self.client = pytumblr.TumblrRestClient(self.consumer_key, self.secret_key)
         self.logger = logging.getLogger(__name__)
         
     def set_posts_as_recent(self, limit=20):

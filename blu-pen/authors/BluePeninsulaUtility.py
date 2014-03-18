@@ -387,9 +387,18 @@ class BluePeninsulaUtility:
                 source_header = source_words[0] + " and " + source_words[1]
                 source_label = "for " + source_words[0] + " and " + source_words[1]
 
-        return (source_log,
-                source_path,
-                source_header,
-                source_label,
-                source_types,
-                source_words)
+        if len(source_words) == 1:
+            return (source_log,
+                    source_path,
+                    source_header,
+                    source_label,
+                    source_types[0],
+                    source_words[0])
+
+        else:
+            return (source_log,
+                    source_path,
+                    source_header,
+                    source_label,
+                    source_types,
+                    source_words)

@@ -342,10 +342,7 @@ class Request(dict):
     def __init__(self, method=HTTP_METHOD, url=None, parameters=None,
                  body='', is_form_encoded=False):
         if url is not None:
-            # <RAL-2014-03-18-Removed>
-            # self.url = to_unicode(url)
-            # </RAL-2014-03-18-Removed>
-            self.url = url
+            self.url = to_unicode(url)
         self.method = method
         if parameters is not None:
             for k, v in parameters.iteritems():
