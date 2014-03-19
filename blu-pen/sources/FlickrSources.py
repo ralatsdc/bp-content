@@ -81,22 +81,19 @@ class FlickrSources:
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
             root.addHandler(console_handler)
-        else:
-            for handler in root.handlers:
-                if isinstance(handler, logging.StreamHandler):
-                    handler.setFormatter(formatter)
-                else:
-                    root.removeHandler(handler)
-        self.logger = logging.getLogger("FlickrSources")
+            file_handler = logging.FileHandler("FlickrSources.log", mode='w', encoding='utf-8')
+            file_handler.setFormatter(formatter)
+            root.addHandler(file_handler)
+        self.logger = logging.getLogger(u"FlickrSources")
 
         # Check input arguments
-        if len(self.source_word) > 1:
-            err_msg = "{0} only one source word accepted".format(
+        if not type(self.source_word) == unicode:
+            err_msg = u"{0} only one source word accepted as type unicode".format(
                 self.source_path)
             self.logger.error(err_msg)
             raise Exception(err_msg)
         if not self.source_type == "@":
-            err_msg = "{0} can only search by group (@)".format(
+            err_msg = u"{0} can only search by group (@)".format(
                 self.source_path)
             self.logger.error(err_msg)
             raise Exception(err_msg)
@@ -116,7 +113,7 @@ class FlickrSources:
             """
             # Sleep before the attempt
             seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-            self.logger.info("{0}: sleeping for {1} seconds".format(
+            self.logger.info(u"{0}: sleeping for {1} seconds".format(
                 self.source_log, seconds_between_api_attempts))
             time.sleep(seconds_between_api_attempts)
 
@@ -142,11 +139,11 @@ class FlickrSources:
                     group['topic_count'] = grp.get('topic_count')
                     groups.append(group)
 
-                self.logger.info("{0}: found groups for {1}{2}".format(
+                self.logger.info(u"{0}: found groups for {1}{2}".format(
                     self.source_log, source_type, source_word))
 
             except Exception as exc:
-                self.logger.warning("{0}: couldn't find groups for {1}{2}: {3}".format(
+                self.logger.warning(u"{0}: couldn't find groups for {1}{2}: {3}".format(
                     self.source_log, source_type, source_word, exc))
 
         # Make attempts to get groups by source
@@ -173,7 +170,7 @@ class FlickrSources:
             """
             # Sleep before the attempt
             seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-            self.logger.info("{0}: sleeping for {1} seconds".format(
+            self.logger.info(u"{0}: sleeping for {1} seconds".format(
                 self.source_log, seconds_between_api_attempts))
             time.sleep(seconds_between_api_attempts)
 
@@ -187,11 +184,11 @@ class FlickrSources:
                 info['members'] = int(group_info_xml.find("group").find("members").text)
                 info['pool_count'] = int(group_info_xml.find("group").find("pool_count").text)
                 info['topic_count'] = int(group_info_xml.find("group").find("topic_count").text)
-                self.logger.info("{0}: found group info for {1}".format(
+                self.logger.info(u"{0}: found group info for {1}".format(
                     self.source_log, nsid))
 
             except Exception as exc:
-                self.logger.warning("{0}: couldn't find group info for {1}: {2}".format(
+                self.logger.warning(u"{0}: couldn't find group info for {1}: {2}".format(
                     self.source_log, nsid, exc))
 
         # Make attempts to get group info by NSID
@@ -254,7 +251,7 @@ class FlickrSources:
 
         pickle.dump(p, pickle_file)
 
-        self.logger.info("{0} dumped {1} groups to {2}".format(
+        self.logger.info(u"{0} dumped {1} groups to {2}".format(
             self.source_log, len(self.groups), pickle_file_name))
 
         pickle_file.close()
@@ -291,7 +288,7 @@ class FlickrSources:
         self.topic_count = p['topic_count']
         self.description = p['description']
 
-        self.logger.info("{0} loaded {1} groups from {2}".format(
+        self.logger.info(u"{0} loaded {1} groups from {2}".format(
             self.source_log, len(self.groups), pickle_file_name))
 
         pickle_file.close()
@@ -307,48 +304,74 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config-file",
                         default="../authors/BluePeninsula.cfg",
                         help="the configuration file")
-    parser.add_argument("-w", "--source-words-str",
-                        default="@Japan",
-                        help="the query term, with leading '@', to search for groups")
+    parser.add_argument("-w", "--source-words-file",
+                        default="./FlickrSources.json",
+                        help="the tag, with leading '@', to search for groups")
     args = parser.parse_args()
 
-    # Create a FlickrSources instance, and create the content directory,
-    # if needed
-    fs = FlickrSources(args.config_file, args.source_words_str)
-    if not os.path.exists(fs.content_dir):
-        os.makedirs(fs.content_dir)
+    # Load the source words file
+    inp = codecs.open(args.source_words_file, encoding='utf-8', mode='r')
+    source = json.loads(inp.read())
+    inp.close()
 
-    # Create and dump, or load, the FlickrSources pickle
-    if not os.path.exists(fs.pickle_file_name):
+    # Consider each source word string
+    nsid = []
+    name = []
+    eighteenplus = []
+    members = []
+    pool_count = []
+    topic_count = []
+    description = []
+    for source_word_str in source['words']:
 
-        # Get one hundred groups
-        fs.groups = fs.get_groups_by_source(fs.source_type[0], fs.source_word[0])
+        # Create a FlickrSources instance, and create the content
+        # directory, if needed
+        fs = FlickrSources(args.config_file, source_word_str)
+        if not os.path.exists(fs.content_dir):
+            os.makedirs(fs.content_dir)
+        fs.logger.info(u"{0}: finding groups using {1}".format(
+            fs.source_log, source_word_str))
 
-        # Get information for each group
-        for grp in fs.groups:
-            info = fs.get_group_info_by_id(grp['nsid'])
-            grp.update(info)
-        
-        # Assign arrays of values for selecting groups
-        for grp in fs.groups:
-            fs.nsid.append(grp['nsid'])
-            fs.name.append(grp['name'])
-            fs.eighteenplus.append(grp['eighteenplus'])
-            fs.members.append(grp['members'])
-            fs.pool_count.append(grp['pool_count'])
-            fs.topic_count.append(grp['topic_count'])
-            fs.description.append(grp['description'])
+        # Create and dump, or load, the FlickrSources pickle
+        if not os.path.exists(fs.pickle_file_name):
 
-        fs.dump()
+            # Get one hundred groups
+            fs.groups = fs.get_groups_by_source(fs.source_type, fs.source_word)
 
-    else:
+            # Get information for each group
+            for grp in fs.groups:
+                info = fs.get_group_info_by_id(grp['nsid'])
+                grp.update(info)
+            
+            # Assign arrays of values for selecting groups
+            for grp in fs.groups:
+                fs.nsid.append(grp['nsid'])
+                fs.name.append(grp['name'])
+                fs.eighteenplus.append(grp['eighteenplus'])
+                fs.members.append(grp['members'])
+                fs.pool_count.append(grp['pool_count'])
+                fs.topic_count.append(grp['topic_count'])
+                fs.description.append(grp['description'])
 
-        fs.load()
+            fs.dump()
+
+        else:
+
+            fs.load()
+
+        # Accumulate arrays of values for selecting groups
+        nsid.extend(fs.nsid)
+        name.extend(fs.name)
+        eighteenplus.extend(fs.eighteenplus)
+        members.extend(fs.members)
+        pool_count.extend(fs.pool_count)
+        topic_count.extend(fs.topic_count)
+        description.extend(fs.description)
 
     # Compute z-scores based on number of photos, number of members,
     # and the members to photos ratio
-    n_photos = np.array(fs.pool_count)
-    n_members = np.array(fs.members)
+    n_photos = np.array(pool_count)
+    n_members = np.array(members)
     n_trusting = n_members / n_photos
 
     # Convert the numeric scores to string scores
@@ -359,15 +382,15 @@ if __name__ == "__main__":
     # Create a dictionary of groups in order to print a JSON document
     # to a file
     groups = []
-    n_grp = len(fs.groups)
+    n_grp = len(nsid)
     for i_grp in range(n_grp):
         group = {}
-        group['nsid'] = fs.nsid[i_grp]
-        group['name'] = fs.name[i_grp]
-        group['eighteenplus'] = fs.eighteenplus[i_grp]
-        group['members'] = fs.members[i_grp]
-        group['pool_count'] = fs.pool_count[i_grp]
-        group['topic_count'] = fs.topic_count[i_grp]
+        group['nsid'] = nsid[i_grp]
+        group['name'] = name[i_grp]
+        group['eighteenplus'] = eighteenplus[i_grp]
+        group['members'] = members[i_grp]
+        group['pool_count'] = pool_count[i_grp]
+        group['topic_count'] = topic_count[i_grp]
         group['photos'] = n_photos[i_grp]
         group['members'] = n_members[i_grp]
         group['trusting'] = n_trusting[i_grp]
@@ -379,7 +402,7 @@ if __name__ == "__main__":
         groups.append(group)
 
     # Print the selected groups JSON document, preserving the encoding
-    groups_file_name = fs.pickle_file_name.replace(".pkl", ".out")
+    groups_file_name = args.source_words_file.replace(".json", ".out")
     out = codecs.open(groups_file_name, encoding='utf-8', mode='w')
     out.write(json.dumps(groups, ensure_ascii=False, indent=4, separators=(',', ': ')))
     out.close()
