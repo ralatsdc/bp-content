@@ -37,8 +37,6 @@ class TumblrSources:
         file and source word.
 
         """
-        self.blu_pen_utl = BluePeninsulaUtility()
-        
         # Parse configuration file
         self.config_file = config_file
         self.config = ConfigParser.SafeConfigParser()
@@ -46,6 +44,7 @@ class TumblrSources:
 
         # Process the source word string to create log and path
         # strings, and assign input argument attributes
+        self.blu_pen_utl = BluePeninsulaUtility()
         (self.source_log,
          self.source_path,
          self.source_header,
@@ -64,8 +63,6 @@ class TumblrSources:
 
         # Initialize created attributes
         self.host_names = set()
-        self.blogs_info = []
-        self.total_posts = []
         self.blog_posts = []
 
         # Create a client
@@ -205,7 +202,7 @@ class TumblrSources:
         """
         # Initialize return value
         exc_caught = False
-        blog = {}
+        b_p = {}
 
         def make_attempt():
             """Makes a single attempt to get blog posts by hostname,
@@ -221,16 +218,16 @@ class TumblrSources:
             # Make an attempt to get blog posts by hostname
             try:
                 if ptype == "" and offset == 0:
-                    blog.update(self.client.posts(hostname, limit=limit))
+                    b_p.update(self.client.posts(hostname, limit=limit))
 
                 elif not ptype == "" and offset == 0:
-                    blog.update(self.client.posts(hostname, limit=limit, type=ptype))
+                    b_p.update(self.client.posts(hostname, limit=limit, type=ptype))
 
                 elif ptype == "" and offset > 0:
-                    blog.update(self.client.posts(hostname, limit=limit, offset=offset))
+                    b_p.update(self.client.posts(hostname, limit=limit, offset=offset))
 
                 else:
-                    blog.update(self.client.posts(hostname, limit=limit, type=ptype, offset=offset))
+                    b_p.update(self.client.posts(hostname, limit=limit, type=ptype, offset=offset))
 
                 self.logger.info(u"{0}: found blog posts for {1}".format(
                     self.source_log, hostname))
@@ -247,7 +244,7 @@ class TumblrSources:
             iAttempts += 1
             make_attempt()
 
-        return blog
+        return b_p
 
     def n_to_s(self, scores):
         """Converts a numerical score to either a "-" if below the
@@ -289,14 +286,12 @@ class TumblrSources:
         p['seconds_between_api_attempts'] = self.seconds_between_api_attempts
 
         p['host_names'] = self.host_names
-        p['blogs_info'] = self.blogs_info
-        p['total_posts'] = self.total_posts
         p['blog_posts'] = self.blog_posts
 
         pickle.dump(p, pickle_file)
 
         self.logger.info(u"{0} dumped {1} blogs to {2}".format(
-            self.source_log, len(self.blogs_info), pickle_file_name))
+            self.source_log, len(self.host_names), pickle_file_name))
 
         pickle_file.close()
         
@@ -323,12 +318,10 @@ class TumblrSources:
         self.seconds_between_api_attempts = p['seconds_between_api_attempts']
 
         self.host_names = p['host_names']
-        self.blogs_info = p['blogs_info']
-        self.total_posts = p['total_posts']
         self.blog_posts = p['blog_posts']
 
         self.logger.info(u"{0} loaded {1} blogs from {2}".format(
-            self.source_log, len(self.blogs_info), pickle_file_name))
+            self.source_log, len(self.host_names), pickle_file_name))
 
         pickle_file.close()
 
@@ -352,11 +345,8 @@ if __name__ == "__main__":
     inp.close()
 
     # Consider each source word string
-
-    blogs_info = []
-    total_posts = []
+    host_names = []
     blog_posts = []
-
     for source_word_str in source['words']:
 
         # Create a TumblrSources instance, and create the content directory, if needed
@@ -390,10 +380,8 @@ if __name__ == "__main__":
             # Get information, total number of posts, and text posts
             # for each blog
             for host_name in ts.host_names:
-                blog = ts.get_blog_posts_by_hostname(host_name)
-                ts.blogs_info.append(blog['blog'])
-                ts.total_posts.append(blog['total_posts'])
-                ts.blog_posts.append(blog['posts'])
+                b_p = ts.get_blog_posts_by_hostname(host_name)
+                ts.blog_posts.append(b_p)
 
             ts.dump()
 
@@ -401,30 +389,67 @@ if __name__ == "__main__":
             
             ts.load()
 
-        blogs_info.extend(ts.blogs_info)
-        total_posts.extend(ts.total_posts)
-        blog_posts.extend(ts.blog_posts)
+        # Accumulate blog info, and posts
+        for b_p in ts.blog_posts:
+            if not 'blog' in b_p:
+                continue
+            h_n = b_p['blog']['name']
+            if not h_n in host_names:
+                host_names.append(h_n)
+                blog_posts.append(b_p)
 
+    # Consider sample posts from each blog
     total_tags = []
-    for posts in blog_posts:
+    for blog in blog_posts:
+
+        # If there are no posts for the current blog, note that the
+        # total number of tag appearances is zero, and continue to the
+        # next blog
         n_tags = 0
+        if not 'posts' in blog:
+            total_tags.append(n_tags)
+            continue
+
+        # Consider each post from the current blog
+        posts = blog['posts']
         for post in posts:
-            n_tags += len(re.findall(ts.source_word, "".join(post['tags']), re.I))
+
+            # Consider each source word
+            for source_word_str in source['words']:
+
+                # Process the source word string to create log and
+                # path strings, and assign input argument attributes
+                (source_log,
+                 source_path,
+                 source_header,
+                 source_label,
+                 source_type,
+                 source_word) = ts.blu_pen_utl.process_source_words(source_word_str)
+
+                # Count the appearances of the current source word in
+                # the curren post of the current blog
+                n_tags += len(re.findall(source_word, "".join(post['tags']), re.I))
+
+        # Note the total number of tag appearances for the current
+        # blog
         total_tags.append(n_tags)
 
+    # Find the blogs with the highest number of tag appearances
+    # TODO: Remove the hard coded values
     np_total_tags = np.array(total_tags)
-
     min_total_tags = 40
     index_blog, = np.nonzero(np_total_tags > min_total_tags)
     while np.size(index_blog) < 100 and min_total_tags > 0:
         min_total_tags -= 1
         index_blog, = np.nonzero(np_total_tags > min_total_tags)
 
-    np_blogs_info = np.array(blogs_info)[index_blog]
-
+    # Select the blogs with the highest number of tag appearances
+    blogs_info = []
     posts = []
     likes = []
-    for info in np_blogs_info:
+    for i_blg in index_blog:
+        info = blog_posts[i_blg]['blog']
+        blogs_info.append(info)
         if 'posts' in info:
             posts.append(info['posts'])
         else:
@@ -448,10 +473,10 @@ if __name__ == "__main__":
     # Create a dictionary of blogs in order to print a JSON document
     # to a file
     blogs = []
-    for i_blg in range(np.size(np_blogs_info)):
+    for i_blg in range(len(blogs_info)):
         blog = {}
 
-        info = np_blogs_info[i_blg]
+        info = blogs_info[i_blg]
 
         if 'name' in info:
             blog['name'] = info['name']
