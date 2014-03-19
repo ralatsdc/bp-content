@@ -76,7 +76,7 @@ class TumblrSources:
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
             root.addHandler(console_handler)
-            file_handler = logging.FileHandler("TumblrSources.log", mode='w', encoding='utf-8')
+            file_handler = logging.FileHandler("FlickrSources.log", mode='w', encoding='utf-8')
             file_handler.setFormatter(formatter)
             root.addHandler(file_handler)
         self.logger = logging.getLogger(u"TumblrSources")

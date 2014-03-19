@@ -77,13 +77,14 @@ class FlickrSources:
         root = logging.getLogger()
         root.setLevel(logging.INFO)
         formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S")
-        if len(root.handlers) == 0:
-            console_handler = logging.StreamHandler()
-            console_handler.setFormatter(formatter)
-            root.addHandler(console_handler)
-            file_handler = logging.FileHandler("FlickrSources.log", mode='w', encoding='utf-8')
-            file_handler.setFormatter(formatter)
-            root.addHandler(file_handler)
+        for handler in root.handlers:
+            root.removeHandler(handler)
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        root.addHandler(console_handler)
+        file_handler = logging.FileHandler("TumblrSources.log", mode='w', encoding='utf-8')
+        file_handler.setFormatter(formatter)
+        root.addHandler(file_handler)
         self.logger = logging.getLogger(u"FlickrSources")
 
         # Check input arguments
