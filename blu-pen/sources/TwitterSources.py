@@ -74,17 +74,14 @@ class TwitterSources:
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
             root.addHandler(console_handler)
-        else:
-            for handler in root.handlers:
-                if isinstance(handler, logging.StreamHandler):
-                    handler.setFormatter(formatter)
-                else:
-                    root.removeHandler(handler)
-        self.logger = logging.getLogger("TwitterSources")
+            file_handler = logging.FileHandler("TwitterSources.log", mode='w', encoding='utf-8')
+            file_handler.setFormatter(formatter)
+            root.addHandler(file_handler)
+        self.logger = logging.getLogger(u"TwitterSources")
 
         # Check input arguments
-        if len(self.source_word) > 1:
-            err_msg = "{0} only one source word accepted".format(
+        if not type(self.source_word) == unicode:
+            err_msg = u"{0} only one source word accepted as type unicode".format(
                 self.source_path)
             self.logger.error(err_msg)
             raise Exception(err_msg)
@@ -111,7 +108,7 @@ class TwitterSources:
 
             # Sleep before the attempt
             seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-            self.logger.info("{0}: sleeping for {1} seconds".format(
+            self.logger.info(u"{0}: sleeping for {1} seconds".format(
                 self.source_log, seconds_between_api_attempts))
             time.sleep(seconds_between_api_attempts)
 
@@ -154,11 +151,11 @@ class TwitterSources:
                         screen_names = self.get_names_from_tweets(tweets)
                         users.extend(api.UsersLookup(screen_name=screen_names))
 
-                self.logger.info("{0}: found users for {1}{2}".format(
+                self.logger.info(u"{0}: found users for {1}{2}".format(
                     self.source_log, source_type, source_word))
 
             except Exception as exc:
-                self.logger.warning("{0}: couldn't find users for {1}{2}: {3}".format(
+                self.logger.warning(u"{0}: couldn't find users for {1}{2}: {3}".format(
                         self.source_log, source_type, source_word, exc))
 
         # Make attempts to get users by source
@@ -338,7 +335,7 @@ class TwitterSources:
 
         pickle.dump(p, pickle_file)
 
-        self.logger.info("{0} dumped {1} users to {2}".format(
+        self.logger.info(u"{0} dumped {1} users to {2}".format(
             self.source_log, len(self.users), pickle_file_name))
 
         pickle_file.close()
@@ -372,7 +369,7 @@ class TwitterSources:
         self.statuses_count = p['statuses_count']
         self.followers_count = p['followers_count']
 
-        self.logger.info("{0} loaded {1} users from {2}".format(
+        self.logger.info(u"{0} loaded {1} users from {2}".format(
             self.source_log, len(self.users), pickle_file_name))
 
         pickle_file.close()
@@ -388,43 +385,65 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config-file",
                         default="../authors/BluePeninsula.cfg",
                         help="the configuration file")
-    parser.add_argument("-w", "--source-words-str",
-                        default="@Japan",
+    parser.add_argument("-w", "--source-words-file",
+                        default="./TwitterSources.json",
                         help="the query term, with leading '@', to search for users, or '#', to search for tweets")
     args = parser.parse_args()
 
-    # Create a TwitterSources instance, and create the content
-    # directory, if needed
-    ts = TwitterSources(args.config_file, args.source_words_str)
-    if not os.path.exists(ts.content_dir):
-        os.makedirs(ts.content_dir)
+    # Load the source words file
+    inp = codecs.open(args.source_words_file, encoding='utf-8', mode='r')
+    source = json.loads(inp.read())
+    inp.close()
 
-    # Create and dump, or load, the TwitterSources pickle
-    if not os.path.exists(ts.pickle_file_name):
+    # Consider each source word string
+    name = []
+    description = []
+    screen_name = []
+    created_at = []
+    statuses_count = []
+    followers_count = []
+    for source_word_str in source['words']:
 
-        # Select one hundred users
-        for page in range(1, 6):
-            ts.users.extend(ts.get_users_by_source(ts.source_type[0], ts.source_word[0], page=page))
-        
-        # Assign arrays of values for selecting users
-        for u in ts.users:
-            ts.name.append(u.name)
-            ts.description.append(u.description)
-            ts.screen_name.append(u.screen_name)
-            ts.created_at.append(u.created_at)
-            ts.statuses_count.append(u.statuses_count)
-            ts.followers_count.append(u.followers_count)
+        # Create a TwitterSources instance, and create the content
+        # directory, if needed
+        ts = TwitterSources(args.config_file, source_word_str)
+        if not os.path.exists(ts.content_dir):
+            os.makedirs(ts.content_dir)
 
-        ts.dump()
+        # Create and dump, or load, the TwitterSources pickle
+        if not os.path.exists(ts.pickle_file_name):
 
-    else:
+            # Select one hundred users
+            for page in range(1, 6):
+                ts.users.extend(ts.get_users_by_source(ts.source_type, ts.source_word, page=page))
+            
+            # Assign arrays of values for selecting users
+            for u in ts.users:
+                ts.name.append(u.name)
+                ts.description.append(u.description)
+                ts.screen_name.append(u.screen_name)
+                ts.created_at.append(u.created_at)
+                ts.statuses_count.append(u.statuses_count)
+                ts.followers_count.append(u.followers_count)
 
-        ts.load()
+            ts.dump()
+
+        else:
+
+            ts.load()
+
+        # Accumulate created atributes
+        name.extend(ts.name)
+        description.extend(ts.description)
+        screen_name.extend(ts.screen_name)
+        created_at.extend(ts.created_at)
+        statuses_count.extend(ts.statuses_count)
+        followers_count.extend(ts.followers_count)
 
     # Compute scores based on number of statuses, number of
     # followers, and the followers to statuses ratio
-    n_statuses = np.array(ts.statuses_count)
-    n_followers = np.array(ts.followers_count)
+    n_statuses = np.array(statuses_count)
+    n_followers = np.array(followers_count)
     n_trusting = n_followers / n_statuses
 
     # Convert the numeric scores to string scores
@@ -435,15 +454,15 @@ if __name__ == "__main__":
     # Create a dictionary of users in order to print a JSON document
     # to a file
     users = []
-    n_usr = len(ts.users)
+    n_usr = len(name)
     for i_usr in range(n_usr):
         user = {}
-        user['name'] = ts.name[i_usr]
-        user['description'] = ts.description[i_usr]
-        user['screen_name'] = ts.screen_name[i_usr]
-        user['created_at'] = ts.created_at[i_usr]
-        user['statuses_count'] = ts.statuses_count[i_usr]
-        user['followers_count'] = ts.followers_count[i_usr]
+        user['name'] = name[i_usr]
+        user['description'] = description[i_usr]
+        user['screen_name'] = screen_name[i_usr]
+        user['created_at'] = created_at[i_usr]
+        user['statuses_count'] = statuses_count[i_usr]
+        user['followers_count'] = followers_count[i_usr]
         user['statuses'] = n_statuses[i_usr]
         user['followers'] = n_followers[i_usr]
         user['trusting'] = n_trusting[i_usr]
@@ -455,7 +474,7 @@ if __name__ == "__main__":
         users.append(user)
 
     # Print the selected users JSON document, preserving the encoding
-    users_file_name = ts.pickle_file_name.replace(".pkl", ".out")
+    users_file_name = args.source_words_file.replace(".json", ".out")
     out = codecs.open(users_file_name, encoding='utf-8', mode='w')
     out.write(json.dumps(users, ensure_ascii=False, indent=4, separators=(',', ': ')))
     out.close()
