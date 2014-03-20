@@ -303,7 +303,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Selects a collection of Flickr groups by searching for groups using a query term")
     parser.add_argument("-c", "--config-file",
-                        default="../authors/BluePeninsula.cfg",
+                        default="BluPenSources.cfg",
                         help="the configuration file")
     parser.add_argument("-w", "--source-words-file",
                         default="./FlickrSources.json",

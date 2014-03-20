@@ -332,7 +332,7 @@ if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Selects a set of Tumblr blogs by getting tagged posts")
     parser.add_argument("-c", "--config-file",
-                        default="../authors/BluePeninsula.cfg",
+                        default="BluPenSources.cfg",
                         help="the configuration file")
     parser.add_argument("-w", "--source-words-file",
                         default="./TumblrSources.json",
