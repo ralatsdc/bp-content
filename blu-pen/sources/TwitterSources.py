@@ -1,12 +1,8 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Standard library imports
 from __future__ import division
 import ConfigParser
-import argparse
-import codecs
-import json
 import logging
 import math
 import os
@@ -67,16 +63,6 @@ class TwitterSources:
         self.followers_count = []
 
         # Create a logger
-        root = logging.getLogger()
-        root.setLevel(logging.INFO)
-        formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S")
-        if len(root.handlers) == 0:
-            console_handler = logging.StreamHandler()
-            console_handler.setFormatter(formatter)
-            root.addHandler(console_handler)
-            file_handler = logging.FileHandler("TwitterSources.log", mode='w', encoding='utf-8')
-            file_handler.setFormatter(formatter)
-            root.addHandler(file_handler)
         self.logger = logging.getLogger(u"TwitterSources")
 
         # Check input arguments
@@ -84,7 +70,7 @@ class TwitterSources:
             err_msg = u"{0} only one source word accepted as type unicode".format(
                 self.source_path)
             self.logger.error(err_msg)
-            raise Exception(err_msg)
+            raise Exception(err_msg.encode('utf-8'))
 
     def get_users_by_source(self, source_type, source_word, count=20, page=0, max_id=0, since_id=0):
         """Makes multiple attempts to get users by source, sleeping
@@ -287,6 +273,40 @@ class TwitterSources:
 
         return screen_names
 
+    def set_sources(self):
+        """Create and dump, or load, the TwitterSources pickle.
+
+        """
+        # Create content directory, if it does not exist
+        if not os.path.exists(self.content_dir):
+            os.makedirs(self.content_dir)
+
+        # Create and dump, or load, the TwitterSources pickle
+        if not os.path.exists(self.pickle_file_name):
+            self.logger.info(u"{0}: finding sources using {1}".format(
+                self.source_log, source_word_str))
+
+            # Select one hundred users
+            for page in range(1, 6):
+                self.users.extend(self.get_users_by_source(self.source_type, self.source_word, page=page))
+            
+            # Assign arrays of values for selecting users
+            for u in self.users:
+                self.name.append(u.name)
+                self.description.append(u.description)
+                self.screen_name.append(u.screen_name)
+                self.created_at.append(u.created_at)
+                self.statuses_count.append(u.statuses_count)
+                self.followers_count.append(u.followers_count)
+
+            # Dumps attributes pickle
+            self.dump()
+
+        else:
+
+            # Load attributes pickle
+            self.load()
+
     def n_to_s(self, scores):
         """Converts a numerical score to either a "-" if below the
         median, a "+" if above the median, or a "~" otherwise.
@@ -373,108 +393,3 @@ class TwitterSources:
             self.source_log, len(self.users), pickle_file_name))
 
         pickle_file.close()
-
-if __name__ == "__main__":
-    """Selects a collection of Twitter users by searching for users
-    using a query term.
-
-    """
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(
-        description="Selects a collection of Twitter users by searching for users using a query term.")
-    parser.add_argument("-c", "--config-file",
-                        default="BluPenSources.cfg",
-                        help="the configuration file")
-    parser.add_argument("-w", "--source-words-file",
-                        default="./TwitterSources.json",
-                        help="the query term, with leading '@', to search for users, or '#', to search for tweets")
-    args = parser.parse_args()
-
-    # Load the source words file
-    inp = codecs.open(args.source_words_file, encoding='utf-8', mode='r')
-    source = json.loads(inp.read())
-    inp.close()
-
-    # Consider each source word string
-    name = []
-    description = []
-    screen_name = []
-    created_at = []
-    statuses_count = []
-    followers_count = []
-    for source_word_str in source['words']:
-
-        # Create a TwitterSources instance, and create the content
-        # directory, if needed
-        ts = TwitterSources(args.config_file, source_word_str)
-        if not os.path.exists(ts.content_dir):
-            os.makedirs(ts.content_dir)
-
-        # Create and dump, or load, the TwitterSources pickle
-        if not os.path.exists(ts.pickle_file_name):
-
-            # Select one hundred users
-            for page in range(1, 6):
-                ts.users.extend(ts.get_users_by_source(ts.source_type, ts.source_word, page=page))
-            
-            # Assign arrays of values for selecting users
-            for u in ts.users:
-                ts.name.append(u.name)
-                ts.description.append(u.description)
-                ts.screen_name.append(u.screen_name)
-                ts.created_at.append(u.created_at)
-                ts.statuses_count.append(u.statuses_count)
-                ts.followers_count.append(u.followers_count)
-
-            ts.dump()
-
-        else:
-
-            ts.load()
-
-        # Accumulate created atributes
-        name.extend(ts.name)
-        description.extend(ts.description)
-        screen_name.extend(ts.screen_name)
-        created_at.extend(ts.created_at)
-        statuses_count.extend(ts.statuses_count)
-        followers_count.extend(ts.followers_count)
-
-    # Compute scores based on number of statuses, number of
-    # followers, and the followers to statuses ratio
-    n_statuses = np.array(statuses_count)
-    n_followers = np.array(followers_count)
-    n_trusting = n_followers / n_statuses
-
-    # Convert the numeric scores to string scores
-    s_statuses = ts.n_to_s(n_statuses)
-    s_followers = ts.n_to_s(n_followers)
-    s_trusting = ts.n_to_s(n_trusting)
-
-    # Create a dictionary of users in order to print a JSON document
-    # to a file
-    users = []
-    n_usr = len(name)
-    for i_usr in range(n_usr):
-        user = {}
-        user['name'] = name[i_usr]
-        user['description'] = description[i_usr]
-        user['screen_name'] = screen_name[i_usr]
-        user['created_at'] = created_at[i_usr]
-        user['statuses_count'] = statuses_count[i_usr]
-        user['followers_count'] = followers_count[i_usr]
-        user['statuses'] = n_statuses[i_usr]
-        user['followers'] = n_followers[i_usr]
-        user['trusting'] = n_trusting[i_usr]
-        user['score'] = s_statuses[i_usr] + s_followers[i_usr] + s_trusting[i_usr]
-        if user['score'] == "+++":
-            user['include'] = True
-        else:
-            user['include'] = False
-        users.append(user)
-
-    # Print the selected users JSON document, preserving the encoding
-    users_file_name = args.source_words_file.replace(".json", ".out")
-    out = codecs.open(users_file_name, encoding='utf-8', mode='w')
-    out.write(json.dumps(users, ensure_ascii=False, indent=4, separators=(',', ': ')))
-    out.close()

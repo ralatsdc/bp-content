@@ -1,18 +1,12 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Standard library imports
 from __future__ import division
 import ConfigParser
-import argparse
-import codecs
-import json
 import logging
 import math
 import os
 import pickle
-import random
-import re
 import sys
 import time
 
@@ -69,16 +63,6 @@ class TumblrSources:
         self.client = pytumblr.TumblrRestClient(self.consumer_key, self.secret_key)
 
         # Create a logger
-        root = logging.getLogger()
-        root.setLevel(logging.INFO)
-        formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S")
-        if len(root.handlers) == 0:
-            console_handler = logging.StreamHandler()
-            console_handler.setFormatter(formatter)
-            root.addHandler(console_handler)
-            file_handler = logging.FileHandler("FlickrSources.log", mode='w', encoding='utf-8')
-            file_handler.setFormatter(formatter)
-            root.addHandler(file_handler)
         self.logger = logging.getLogger(u"TumblrSources")
 
         # Check input arguments
@@ -86,12 +70,12 @@ class TumblrSources:
             err_msg = u"{0} only one source word accepted as type unicode".format(
                 self.source_path)
             self.logger.error(err_msg)
-            raise Exception(err_msg)
+            raise Exception(err_msg.encode('utf-8'))
         if not self.source_type == "#":
             err_msg = u"{0} can only search for posts with tag (#)".format(
                 self.source_path)
             self.logger.error(err_msg)
-            raise Exception(err_msg)
+            raise Exception(err_msg.encode('utf-8'))
 
     def get_blog_names_by_posts_with_tag(self, source_type, source_word, limit=20, before=0):
         """Makes multiple attempts to get blog host names by posts with
@@ -246,6 +230,51 @@ class TumblrSources:
 
         return b_p
 
+    def set_sources(self):
+        """Create and dump, or load, the TumblrSources pickle.
+
+        """
+        # Create content directory, if it does not exist
+        if not os.path.exists(self.content_dir):
+            os.makedirs(self.content_dir)
+
+        # Create and dump, or load, the TumblrSources pickle
+        if not os.path.exists(self.pickle_file_name):
+            self.logger.info(u"{0}: finding sources using {1}".format(
+                self.source_log, source_word_str))
+
+            # Get blog names by posts with tag
+            ns = self.get_blog_names_by_posts_with_tag(self.source_type, self.source_word)
+            self.host_names = self.host_names.union(ns['host_names'])
+            n_host_names = len(self.host_names)
+            additional_names_found = True
+            self.logger.info(u"{0}: found {1} unique blog host names using {2}".format(
+                self.source_log, n_host_names, source_word_str))
+            while additional_names_found and n_host_names < 1000:
+                ns = self.get_blog_names_by_posts_with_tag(self.source_type, self.source_word, before=ns['time_stamp'])
+                self.host_names = self.host_names.union(ns['host_names'])
+                if len(self.host_names) > n_host_names:
+                    additional_names_found = True
+                else:
+                    additional_names_found = False
+                n_host_names = len(self.host_names)
+                self.logger.info(u"{0}: found {1} unique blog host names using {2}".format(
+                    self.source_log, n_host_names, source_word_str))
+        
+            # Get information, total number of posts, and text posts
+            # for each blog
+            for host_name in self.host_names:
+                b_p = self.get_blog_posts_by_hostname(host_name)
+                self.blog_posts.append(b_p)
+
+            # Dumps attributes pickle
+            self.dump()
+
+        else:
+            
+            # Load attributes pickle
+            self.load()
+
     def n_to_s(self, scores):
         """Converts a numerical score to either a "-" if below the
         median, a "+" if above the median, or a "~" otherwise.
@@ -324,191 +353,3 @@ class TumblrSources:
             self.source_log, len(self.host_names), pickle_file_name))
 
         pickle_file.close()
-
-if __name__ == "__main__":
-    """Selects a set of Tumblr blogs by getting tagged posts.
-
-    """
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Selects a set of Tumblr blogs by getting tagged posts")
-    parser.add_argument("-c", "--config-file",
-                        default="BluPenSources.cfg",
-                        help="the configuration file")
-    parser.add_argument("-w", "--source-words-file",
-                        default="./TumblrSources.json",
-                        help="the tag, with leading '#', to search for posts")
-    args = parser.parse_args()
-
-    # Load the source words file
-    inp = codecs.open(args.source_words_file, encoding='utf-8', mode='r')
-    source = json.loads(inp.read())
-    inp.close()
-
-    # Consider each source word string
-    host_names = []
-    blog_posts = []
-    for source_word_str in source['words']:
-
-        # Create a TumblrSources instance, and create the content directory, if needed
-        ts = TumblrSources(args.config_file, source_word_str)
-        if not os.path.exists(ts.content_dir):
-            os.makedirs(ts.content_dir)
-        ts.logger.info(u"{0}: finding blogs using {1}".format(
-            ts.source_log, source_word_str))
-
-        # Create and dump, or load, the TumblrSources pickle
-        if not os.path.exists(ts.pickle_file_name):
-
-            # Get blog names by posts with tag
-            ns = ts.get_blog_names_by_posts_with_tag(ts.source_type, ts.source_word)
-            ts.host_names = ts.host_names.union(ns['host_names'])
-            n_host_names = len(ts.host_names)
-            additional_names_found = True
-            ts.logger.info(u"{0}: found {1} unique blog host names using {2}".format(
-                ts.source_log, n_host_names, source_word_str))
-            while additional_names_found and n_host_names < 1000:
-                ns = ts.get_blog_names_by_posts_with_tag(ts.source_type, ts.source_word, before=ns['time_stamp'])
-                ts.host_names = ts.host_names.union(ns['host_names'])
-                if len(ts.host_names) > n_host_names:
-                    additional_names_found = True
-                else:
-                    additional_names_found = False
-                n_host_names = len(ts.host_names)
-                ts.logger.info(u"{0}: found {1} unique blog host names using {2}".format(
-                    ts.source_log, n_host_names, source_word_str))
-        
-            # Get information, total number of posts, and text posts
-            # for each blog
-            for host_name in ts.host_names:
-                b_p = ts.get_blog_posts_by_hostname(host_name)
-                ts.blog_posts.append(b_p)
-
-            ts.dump()
-
-        else:
-            
-            ts.load()
-
-        # Accumulate blog info, and posts
-        for b_p in ts.blog_posts:
-            if not 'blog' in b_p:
-                continue
-            h_n = b_p['blog']['name']
-            if not h_n in host_names:
-                host_names.append(h_n)
-                blog_posts.append(b_p)
-
-    # Consider sample posts from each blog
-    total_tags = []
-    for blog in blog_posts:
-
-        # If there are no posts for the current blog, note that the
-        # total number of tag appearances is zero, and continue to the
-        # next blog
-        n_tags = 0
-        if not 'posts' in blog:
-            total_tags.append(n_tags)
-            continue
-
-        # Consider each post from the current blog
-        posts = blog['posts']
-        for post in posts:
-
-            # Consider each source word
-            for source_word_str in source['words']:
-
-                # Process the source word string to create log and
-                # path strings, and assign input argument attributes
-                (source_log,
-                 source_path,
-                 source_header,
-                 source_label,
-                 source_type,
-                 source_word) = ts.blu_pen_utl.process_source_words(source_word_str)
-
-                # Count the appearances of the current source word in
-                # the curren post of the current blog
-                n_tags += len(re.findall(source_word, "".join(post['tags']), re.I))
-
-        # Note the total number of tag appearances for the current
-        # blog
-        total_tags.append(n_tags)
-
-    # Find the blogs with the highest number of tag appearances
-    # TODO: Remove the hard coded values
-    np_total_tags = np.array(total_tags)
-    min_total_tags = 40
-    index_blog, = np.nonzero(np_total_tags > min_total_tags)
-    while np.size(index_blog) < 100 and min_total_tags > 0:
-        min_total_tags -= 1
-        index_blog, = np.nonzero(np_total_tags > min_total_tags)
-
-    # Select the blogs with the highest number of tag appearances
-    blogs_info = []
-    posts = []
-    likes = []
-    for i_blg in index_blog:
-        info = blog_posts[i_blg]['blog']
-        blogs_info.append(info)
-        if 'posts' in info:
-            posts.append(info['posts'])
-        else:
-            posts.append(0)
-        if 'likes' in info:
-            likes.append(info['likes'])
-        else:
-            likes.append(0)
-
-    # Compute scores based on number of posts, number of likes,
-    # and the likes to posts ratio
-    np_n_posts = np.array(posts)
-    np_n_likes = np.array(likes)
-    np_n_trusting = np_n_likes / np_n_posts
-
-    # Convert the numeric scores to string scores
-    np_s_posts = ts.n_to_s(np_n_posts)
-    np_s_likes = ts.n_to_s(np_n_likes)
-    np_s_trusting = ts.n_to_s(np_n_trusting)
-
-    # Create a dictionary of blogs in order to print a JSON document
-    # to a file
-    blogs = []
-    for i_blg in range(len(blogs_info)):
-        blog = {}
-
-        info = blogs_info[i_blg]
-
-        if 'name' in info:
-            blog['name'] = info['name']
-        else:
-            blog['name'] = ""
-        if 'title' in info:
-            blog['title'] = info['title']
-        else:
-            blog['title'] = ""
-        if 'description' in info:
-            blog['description'] = info['description']
-        else:
-            blog['description'] = ""
-        if 'url' in info:
-            blog['url'] = info['url']
-        else:
-            blog['url'] = ""
-
-        blog['posts'] = np_n_posts[i_blg]
-        blog['likes'] = np_n_likes[i_blg]
-        blog['trusting'] = np_n_trusting[i_blg]
-        blog['score'] = np_s_posts[i_blg] + np_s_likes[i_blg] + np_s_trusting[i_blg]
-
-        if blog['score'] == "+++":
-            blog['include'] = True
-        else:
-            blog['include'] = False
-
-        blogs.append(blog)
-
-    # Print the selected blogs JSON document, preserving the encoding
-    blogs_file_name = args.source_words_file.replace(".json", ".out")
-    out = codecs.open(blogs_file_name, encoding='utf-8', mode='w')
-    out.write(json.dumps(blogs, ensure_ascii=False, indent=4, separators=(',', ': ')))
-    out.close()
