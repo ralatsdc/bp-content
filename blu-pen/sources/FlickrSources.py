@@ -51,7 +51,6 @@ class FlickrSources:
         self.api_secret = api_secret
         self.number_of_api_attempts = number_of_api_attempts
         self.seconds_between_api_attempts = seconds_between_api_attempts
-        # TODO: Process a configuration file to set the pickle directory
         self.content_dir = os.path.join(self.config.get("flickr", "content_dir"), self.source_path)
         self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
 
