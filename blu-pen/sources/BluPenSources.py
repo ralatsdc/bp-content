@@ -17,7 +17,7 @@ import numpy as np
 
 # Local imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from BluPenUtility import BluPenUtility
+from utility.BluPenUtility import BluPenUtility
 from FlickrSources import FlickrSources
 from TumblrSources import TumblrSources
 from TwitterSources import TwitterSources
@@ -35,8 +35,8 @@ class BluPenSources:
         self.config_file = config_file
         self.config = ConfigParser.SafeConfigParser()
         self.config.read(self.config_file)
-        self.sources_request_dir = self.config.get("sources", "request_dir")
-        self.authors_request_dir = self.config.get("authors", "request_dir")
+        self.sources_requests_dir = self.config.get("sources", "requests_dir")
+        self.authors_requests_dir = self.config.get("authors", "requests_dir")
 
         # Create a logger
         root = logging.getLogger()
@@ -310,6 +310,7 @@ class BluPenSources:
             users.append(user)
 
         return users
+
 if __name__ == "__main__":
     """TODO: Complete
         
@@ -322,21 +323,29 @@ if __name__ == "__main__":
                         help="the configuration file")
     args = parser.parse_args()
 
-    # Load the source words JSON document
+    # Read the source words JSON document from sources/queue
     bpu = BluPenUtility()
     bps = BluPenSources(args.config_file)
-    inp_file_name, req_data = bpu.read_queue(bps.sources_request_dir)
+    inp_file_name, inp_req_data = bpu.read_queue(bps.sources_requests_dir)
+    out_file_name = os.path.basename(inp_file_name); out_req_data = {}
+    if inp_file_name == "" or inp_req_data == {}:
+        bps.logger.info("Nothing to do, exiting")
+        sys.exit()
 
     # Get sources from the specified service
-    if req_data['service'] == 'flickr':
-        sources = bps.get_sources_from_flickr(args.config_file, req_data['words'])
+        
+    if inp_req_data['service'] == 'flickr':
+        sources = bps.get_sources_from_flickr(args.config_file, inp_req_data['words'])
 
-    elif req_data['service'] == 'tumblr':
-        sources = bps.get_sources_from_tumblr(args.config_file, req_data['words'])
+    elif inp_req_data['service'] == 'tumblr':
+        sources = bps.get_sources_from_tumblr(args.config_file, inp_req_data['words'])
 
-    elif req_data['service'] == 'twitter':
-        sources = bps.get_sources_from_twitter(args.config_file, req_data['words'])
+    elif inp_req_data['service'] == 'twitter':
+        sources = bps.get_sources_from_twitter(args.config_file, inp_req_data['words'])
 
-    # Dump the selected sources JSON document
-    out_file_name = os.basename(inp_file_name)
-    bpu.write_queue(bps.authors_request_dir, out_file_name, req_data)
+    # Write the source words JSON document to sources/did-pop
+    bpu.write_queue(bps.sources_requests_dir, out_file_name, inp_req_data)
+
+    # Dump the selected sources JSON document to authors/do-push
+    out_req_data['authors'] = sources
+    bpu.write_queue(bps.authors_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")
