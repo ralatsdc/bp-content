@@ -18,21 +18,20 @@ import urllib, urllib2
 # Local imports
 from ServiceError import ServiceError
 
-class BluePeninsulaUtility:
-    """Provides utilities for using an BluePeninsula.
+class AuthorsUtility:
+    """Provides utilities for BluPenAuthors.
 
     """
     def __init__(self, number_of_download_attempts=3,
                  seconds_between_download_attempts=3,
                  max_character_repetitions=6):
-        """Constructs an BluePeninsulaUtility.
+        """Constructs an AuthorsUtility.
 
         """
         self.number_of_download_attempts = number_of_download_attempts
         self.seconds_between_download_attempts = float(seconds_between_download_attempts)
         self.max_character_repetitions = int(max_character_repetitions);
-
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("AuthorsUtility")
 
     def download_file(self, req_file_url, out_file_name):
         """Downloads a file from a URL.
@@ -386,6 +385,8 @@ class BluePeninsulaUtility:
                 source_path = "for_" + source_words[0] + "_and_" + source_words[1]
                 source_header = source_words[0] + " and " + source_words[1]
                 source_label = "for " + source_words[0] + " and " + source_words[1]
+
+        source_path = source_path.replace("/", "-").replace(" ", "_")
 
         if len(source_words) == 1:
             return (source_log,

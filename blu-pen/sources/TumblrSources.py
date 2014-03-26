@@ -23,7 +23,7 @@ class TumblrSources:
     tagged posts.
 
     """
-    def __init__(self, config_file, source_word_str,
+    def __init__(self, source_word_str, content_dir,
                  consumer_key="7c3XQwWIUJS9hjJ9EPzhx2qlySQ5J2sIRgXRN89Ld03AGtK1KP",
                  secret_key="R8Y1Qj7wODcorDid3A24Ct1bfUg0wGoT9iB4n2GgXwKcTb6csb",
                  number_of_api_attempts=4, seconds_between_api_attempts=1):
@@ -31,11 +31,6 @@ class TumblrSources:
         file and source word.
 
         """
-        # Parse configuration file
-        self.config_file = config_file
-        self.config = ConfigParser.SafeConfigParser()
-        self.config.read(self.config_file)
-
         # Process the source word string to create log and path
         # strings, and assign input argument attributes
         self.blu_pen_utl = BluePeninsulaUtility()
@@ -47,12 +42,12 @@ class TumblrSources:
          self.source_word) = self.blu_pen_utl.process_source_words(source_word_str)
 
         # Assign input atributes
+        self.content_dir = content_dir
+        self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
         self.consumer_key = consumer_key
         self.secret_key = secret_key
         self.number_of_api_attempts = number_of_api_attempts
         self.seconds_between_api_attempts = seconds_between_api_attempts
-        self.content_dir = os.path.join(self.config.get("tumblr", "content_dir"), self.source_path)
-        self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
 
         # Initialize created attributes
         self.host_names = set()
@@ -75,159 +70,6 @@ class TumblrSources:
                 self.source_path)
             self.logger.error(err_msg)
             raise Exception(err_msg.encode('utf-8'))
-
-    def get_blog_names_by_posts_with_tag(self, source_type, source_word, limit=20, before=0):
-        """Makes multiple attempts to get blog host names by posts with
-        tag, sleeping before attempts.
-
-        """
-        # Initialize return value
-        exc_caught = False
-        host_names = set()
-        time_stamp = [float('inf')]
-
-        def make_attempt():
-            """Makes a single attempt to get blog host names by posts with
-            tag, sleeping before the attempt.
-
-            """
-            # Sleep before the attempt
-            seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-            self.logger.info(u"{0}: sleeping for {1} seconds".format(
-                self.source_log, seconds_between_api_attempts))
-            time.sleep(seconds_between_api_attempts)
-
-            # Use the before parameter, if present
-            if before == 0:
-                posts = self.client.tagged(tag=source_word, limit=limit)
-
-            else:
-                posts = self.client.tagged(tag=source_word, limit=limit, before=before)
-
-            # Make an attempt to get blog host names by posts with tag
-            try:
-
-                # Use the before parameter, if present
-                if before == 0:
-                    posts = self.client.tagged(tag=unicode(source_word).encode('utf-8'), limit=limit)
-
-                else:
-                    posts = self.client.tagged(tag=unicode(source_word).encode('utf-8'), limit=limit, before=before)
-
-                # Collect uniaue blog names from posts
-                for post in posts:
-                    host_names.add(post['blog_name'])
-                    if post['timestamp'] < time_stamp[0]:
-                        time_stamp[0] = post['timestamp']
-
-                self.logger.info(u"{0}: found {1} blog host names by posts with {2}{3}".format(
-                    self.source_log, len(host_names), source_type, source_word))
-
-            except Exception as exc:
-                exc_caught = True
-                self.logger.warning(u"{0}: couldn't find blog host names by posts with {1}{2}: {3}".format(
-                    self.source_log, source_type, source_word, exc))
-
-        # Make attempts to get blog host names by posts with tag
-        iAttempts = 1
-        make_attempt()
-        while exc_caught and iAttempts < self.number_of_api_attempts:
-            iAttempts += 1
-            make_attempt()
-
-        return {'host_names': host_names, 'time_stamp': time_stamp[0]}
-
-    def get_blog_info_by_hostname(self, hostname):
-        """Makes multiple attempts to get blog info by hostname,
-        sleeping before attempts.
-
-        """
-        # Initialize return value
-        exc_caught = False
-        info = {}
-
-        def make_attempt():
-            """Makes a single attempt to get blog info by hostname,
-            sleeping before the attempt.
-
-            """
-            # Sleep before the attempt
-            seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-            self.logger.info(u"{0}: sleeping for {1} seconds".format(
-                self.source_log, seconds_between_api_attempts))
-            time.sleep(seconds_between_api_attempts)
-
-            # Make an attempt to get blog info by hostname
-            try:
-                info.update(self.client.blog_info(hostname)['blog'])
-
-                self.logger.info(u"{0}: found blog info for {1}".format(
-                    self.source_log, hostname))
-
-            except Exception as exc:
-                exc_caught = True
-                self.logger.warning(u"{0}: couldn't find blog info for {1}: {2}".format(
-                    self.source_log, hostname, exc))
-
-        # Make attempts to get blog info by hostname
-        iAttempts = 1
-        make_attempt()
-        while exc_caught and iAttempts < self.number_of_api_attempts:
-            iAttempts += 1
-            make_attempt()
-
-        return info
-
-    def get_blog_posts_by_hostname(self, hostname, limit=20, ptype="", offset=0):
-        """Makes multiple attempts to get blog posts by hostname,
-        sleeping before attempts.
-
-        """
-        # Initialize return value
-        exc_caught = False
-        b_p = {}
-
-        def make_attempt():
-            """Makes a single attempt to get blog posts by hostname,
-            sleeping before the attempt.
-
-            """
-            # Sleep before the attempt
-            seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-            self.logger.info(u"{0}: sleeping for {1} seconds".format(
-                self.source_log, seconds_between_api_attempts))
-            time.sleep(seconds_between_api_attempts)
-
-            # Make an attempt to get blog posts by hostname
-            try:
-                if ptype == "" and offset == 0:
-                    b_p.update(self.client.posts(hostname, limit=limit))
-
-                elif not ptype == "" and offset == 0:
-                    b_p.update(self.client.posts(hostname, limit=limit, type=ptype))
-
-                elif ptype == "" and offset > 0:
-                    b_p.update(self.client.posts(hostname, limit=limit, offset=offset))
-
-                else:
-                    b_p.update(self.client.posts(hostname, limit=limit, type=ptype, offset=offset))
-
-                self.logger.info(u"{0}: found blog posts for {1}".format(
-                    self.source_log, hostname))
-
-            except Exception as exc:
-                exc_caught = True
-                self.logger.warning(u"{0}: couldn't find blog posts for {1}: {2}".format(
-                    self.source_log, hostname, exc))
-
-        # Make attempts to get blog info by hostname
-        iAttempts = 1
-        make_attempt()
-        while exc_caught and iAttempts < self.number_of_api_attempts:
-            iAttempts += 1
-            make_attempt()
-
-        return b_p
 
     def set_sources(self):
         """Create and dump, or load, the TumblrSources pickle.
@@ -273,6 +115,135 @@ class TumblrSources:
             
             # Load attributes pickle
             self.load()
+
+    def get_blog_names_by_posts_with_tag(self, source_type, source_word, limit=20, before=0):
+        """Makes multiple attempts to get blog host names by posts with
+        tag, sleeping before attempts.
+
+        """
+        exc_caught = False
+        host_names = set()
+        time_stamp = [float('inf')]
+
+        # Make multiple attempts to get blog host names by posts with tag
+        iAttempts = 1
+        while exc_caught and iAttempts < self.number_of_api_attempts:
+            iAttempts += 1
+
+            # Sleep before the attempt
+            seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
+            self.logger.info(u"{0}: sleeping for {1} seconds".format(
+                self.source_log, seconds_between_api_attempts))
+            time.sleep(seconds_between_api_attempts)
+
+            # Use the before parameter, if present
+            if before == 0:
+                posts = self.client.tagged(tag=source_word, limit=limit)
+
+            else:
+                posts = self.client.tagged(tag=source_word, limit=limit, before=before)
+
+            # Make an attempt to get blog host names by posts with tag
+            try:
+
+                # Use the before parameter, if present
+                if before == 0:
+                    posts = self.client.tagged(tag=unicode(source_word).encode('utf-8'), limit=limit)
+
+                else:
+                    posts = self.client.tagged(tag=unicode(source_word).encode('utf-8'), limit=limit, before=before)
+
+                # Collect uniaue blog names from posts
+                for post in posts:
+                    host_names.add(post['blog_name'])
+                    if post['timestamp'] < time_stamp[0]:
+                        time_stamp[0] = post['timestamp']
+
+                self.logger.info(u"{0}: found {1} blog host names by posts with {2}{3}".format(
+                    self.source_log, len(host_names), source_type, source_word))
+
+            except Exception as exc:
+                exc_caught = True
+                self.logger.warning(u"{0}: couldn't find blog host names by posts with {1}{2}: {3}".format(
+                    self.source_log, source_type, source_word, exc))
+
+        return {'host_names': host_names, 'time_stamp': time_stamp[0]}
+
+    def get_blog_info_by_hostname(self, hostname):
+        """Makes multiple attempts to get blog info by hostname,
+        sleeping before attempts.
+
+        """
+        exc_caught = False
+        info = {}
+
+        # Make multiple attempts to get blog info by hostname
+        iAttempts = 1
+        while exc_caught and iAttempts < self.number_of_api_attempts:
+            iAttempts += 1
+
+            # Sleep before the attempt
+            seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
+            self.logger.info(u"{0}: sleeping for {1} seconds".format(
+                self.source_log, seconds_between_api_attempts))
+            time.sleep(seconds_between_api_attempts)
+
+            # Make an attempt to get blog info by hostname
+            try:
+                info.update(self.client.blog_info(hostname)['blog'])
+
+                self.logger.info(u"{0}: found blog info for {1}".format(
+                    self.source_log, hostname))
+
+            except Exception as exc:
+                exc_caught = True
+                self.logger.warning(u"{0}: couldn't find blog info for {1}: {2}".format(
+                    self.source_log, hostname, exc))
+
+        return info
+
+    def get_blog_posts_by_hostname(self, hostname, limit=20, ptype="", offset=0):
+        """Makes multiple attempts to get blog posts by hostname,
+        sleeping before attempts.
+
+        """
+        exc_caught = False
+        b_p = {}
+
+        # Make multiple attempts to get blog posts by hostname
+        iAttempts = 1
+        while exc_caught and iAttempts < self.number_of_api_attempts:
+            iAttempts += 1
+
+            # Sleep before the attempt
+            seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
+            self.logger.info(u"{0}: sleeping for {1} seconds".format(
+                self.source_log, seconds_between_api_attempts))
+            time.sleep(seconds_between_api_attempts)
+
+            # Make an attempt to get blog posts by hostname
+            try:
+                if ptype == "" and offset == 0:
+                    b_p.update(self.client.posts(hostname, limit=limit))
+
+                elif not ptype == "" and offset == 0:
+                    b_p.update(self.client.posts(hostname, limit=limit, type=ptype))
+
+                elif ptype == "" and offset > 0:
+                    b_p.update(self.client.posts(hostname, limit=limit, offset=offset))
+
+                else:
+                    b_p.update(self.client.posts(hostname, limit=limit, type=ptype, offset=offset))
+
+                self.logger.info(u"{0}: found blog posts for {1}".format(
+                    self.source_log, hostname))
+
+            except Exception as exc:
+                exc_caught = True
+                self.logger.warning(u"{0}: couldn't find blog posts for {1}: {2}".format(
+                    self.source_log, hostname, exc))
+
+        return b_p
 
     def n_to_s(self, scores):
         """Converts a numerical score to either a "-" if below the

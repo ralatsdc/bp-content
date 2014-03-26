@@ -37,6 +37,9 @@ class BluPenSources:
         self.config.read(self.config_file)
         self.sources_requests_dir = self.config.get("sources", "requests_dir")
         self.authors_requests_dir = self.config.get("authors", "requests_dir")
+        self.flickr_content_dir = self.config.get("flickr", "content_dir")
+        self.tumblr_content_dir = self.config.get("tumblr", "content_dir")
+        self.twitter_content_dir = self.config.get("twitter", "content_dir")
 
         # Create a logger
         root = logging.getLogger()
@@ -52,7 +55,7 @@ class BluPenSources:
         root.addHandler(file_handler)
         self.logger = logging.getLogger(u"BluPenSources")
 
-    def get_sources_from_flickr(self, config_file, source_word_strs):
+    def get_sources_from_flickr(self, source_word_strs, content_dir):
         """Select a collection of Flickr groups by searching for
         groups using a query term.
 
@@ -68,7 +71,7 @@ class BluPenSources:
         for source_word_str in source_word_strs:
 
             # Create and dump, or load, the FlickrSources pickle
-            fs = FlickrSources(config_file, source_word_str)
+            fs = FlickrSources(source_word_str, content_dir)
             fs.set_sources()
 
             # Accumulate arrays of values for selecting groups
@@ -115,7 +118,7 @@ class BluPenSources:
 
         return groups
 
-    def get_sources_from_tumblr(self, config_file, source_word_strs):
+    def get_sources_from_tumblr(self, source_word_strs, content_dir):
         """Selects a set of Tumblr blogs by getting tagged posts.
 
         """
@@ -124,10 +127,8 @@ class BluPenSources:
         blog_posts = []
         for source_word_str in source_word_strs:
 
-            # Create a TumblrSources instance, and create the content directory, if needed
-            ts = TumblrSources(args.config_file, source_word_str)
-
             # Create and dump, or load, the TumblrSources pickle.
+            ts = TumblrSources(source_word_str, content_dir)
             ts.set_sources()
 
             # Accumulate blog info, and posts
@@ -250,7 +251,7 @@ class BluPenSources:
 
         return blogs
 
-    def get_sources_from_twitter(self, config_file, source_word_strs):
+    def get_sources_from_twitter(self, source_word_strs, content_dir):
         """Selects a collection of Twitter users by searching for
         users using a query term.
 
@@ -265,7 +266,7 @@ class BluPenSources:
         for source_word_str in source_word_strs:
 
             # Create and dump, or load, the TwitterSources pickle
-            ts = TwitterSources(args.config_file, source_word_str)
+            ts = TwitterSources(source_word_str, content_dir)
             ts.set_sources()
 
             # Accumulate created atributes
@@ -323,7 +324,7 @@ if __name__ == "__main__":
                         help="the configuration file")
     args = parser.parse_args()
 
-    # Read the source words JSON document from sources/queue
+    # Read the input request JSON document from sources/queue
     bpu = BluPenUtility()
     bps = BluPenSources(args.config_file)
     inp_file_name, inp_req_data = bpu.read_queue(bps.sources_requests_dir)
@@ -333,19 +334,20 @@ if __name__ == "__main__":
         sys.exit()
 
     # Get sources from the specified service
-        
     if inp_req_data['service'] == 'flickr':
-        sources = bps.get_sources_from_flickr(args.config_file, inp_req_data['words'])
+        out_req_data['service'] = 'flickr'
+        out_req_data['groups'] = bps.get_sources_from_flickr(inp_req_data['words'], bps.flickr_content_dir)
 
     elif inp_req_data['service'] == 'tumblr':
-        sources = bps.get_sources_from_tumblr(args.config_file, inp_req_data['words'])
+        out_req_data['service'] = 'tumblr':
+        out_req_data['authors'] = bps.get_sources_from_tumblr(inp_req_data['words'], bps.tumblr_content_dir)
 
     elif inp_req_data['service'] == 'twitter':
-        sources = bps.get_sources_from_twitter(args.config_file, inp_req_data['words'])
+        out_req_data['service'] = 'twitter'
+        out_req_data['authors'] = bps.get_sources_from_twitter(inp_req_data['words'], bps.twitter_content_dir)
 
-    # Write the source words JSON document to sources/did-pop
+    # Write the input request JSON document to sources/did-pop
     bpu.write_queue(bps.sources_requests_dir, out_file_name, inp_req_data)
 
-    # Dump the selected sources JSON document to authors/do-push
-    out_req_data['authors'] = sources
+    # Write the output request JSON document to authors/do-push
     bpu.write_queue(bps.authors_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")

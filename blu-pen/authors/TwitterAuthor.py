@@ -21,7 +21,7 @@ import numpy as np
 import twitter
 
 # Local imports
-from BluePeninsulaUtility import BluePeninsulaUtility
+from utility.AuthorsUtility import AuthorsUtility
 from ServiceError import ServiceError
 
 class TwitterAuthor:
@@ -29,21 +29,21 @@ class TwitterAuthor:
     are selected by name or tag.
 
     """
-    def __init__(self, blu_pen, source_words_str, content_dir,
+    def __init__(self, blu_pen_author, source_words_str, content_dir,
                  start_date=date(2006, 07, 15) - timedelta(2), stop_date=date.today() + timedelta(2),
                  max_length=320, max_frequency=20, number_of_api_attempts=4, seconds_between_api_attempts=1):
         """Constructs a TwitterAuthor instance given source words.
 
         """
-        self.blu_pen = blu_pen
-        self.blu_pen_utl = BluePeninsulaUtility()
+        self.blu_pen_author = blu_pen_author
+        self.authors_utility = AuthorsUtility()
 
         (self.source_log,
          self.source_path,
          self.source_header,
          self.source_label,
          self.source_types,
-         self.source_words) = self.blu_pen_utl.process_source_words(source_words_str)
+         self.source_words) = self.authors_utility.process_source_words(source_words_str)
 
         self.content_dir = content_dir
         self.start_date = start_date
@@ -84,7 +84,7 @@ class TwitterAuthor:
 
         self.logger = logging.getLogger(__name__)
 
-    def set_tweets_as_recent(self, count=100, parameter="max_id"):
+    def set_tweets(self, count=100, parameter="max_id"):
         """Gets recents tweets from Twitter for all source words. Note
         that the default Twitter API behavior is to provide recent
         tweets first. Then additional tweets may be obtained by paging
@@ -423,86 +423,46 @@ class TwitterAuthor:
         before attempts.
 
         """
+        tweets = []
+
+        # Make multiple attempts to get source content
         iAttempts = 1
-        credentials = self.get_credentials()
-        api = twitter.Api(
-            consumer_key=credentials['consumer-key'],
-            consumer_secret=credentials['consumer-secret'],
-            access_token_key=credentials['access-token'],
-            access_token_secret=credentials['access-token-secret'])
-        seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-        self.logger.info("{0} sleeping for {1} seconds".format(
-            self.source_log, seconds_between_api_attempts))
-        sleep(seconds_between_api_attempts)
-        try:
-            exc = None
-            if source_type == "@":
-                if not max_id > 0 and not since_id > 0:
-                    tweets = api.GetUserTimeline(screen_name=source_word,
-                                                 count=count,
-                                                 include_rts=True);
-                    # include_rts=True, include_entities=True);
-                elif max_id > 0 and not since_id > 0:
-                    tweets = api.GetUserTimeline(screen_name=source_word,
-                                                 count=count, max_id=max_id,
-                                                 include_rts=True);
-                    # include_rts=True, include_entities=True);
-                elif not max_id > 0 and since_id > 0:
-                    tweets = api.GetUserTimeline(screen_name=source_word,
-                                                 count=count, since_id=since_id,
-                                                 include_rts=True);
-                    # include_rts=True, include_entities=True);
-                else:
-                    raise Exception("A request should not use both max_id and since_id.")
-            else: # source_type == "#":
-                term = source_type + source_word
-                if not max_id > 0 and not since_id > 0:
-                    tweets = api.GetSearch(term=term,
-                                           per_page=count)
-                elif max_id > 0 and not since_id > 0:
-                    tweets = api.GetSearch(term=term,
-                                           per_page=count, max_id=max_id)
-                elif not max_id > 0 and since_id > 0:
-                    tweets = api.GetSearch(term=term,
-                                           per_page=count, since_id=since_id)
-                else:
-                    raise Exception("A request should not use both max_id and since_id.")
-            self.logger.warning("{0} =6= collected content for {1}{2}".format(
-                    self.source_log, source_type, source_word))
-        except Exception as exc:
-            self.logger.warning("{0} =6= couldn't get content for {1}{2}: {3}".format(
-                    self.source_log, source_type, source_word, exc))
-            tweets = []
         while len(tweets) == 0 and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
+
+            # Draw a set of random credentials and create a
+            # corresponding API instance
             credentials = self.get_credentials()
             api = twitter.Api(
                 consumer_key=credentials['consumer-key'],
                 consumer_secret=credentials['consumer-secret'],
                 access_token_key=credentials['access-token'],
                 access_token_secret=credentials['access-token-secret'])
+
+            # Sleep before attempt
             seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
             self.logger.info("{0} =7= sleeping for {1} seconds".format(
                 self.source_log, seconds_between_api_attempts))
             sleep(seconds_between_api_attempts)
+
+            # Make attempt to get source content
             try:
-                exc = None
                 if source_type == "@":
                     if not max_id > 0 and not since_id > 0:
                         tweets = api.GetUserTimeline(screen_name=source_word,
                                                      count=count,
                                                      include_rts=True);
-                        # include_rts=True, include_entities=True);
                     elif max_id > 0 and not since_id > 0:
                         tweets = api.GetUserTimeline(screen_name=source_word,
                                                      count=count, max_id=max_id,
                                                      include_rts=True);
-                        # include_rts=True, include_entities=True);
                     elif not max_id > 0 and since_id > 0:
                         tweets = api.GetUserTimeline(screen_name=source_word,
                                                      count=count, since_id=since_id,
                                                      include_rts=True);
-                        # include_rts=True, include_entities=True);
+                    else:
+                        raise Exception("A request should not use both max_id and since_id.")
+
                 else: # source_type == "#":
                     term = source_type + source_word
                     if not max_id > 0 and not since_id > 0:
@@ -514,13 +474,14 @@ class TwitterAuthor:
                     elif not max_id > 0 and since_id > 0:
                         tweets = api.GetSearch(term=term,
                                                per_page=count, since_id=since_id)
+                    else:
+                        raise Exception("A request should not use both max_id and since_id.")
+
             except Exception as exc:
+                tweets = []
                 self.logger.warning("{0} =8= couldn't get content for {1}{2}: {3}".format(
                     self.source_log, source_type, source_word, exc))
-                tweets = []
-        if exc != None:
-            # Raise exception raised by api.GetUserTimeline or api.GetSearch
-            raise exc
+
         return tweets
 
     def get_credentials(self):

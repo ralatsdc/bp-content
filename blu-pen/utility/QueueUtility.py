@@ -12,15 +12,15 @@ import os
 
 # Local imports
 
-class BluPenUtility:
+class QueueUtility:
     """Provides utilities used by all Blu Pen packages.
 
     """
     def __init__(self):
-        """Constructs a BluPenUtility instance.
+        """Constructs a QueueUtility instance.
 
         """
-        self.logger = logging.getLogger("BluPenUtility")
+        self.logger = logging.getLogger("QueueUtility")
 
     def read_queue(self, request_dir):
         """Read the first-in input file from queue in the specified

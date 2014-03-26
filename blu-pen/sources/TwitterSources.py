@@ -25,20 +25,14 @@ class TwitterSources:
     query term.
 
     """
-    def __init__(self, config_file, source_word_str,
+    def __init__(self, source_word_str, content_dir,
                  number_of_api_attempts=4, seconds_between_api_attempts=1):
         """Constructs a TwitterSources instance given a source word.
 
         """
-        self.blu_pen_utl = BluePeninsulaUtility()
-        
-        # Parse configuration file
-        self.config_file = config_file
-        self.config = ConfigParser.SafeConfigParser()
-        self.config.read(self.config_file)
-
         # Process the source word string to create log and path
         # strings, and assign input argument attributes
+        self.blu_pen_utl = BluePeninsulaUtility()
         (self.source_log,
          self.source_path,
          self.source_header,
@@ -47,10 +41,10 @@ class TwitterSources:
          self.source_word) = self.blu_pen_utl.process_source_words(source_word_str)
 
         # Assign input atributes
+        self.content_dir = content_dir
+        self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
         self.number_of_api_attempts = number_of_api_attempts
         self.seconds_between_api_attempts = seconds_between_api_attempts
-        self.content_dir = os.path.join(self.config.get("twitter", "content_dir"), self.source_path)
-        self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
 
         # Initialize created atributes
         self.users = []
@@ -71,19 +65,52 @@ class TwitterSources:
             self.logger.error(err_msg)
             raise Exception(err_msg.encode('utf-8'))
 
+    def set_sources(self):
+        """Create and dump, or load, the TwitterSources pickle.
+
+        """
+        # Create content directory, if it does not exist
+        if not os.path.exists(self.content_dir):
+            os.makedirs(self.content_dir)
+
+        # Create and dump, or load, the TwitterSources pickle
+        if not os.path.exists(self.pickle_file_name):
+            self.logger.info(u"{0}: finding sources using {1}".format(
+                self.source_log, source_word_str))
+
+            # Select one hundred users
+            for page in range(1, 6):
+                self.users.extend(self.get_users_by_source(self.source_type, self.source_word, page=page))
+            
+            # Assign arrays of values for selecting users
+            for u in self.users:
+                self.name.append(u.name)
+                self.description.append(u.description)
+                self.screen_name.append(u.screen_name)
+                self.created_at.append(u.created_at)
+                self.statuses_count.append(u.statuses_count)
+                self.followers_count.append(u.followers_count)
+
+            # Dumps attributes pickle
+            self.dump()
+
+        else:
+
+            # Load attributes pickle
+            self.load()
+
     def get_users_by_source(self, source_type, source_word, count=20, page=0, max_id=0, since_id=0):
         """Makes multiple attempts to get users by source, sleeping
         before attempts.
 
         """
-        # Initialize return value
         users = []
 
-        def make_attempt():
-            """Makes a single attempt to get users by source, sleeping
-            before the attempt.
+        # Make multiple attempts to get users by source
+        iAttempts = 1
+        while len(users) == 0 and iAttempts < self.number_of_api_attempts:
+            iAttempts += 1
 
-            """
             # Create an API instance with random credentials
             credentials = self.get_credentials()
             api = twitter.Api(consumer_key=credentials['consumer-key'],
@@ -142,13 +169,6 @@ class TwitterSources:
             except Exception as exc:
                 self.logger.warning(u"{0}: couldn't find users for {1}{2}: {3}".format(
                         self.source_log, source_type, source_word, exc))
-
-        # Make attempts to get users by source
-        iAttempts = 1
-        make_attempt()
-        while len(users) == 0 and iAttempts < self.number_of_api_attempts:
-            iAttempts += 1
-            make_attempt()
 
         return users
 
@@ -271,40 +291,6 @@ class TwitterSources:
             screen_names.append(t.user.screen_name)
 
         return screen_names
-
-    def set_sources(self):
-        """Create and dump, or load, the TwitterSources pickle.
-
-        """
-        # Create content directory, if it does not exist
-        if not os.path.exists(self.content_dir):
-            os.makedirs(self.content_dir)
-
-        # Create and dump, or load, the TwitterSources pickle
-        if not os.path.exists(self.pickle_file_name):
-            self.logger.info(u"{0}: finding sources using {1}".format(
-                self.source_log, source_word_str))
-
-            # Select one hundred users
-            for page in range(1, 6):
-                self.users.extend(self.get_users_by_source(self.source_type, self.source_word, page=page))
-            
-            # Assign arrays of values for selecting users
-            for u in self.users:
-                self.name.append(u.name)
-                self.description.append(u.description)
-                self.screen_name.append(u.screen_name)
-                self.created_at.append(u.created_at)
-                self.statuses_count.append(u.statuses_count)
-                self.followers_count.append(u.followers_count)
-
-            # Dumps attributes pickle
-            self.dump()
-
-        else:
-
-            # Load attributes pickle
-            self.load()
 
     def n_to_s(self, scores):
         """Converts a numerical score to either a "-" if below the

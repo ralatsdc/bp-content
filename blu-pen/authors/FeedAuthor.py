@@ -14,20 +14,20 @@ import feedparser
 from lxml.html import soupparser
 
 # Local imports
-from BluePeninsulaUtility import BluePeninsulaUtility
+from utility.AuthorsUtility import AuthorsUtility
 
 class FeedAuthor:
     """Represents authors of Feeds by their creative output. Authors
     are selected by URL.
 
     """
-    def __init__(self, blu_pen, source_url, content_dir, requested_dt=datetime.utcnow(),
-                 number_of_api_attempts=1, seconds_between_api_attempts=1):
+    def __init__(self, blu_pen_author, source_url, content_dir,
+                 requested_dt=datetime.utcnow(), number_of_api_attempts=1, seconds_between_api_attempts=1):
         """Constructs a FeedAuthor instance.
 
         """
-        self.blu_pen = blu_pen
-        self.blu_pen_utl = BluePeninsulaUtility()
+        self.blu_pen_author = blu_pen_author
+        self.authors_utility = AuthorsUtility()
 
         self.source_log = urlparse(source_url).netloc
         self.source_path = urlparse(source_url).netloc
@@ -47,7 +47,7 @@ class FeedAuthor:
 
         self.logger = logging.getLogger("blu-pen.FeedAuthor")
 
-    def set_content_as_recent(self):
+    def set_content(self):
         """Gets the feed content from the source URL, then assigns
         values to selected keys.
 
@@ -96,19 +96,18 @@ class FeedAuthor:
         """
         content = None
 
-        # Make multiple attempts
-        exc = None
+        # Make multiple attempts to get content by URL
         iAttempts = 0
         while content is None and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
 
-            # Sleep longer before each attempt
+            # Sleep before attempt
             seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
             self.logger.info("{0} sleeping for {1} seconds".format(
                 self.source_log, seconds_between_api_attempts))
             sleep(seconds_between_api_attempts)
 
-            # Attempt to get content by URL
+            # Make attempt to get content by URL
             try:
                 content = feedparser.parse(source_url)
                 self.logger.info("{0} collected content for {1}".format(
@@ -163,7 +162,7 @@ class FeedAuthor:
 
                 # Download image to file
                 if not os.path.exists(image_file_name):
-                    self.blu_pen_utl.download_file(image_url, image_file_name)
+                    self.authors_utility.download_file(image_url, image_file_name)
                     self.logger.info("{0} image downloaded to file {1}".format(
                         self.source_path, image_file_name))
                 else:

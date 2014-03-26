@@ -12,29 +12,31 @@ from time import sleep
 from instagram.client import InstagramAPI
 
 # Local imports
-from BluePeninsulaUtility import BluePeninsulaUtility
+from utility.AuthorsUtility import AuthorsUtility
 
 class InstagramAuthor:
     """Represents an author on Instagram by their creative
     output. Authors are selected by tag.
 
     """
-    def __init__(self, blu_pen, source_words_str, content_dir, requested_dt=datetime.utcnow(),
-                 client_id="690d3be7af514fd3942266b6cfc04388", client_secret="a73c94a839b441bea37ea3b94eb1907a",
+    def __init__(self, blu_pen_author, source_words_str, content_dir,
+                 requested_dt=datetime.utcnow(),
+                 client_id="690d3be7af514fd3942266b6cfc04388",
+                 client_secret="a73c94a839b441bea37ea3b94eb1907a",
                  number_of_api_attempts=1, seconds_between_api_attempts=1):
 
         """Constructs a InstagramAuthor instance.
 
         """
-        self.blu_pen = blu_pen
-        self.blu_pen_utl = BluePeninsulaUtility()
+        self.blu_pen_author = blu_pen_author
+        self.authors_utility = AuthorsUtility()
 
         (self.source_log,
          self.source_path,
          self.source_header,
          self.source_label,
          self.source_types,
-         self.source_words) = self.blu_pen_utl.process_source_words(source_words_str)
+         self.source_words) = self.authors_utility.process_source_words(source_words_str)
         if len(self.source_words) > 1:
             err_msg = "{0} only one source word accepted".format(
                 self.source_path)
@@ -70,18 +72,18 @@ class InstagramAuthor:
         """
         media_dicts = []
 
-        # Make multiple attempts
+        # Make multiple attempts to get source media
         iAttempts = 0
         while len(media_dicts) == 0 and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
 
-            # Sleep longer before each attempt
+            # Sleep before attempts
             seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
             self.logger.info("{0} sleeping for {1} seconds".format(
                 self.source_log, seconds_between_api_attempts))
             sleep(seconds_between_api_attempts)
 
-            # Handle errors
+            # Make attempt to get source media
             try:
 
                 # Make an API request based on source type
@@ -141,7 +143,7 @@ class InstagramAuthor:
 
             # Download image to file
             if not os.path.exists(image_file_name):
-                self.blu_pen_utl.download_file(image_url, image_file_name)
+                self.authors_utility.download_file(image_url, image_file_name)
                 self.logger.info("{0} image downloaded to file {1}".format(
                     self.source_path, image_file_name))
             else:

@@ -15,7 +15,7 @@ from lxml.html import soupparser
 
 # Local imports
 from BluePeninsula import BluePeninsula
-from BluePeninsulaUtility import BluePeninsulaUtility
+from utility.AuthorUtility import AuthorUtility
 from TumblrAuthor import TumblrAuthor
 from TumblrWheat import TumblrWheat
 
@@ -28,7 +28,7 @@ class TumblrUtility:
 
         """
         self.blu_pen = BluePeninsula("BluePeninsula.cfg")
-        self.blu_pen_utility = BluePeninsulaUtility()
+        self.authors_utility = AuthorsUtility()
         self.logger = logging.getLogger(__name__)
 
     def get_popular_tags(self):
@@ -100,7 +100,7 @@ class TumblrUtility:
             if post['type'] == "regular":
                 regular += 1
                 if "regular-body" in post and post['regular-body'] != None:
-                    word += len(self.blu_pen_utility.strip_html(post['regular-body']).split())
+                    word += len(self.authors_utility.strip_html(post['regular-body']).split())
             elif post['type'] == "photo":
                 photo += 1
 
