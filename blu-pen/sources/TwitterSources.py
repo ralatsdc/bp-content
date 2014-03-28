@@ -2,7 +2,6 @@
 
 # Standard library imports
 from __future__ import division
-import ConfigParser
 import logging
 import math
 import os
@@ -17,7 +16,7 @@ import twitter
 
 # Local imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from authors.BluePeninsulaUtility import BluePeninsulaUtility
+from utility.AuthorsUtility import AuthorsUtility
 
 class TwitterSources:
     """Represents a collection of Twitter users selected by searching
@@ -32,16 +31,16 @@ class TwitterSources:
         """
         # Process the source word string to create log and path
         # strings, and assign input argument attributes
-        self.blu_pen_utl = BluePeninsulaUtility()
+        self.authors_utility = AuthorsUtility()
         (self.source_log,
          self.source_path,
          self.source_header,
          self.source_label,
          self.source_type,
-         self.source_word) = self.blu_pen_utl.process_source_words(source_word_str)
+         self.source_word) = self.authors_utility.process_source_words(source_word_str)
 
         # Assign input atributes
-        self.content_dir = content_dir
+        self.content_dir = os.path.join(content_dir, self.source_path)
         self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
         self.number_of_api_attempts = number_of_api_attempts
         self.seconds_between_api_attempts = seconds_between_api_attempts
@@ -65,7 +64,7 @@ class TwitterSources:
             self.logger.error(err_msg)
             raise Exception(err_msg.encode('utf-8'))
 
-    def set_sources(self):
+    def set_sources(self, do_purge=False):
         """Create and dump, or load, the TwitterSources pickle.
 
         """
@@ -73,10 +72,14 @@ class TwitterSources:
         if not os.path.exists(self.content_dir):
             os.makedirs(self.content_dir)
 
+        # Remove pickle file, if requested
+        if do_purge and os.path.exists(self.pickle_file_name):
+            os.remove(self.pickle_file_name)
+
         # Create and dump, or load, the TwitterSources pickle
         if not os.path.exists(self.pickle_file_name):
             self.logger.info(u"{0}: finding sources using {1}".format(
-                self.source_log, source_word_str))
+                self.source_log, self.source_type + self.source_word))
 
             # Select one hundred users
             for page in range(1, 6):
@@ -104,11 +107,11 @@ class TwitterSources:
         before attempts.
 
         """
-        users = []
+        users = None
 
         # Make multiple attempts to get users by source
-        iAttempts = 1
-        while len(users) == 0 and iAttempts < self.number_of_api_attempts:
+        iAttempts = 0
+        while users is None and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
 
             # Create an API instance with random credentials
@@ -128,17 +131,16 @@ class TwitterSources:
             try:
 
                 # Select the API method by source type
-                exc = None
                 if source_type == "@":
                     if not max_id == 0 or not since_id == 0:
                         raise Exception("A search for users cannot contain a max_id or since_id parameter.")
 
                     # Use the page parameter, if present
                     if page == 0:
-                        users.extend(api.GetUsersSearch(term=source_word, count=count))
+                        users = api.GetUsersSearch(term=source_word, count=count)
 
                     else:
-                        users.extend(api.GetUsersSearch(term=source_word, count=count, page=page))
+                        users = api.GetUsersSearch(term=source_word, count=count, page=page)
 
                 else: # source_type == "#":
                     if not page == 0:
@@ -159,6 +161,7 @@ class TwitterSources:
                         raise Exception("A search for tweets cannot contain both a max_id and since_id parameter.")
 
                     # Lookup users given tweet screen names
+                    users = []
                     if len(tweets) > 0:
                         screen_names = self.get_names_from_tweets(tweets)
                         users.extend(api.UsersLookup(screen_name=screen_names))
@@ -167,6 +170,7 @@ class TwitterSources:
                     self.source_log, source_type, source_word))
 
             except Exception as exc:
+                users = None
                 self.logger.warning(u"{0}: couldn't find users for {1}{2}: {3}".format(
                         self.source_log, source_type, source_word, exc))
 

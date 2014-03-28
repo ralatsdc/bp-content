@@ -2,7 +2,6 @@
 
 # Standard library imports
 from __future__ import division
-import ConfigParser
 import logging
 import math
 import os
@@ -16,7 +15,7 @@ import flickrapi
 
 # Local imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from authors.BluePeninsulaUtility import BluePeninsulaUtility
+from utility.AuthorsUtility import AuthorsUtility
 
 class FlickrSources:
     """Represents a collection of Flickr groups selected by searching
@@ -32,16 +31,16 @@ class FlickrSources:
         """
         # Process the source word string to create log and path
         # strings, and assign input argument attributes
-        self.blu_pen_utl = BluePeninsulaUtility()
+        self.authors_utility = AuthorsUtility()
         (self.source_log,
          self.source_path,
          self.source_header,
          self.source_label,
          self.source_type,
-         self.source_word) = self.blu_pen_utl.process_source_words(source_word_str)
+         self.source_word) = self.authors_utility.process_source_words(source_word_str)
 
         # Assign input atributes
-        self.content_dir = content_dir
+        self.content_dir = os.path.join(content_dir, self.source_path)
         self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
         self.api_key = api_key
         self.api_secret = api_secret
@@ -76,7 +75,7 @@ class FlickrSources:
             self.logger.error(err_msg)
             raise Exception(err_msg.encode('utf-8'))
 
-    def set_sources(self):
+    def set_sources(self, do_purge=False):
         """Create and dump, or load, the FlickrSources pickle.
 
         """
@@ -84,10 +83,14 @@ class FlickrSources:
         if not os.path.exists(self.content_dir):
             os.makedirs(self.content_dir)
 
+        # Remove pickle file, if requested
+        if do_purge and os.path.exists(self.pickle_file_name):
+            os.remove(self.pickle_file_name)
+
         # Create and dump, or load, the FlickrSources pickle
         if not os.path.exists(self.pickle_file_name):
             self.logger.info(u"{0}: finding sources using {1}".format(
-                self.source_log, source_word_str))
+                self.source_log, self.source_type + self.source_word))
 
             # Get the default number (100) of groups
             self.groups = self.get_groups_by_source(self.source_type, self.source_word)
@@ -120,11 +123,11 @@ class FlickrSources:
         before attempts.
 
         """
-        groups = []
+        groups = None
 
         # Make multiple attempts to get groups by source
-        iAttempts = 1
-        while len(groups) == 0 and iAttempts < self.number_of_api_attempts:
+        iAttempts = 0
+        while groups is None and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
 
             # Sleep before the attempt
@@ -145,6 +148,7 @@ class FlickrSources:
 
                 # Parse the resulting XML
                 grps = groups_xml.find("groups").findall("group")
+                groups = []
                 for grp in grps:
                     group = {}
                     group['nsid'] = grp.get('nsid')
@@ -159,6 +163,7 @@ class FlickrSources:
                     self.source_log, source_type, source_word))
 
             except Exception as exc:
+                groups = None
                 self.logger.warning(u"{0}: couldn't find groups for {1}{2}: {3}".format(
                     self.source_log, source_type, source_word, exc))
 
@@ -169,11 +174,11 @@ class FlickrSources:
         before attempts.
 
         """
-        info = {}
+        info = None
 
         # Make multiple attempts to get group info by NSID
-        iAttempts = 1
-        while len(info) == 0 and iAttempts < self.number_of_api_attempts:
+        iAttempts = 0
+        while info is None and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
 
             # Sleep before the attempt
@@ -187,6 +192,7 @@ class FlickrSources:
                 group_info_xml = self.api.groups_getInfo(group_id=nsid)
 
                 # Parse the resulting XML
+                info = {}
                 info['name'] = group_info_xml.find("group").find("name").text
                 info['description'] = group_info_xml.find("group").find("description").text
                 info['members'] = int(group_info_xml.find("group").find("members").text)
@@ -196,6 +202,7 @@ class FlickrSources:
                     self.source_log, nsid))
 
             except Exception as exc:
+                info = None
                 self.logger.warning(u"{0}: couldn't find group info for {1}: {2}".format(
                     self.source_log, nsid, exc))
 

@@ -2,7 +2,6 @@
 
 # Standard library imports
 from __future__ import division
-import ConfigParser
 import logging
 import math
 import os
@@ -16,7 +15,7 @@ import pytumblr
 
 # Local imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from authors.BluePeninsulaUtility import BluePeninsulaUtility
+from utility.AuthorsUtility import AuthorsUtility
 
 class TumblrSources:
     """Represents a collection of Tumblr blogs selected by getting
@@ -33,16 +32,16 @@ class TumblrSources:
         """
         # Process the source word string to create log and path
         # strings, and assign input argument attributes
-        self.blu_pen_utl = BluePeninsulaUtility()
+        self.authors_utility = AuthorsUtility()
         (self.source_log,
          self.source_path,
          self.source_header,
          self.source_label,
          self.source_type,
-         self.source_word) = self.blu_pen_utl.process_source_words(source_word_str)
+         self.source_word) = self.authors_utility.process_source_words(source_word_str)
 
         # Assign input atributes
-        self.content_dir = content_dir
+        self.content_dir = os.path.join(content_dir, self.source_path)
         self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
         self.consumer_key = consumer_key
         self.secret_key = secret_key
@@ -71,7 +70,7 @@ class TumblrSources:
             self.logger.error(err_msg)
             raise Exception(err_msg.encode('utf-8'))
 
-    def set_sources(self):
+    def set_sources(self, do_purge=False):
         """Create and dump, or load, the TumblrSources pickle.
 
         """
@@ -79,10 +78,14 @@ class TumblrSources:
         if not os.path.exists(self.content_dir):
             os.makedirs(self.content_dir)
 
+        # Remove pickle file, if requested
+        if do_purge and os.path.exists(self.pickle_file_name):
+            os.remove(self.pickle_file_name)
+
         # Create and dump, or load, the TumblrSources pickle
         if not os.path.exists(self.pickle_file_name):
             self.logger.info(u"{0}: finding sources using {1}".format(
-                self.source_log, source_word_str))
+                self.source_log, self.source_type + self.source_word))
 
             # Get blog names by posts with tag
             ns = self.get_blog_names_by_posts_with_tag(self.source_type, self.source_word)
@@ -90,7 +93,7 @@ class TumblrSources:
             n_host_names = len(self.host_names)
             additional_names_found = True
             self.logger.info(u"{0}: found {1} unique blog host names using {2}".format(
-                self.source_log, n_host_names, source_word_str))
+                self.source_log, n_host_names, self.source_type + self.source_word))
             while additional_names_found and n_host_names < 1000:
                 ns = self.get_blog_names_by_posts_with_tag(self.source_type, self.source_word, before=ns['time_stamp'])
                 self.host_names = self.host_names.union(ns['host_names'])
@@ -100,7 +103,7 @@ class TumblrSources:
                     additional_names_found = False
                 n_host_names = len(self.host_names)
                 self.logger.info(u"{0}: found {1} unique blog host names using {2}".format(
-                    self.source_log, n_host_names, source_word_str))
+                    self.source_log, n_host_names, self.source_type + self.source_word))
         
             # Get information, total number of posts, and text posts
             # for each blog
@@ -121,13 +124,12 @@ class TumblrSources:
         tag, sleeping before attempts.
 
         """
-        exc_caught = False
-        host_names = set()
-        time_stamp = [float('inf')]
+        host_names = None
+        time_stamp = None
 
         # Make multiple attempts to get blog host names by posts with tag
-        iAttempts = 1
-        while exc_caught and iAttempts < self.number_of_api_attempts:
+        iAttempts = 0
+        while host_names is None and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
 
             # Sleep before the attempt
@@ -154,6 +156,8 @@ class TumblrSources:
                     posts = self.client.tagged(tag=unicode(source_word).encode('utf-8'), limit=limit, before=before)
 
                 # Collect uniaue blog names from posts
+                host_names = set()
+                time_stamp = [float('inf')]
                 for post in posts:
                     host_names.add(post['blog_name'])
                     if post['timestamp'] < time_stamp[0]:
@@ -163,7 +167,8 @@ class TumblrSources:
                     self.source_log, len(host_names), source_type, source_word))
 
             except Exception as exc:
-                exc_caught = True
+                host_names = None
+                time_stamp = None
                 self.logger.warning(u"{0}: couldn't find blog host names by posts with {1}{2}: {3}".format(
                     self.source_log, source_type, source_word, exc))
 
@@ -174,12 +179,11 @@ class TumblrSources:
         sleeping before attempts.
 
         """
-        exc_caught = False
-        info = {}
+        info = None
 
         # Make multiple attempts to get blog info by hostname
-        iAttempts = 1
-        while exc_caught and iAttempts < self.number_of_api_attempts:
+        iAttempts = 0
+        while info is None and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
 
             # Sleep before the attempt
@@ -190,13 +194,12 @@ class TumblrSources:
 
             # Make an attempt to get blog info by hostname
             try:
-                info.update(self.client.blog_info(hostname)['blog'])
-
+                info = self.client.blog_info(hostname)['blog']
                 self.logger.info(u"{0}: found blog info for {1}".format(
                     self.source_log, hostname))
 
             except Exception as exc:
-                exc_caught = True
+                info = None
                 self.logger.warning(u"{0}: couldn't find blog info for {1}: {2}".format(
                     self.source_log, hostname, exc))
 
@@ -207,12 +210,11 @@ class TumblrSources:
         sleeping before attempts.
 
         """
-        exc_caught = False
-        b_p = {}
+        b_p = None
 
         # Make multiple attempts to get blog posts by hostname
-        iAttempts = 1
-        while exc_caught and iAttempts < self.number_of_api_attempts:
+        iAttempts = 0
+        while b_p is None and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
 
             # Sleep before the attempt
@@ -224,22 +226,22 @@ class TumblrSources:
             # Make an attempt to get blog posts by hostname
             try:
                 if ptype == "" and offset == 0:
-                    b_p.update(self.client.posts(hostname, limit=limit))
+                    b_p = self.client.posts(hostname, limit=limit)
 
                 elif not ptype == "" and offset == 0:
-                    b_p.update(self.client.posts(hostname, limit=limit, type=ptype))
+                    b_p = self.client.posts(hostname, limit=limit, type=ptype)
 
                 elif ptype == "" and offset > 0:
-                    b_p.update(self.client.posts(hostname, limit=limit, offset=offset))
+                    b_p = self.client.posts(hostname, limit=limit, offset=offset)
 
                 else:
-                    b_p.update(self.client.posts(hostname, limit=limit, type=ptype, offset=offset))
+                    b_p = self.client.posts(hostname, limit=limit, type=ptype, offset=offset)
 
                 self.logger.info(u"{0}: found blog posts for {1}".format(
                     self.source_log, hostname))
 
             except Exception as exc:
-                exc_caught = True
+                b_p = None
                 self.logger.warning(u"{0}: couldn't find blog posts for {1}: {2}".format(
                     self.source_log, hostname, exc))
 

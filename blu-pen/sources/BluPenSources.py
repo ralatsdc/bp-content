@@ -8,6 +8,7 @@ import argparse
 import codecs
 import json
 import logging
+import logging.handlers
 import os
 import re
 import sys
@@ -17,13 +18,13 @@ import numpy as np
 
 # Local imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from utility.BluPenUtility import BluPenUtility
 from FlickrSources import FlickrSources
 from TumblrSources import TumblrSources
 from TwitterSources import TwitterSources
+from utility.QueueUtility import QueueUtility
 
 class BluPenSources:
-    """TODO: Complete
+    """Selects sources from selected services.
 
     """
     def __init__(self, config_file):
@@ -35,24 +36,51 @@ class BluPenSources:
         self.config_file = config_file
         self.config = ConfigParser.SafeConfigParser()
         self.config.read(self.config_file)
+
+        self.do_purge = self.config.getboolean("sources", "do_purge")
         self.sources_requests_dir = self.config.get("sources", "requests_dir")
+
+        self.add_console_handler = self.config.getboolean("sources", "add_console_handler")
+        self.add_file_handler = self.config.getboolean("sources", "add_file_handler")
+        self.log_file_name = self.config.get("sources", "log_file_name")
+        log_level = self.config.get("sources", "log_level")
+        if log_level == 'DEBUG':
+            self.log_level = logging.DEBUG
+        elif log_level == 'INFO':
+            self.log_level = logging.INFO
+        elif log_level == 'WARNING':
+            self.log_level = logging.WARNING
+        elif log_level == 'ERROR':
+            self.log_level = logging.ERROR
+        elif log_level == 'CRITICAL':
+            self.log_level = logging.CRITICAL
+
         self.authors_requests_dir = self.config.get("authors", "requests_dir")
+
         self.flickr_content_dir = self.config.get("flickr", "content_dir")
         self.tumblr_content_dir = self.config.get("tumblr", "content_dir")
         self.twitter_content_dir = self.config.get("twitter", "content_dir")
 
+        self.tumblr_min_total_tags = self.config.getint("tumblr", "min_total_tags")
+        self.tumblr_min_total_blogs = self.config.getint("tumblr", "min_total_blogs")
+
         # Create a logger
         root = logging.getLogger()
-        root.setLevel(logging.INFO)
-        formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S")
+        root.setLevel(self.log_level)
+        formatter = logging.Formatter(
+            "%(asctime)s %(name)s %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S")
         for handler in root.handlers:
             root.removeHandler(handler)
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        root.addHandler(console_handler)
-        file_handler = logging.FileHandler("BluPenSources.log", mode='w', encoding='utf-8')
-        file_handler.setFormatter(formatter)
-        root.addHandler(file_handler)
+        if self.add_console_handler:
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            root.addHandler(console_handler)
+        if self.add_file_handler:
+            file_handler = logging.handlers.RotatingFileHandler(
+                self.log_file_name, maxBytes=1000000, backupCount=5, encoding='utf-8')
+            file_handler.setFormatter(formatter)
+            root.addHandler(file_handler)
+
         self.logger = logging.getLogger(u"BluPenSources")
 
     def get_sources_from_flickr(self, source_word_strs, content_dir):
@@ -72,7 +100,7 @@ class BluPenSources:
 
             # Create and dump, or load, the FlickrSources pickle
             fs = FlickrSources(source_word_str, content_dir)
-            fs.set_sources()
+            fs.set_sources(do_purge=self.do_purge)
 
             # Accumulate arrays of values for selecting groups
             nsid.extend(fs.nsid)
@@ -129,7 +157,7 @@ class BluPenSources:
 
             # Create and dump, or load, the TumblrSources pickle.
             ts = TumblrSources(source_word_str, content_dir)
-            ts.set_sources()
+            ts.set_sources(do_purge=self.do_purge)
 
             # Accumulate blog info, and posts
             for b_p in ts.blog_posts:
@@ -166,7 +194,7 @@ class BluPenSources:
                      source_header,
                      source_label,
                      source_type,
-                     source_word) = ts.blu_pen_utl.process_source_words(source_word_str)
+                     source_word) = ts.authors_utility.process_source_words(source_word_str)
 
                     # Count the appearances of the current source word in
                     # the curren post of the current blog
@@ -177,11 +205,10 @@ class BluPenSources:
             total_tags.append(n_tags)
 
         # Find the blogs with the highest number of tag appearances
-        # TODO: Remove the hard coded values
         np_total_tags = np.array(total_tags)
-        min_total_tags = 40
+        min_total_tags = self.tumblr_min_total_tags
         index_blog, = np.nonzero(np_total_tags > min_total_tags)
-        while np.size(index_blog) < 100 and min_total_tags > 0:
+        while np.size(index_blog) < self.tumblr_min_total_blogs and min_total_tags > 0:
             min_total_tags -= 1
             index_blog, = np.nonzero(np_total_tags > min_total_tags)
 
@@ -267,7 +294,7 @@ class BluPenSources:
 
             # Create and dump, or load, the TwitterSources pickle
             ts = TwitterSources(source_word_str, content_dir)
-            ts.set_sources()
+            ts.set_sources(do_purge=self.do_purge)
 
             # Accumulate created atributes
             name.extend(ts.name)
@@ -313,7 +340,7 @@ class BluPenSources:
         return users
 
 if __name__ == "__main__":
-    """TODO: Complete
+    """Process the sources queue.
         
     """
     # Parse command line arguments
@@ -325,9 +352,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Read the input request JSON document from sources/queue
-    bpu = BluPenUtility()
+    qu = QueueUtility()
     bps = BluPenSources(args.config_file)
-    inp_file_name, inp_req_data = bpu.read_queue(bps.sources_requests_dir)
+    
+    inp_file_name, inp_req_data = qu.read_queue(bps.sources_requests_dir)
     out_file_name = os.path.basename(inp_file_name); out_req_data = {}
     if inp_file_name == "" or inp_req_data == {}:
         bps.logger.info("Nothing to do, exiting")
@@ -339,7 +367,7 @@ if __name__ == "__main__":
         out_req_data['groups'] = bps.get_sources_from_flickr(inp_req_data['words'], bps.flickr_content_dir)
 
     elif inp_req_data['service'] == 'tumblr':
-        out_req_data['service'] = 'tumblr':
+        out_req_data['service'] = 'tumblr'
         out_req_data['authors'] = bps.get_sources_from_tumblr(inp_req_data['words'], bps.tumblr_content_dir)
 
     elif inp_req_data['service'] == 'twitter':
@@ -347,7 +375,7 @@ if __name__ == "__main__":
         out_req_data['authors'] = bps.get_sources_from_twitter(inp_req_data['words'], bps.twitter_content_dir)
 
     # Write the input request JSON document to sources/did-pop
-    bpu.write_queue(bps.sources_requests_dir, out_file_name, inp_req_data)
+    qu.write_queue(bps.sources_requests_dir, out_file_name, inp_req_data)
 
     # Write the output request JSON document to authors/do-push
-    bpu.write_queue(bps.authors_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")
+    qu.write_queue(bps.authors_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")
