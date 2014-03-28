@@ -41,6 +41,10 @@ class AuthorsUtility:
         if out_file_name == "":
             raise ServiceError("Cowardly refusing to download the URL to an unnamed file.")
 
+        # Cowardly refuse to download the URL to an existing file
+        if os.path.exists(out_file_name):
+            self.logger.warning(u"Previously downloaded {0}".format(out_file_name))
+
         # Download the URL to a response file in memory
         do_download = True
         iAttempts = 0
