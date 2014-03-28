@@ -34,7 +34,7 @@ class FlickrUtility:
         try:
             photos_xml = self.api.interestingness_getList()
         except Exception as exc:
-            self.logger.error("could not get photos XML: {0}".format(
+            self.logger.error(u"could not get photos XML: {0}".format(
                 exc))
 
         # Parse attributes and values
@@ -47,7 +47,7 @@ class FlickrUtility:
             try:
                 info_xml = self.api.people_getInfo(user_id=user_id)
             except Exception as exc:
-                self.logger.error("could not get user info XML for {0}: {1}".format(
+                self.logger.error(u"could not get user info XML for {0}: {1}".format(
                     user_id, exc))
             usernames.add(info_xml.find("person").findtext("username"))
 

@@ -11,7 +11,7 @@ import zipfile
 import twitter
 
 # Local imports
-from ServiceError import ServiceError
+from utility.ServiceError import ServiceError
 
 class TwitterUtility:
     """Provides utilities for using Twitter.

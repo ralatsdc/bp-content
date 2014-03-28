@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Standard library imports
-from datetime import datetime, timedelta
+import datetime
 import logging
 import os
 import re
@@ -15,9 +15,9 @@ from lxml.html import soupparser
 
 # Local imports
 from BluePeninsula import BluePeninsula
-from utility.AuthorUtility import AuthorUtility
 from TumblrAuthor import TumblrAuthor
 from TumblrWheat import TumblrWheat
+from utility.AuthorUtility import AuthorUtility
 
 class TumblrUtility:
     """Represents utilities for using Tumblr.
@@ -39,7 +39,7 @@ class TumblrUtility:
         try:
             html = urllib.urlopen("http://www.tumblr.com/explore").read()
         except Exception as exc:
-            self.logger.error("could not get popular tags")
+            self.logger.error(u"Could not get popular tags")
         
         # Find all anchors in the page containing tags
         p = re.compile("^/tagged/(.*)$")
@@ -63,7 +63,7 @@ class TumblrUtility:
         try:
             html = urllib.urlopen("http://www.tumblr.com/tagged/" + tag).read()
         except Exception as exc:
-            self.logger.error("could not get subdomains for tag")
+            self.logger.error(u"Could not get subdomains for tag")
         
         # Find all links in the page containing subdomains
         p = re.compile("^http://(.*).tumblr.com$")
@@ -138,8 +138,8 @@ class TumblrUtility:
         
         # Get contents set up TeX
         book_title = "Ah...This is the Life"
-        created_dt = [datetime.now()]
-        requested_dt = datetime.now()
+        created_dt = [datetime.datetime.now()]
+        requested_dt = datetime.datetime.now()
         tex = tumblr_wheat.get_contents_set_up_tex(book_title, created_dt, requested_dt)
 
         # Consider each photo grid

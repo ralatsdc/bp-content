@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 # Standard library imports
-import codecs
 import ConfigParser
 import argparse
+import codecs
 import datetime
 import logging
+import logging.handlers
 import os
 import sys
 import urlparse
@@ -19,10 +20,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from FeedAuthor import FeedAuthor
 from FlickrGroup import FlickrGroup
 from InstagramAuthor import InstagramAuthor
-from ProcessingError import ProcessingError
 from TumblrAuthor import TumblrAuthor
 from TwitterAuthor import TwitterAuthor
 from TwitterUtility import TwitterUtility
+from utility.ProcessingError import ProcessingError
 from utility.QueueUtility import QueueUtility
 
 class BluPenAuthors:
@@ -45,175 +46,123 @@ class BluPenAuthors:
 
         # Assign atributes
         self.authors_requests_dir = self.config.get("authors", "requests_dir")
+
+        self.do_purge = self.config.getboolean("authors", "do_purge")
+
+        self.add_console_handler = self.config.getboolean("authors", "add_console_handler")
+        self.add_file_handler = self.config.getboolean("authors", "add_file_handler")
+        self.log_file_name = self.config.get("authors", "log_file_name")
+        log_level = self.config.get("authors", "log_level")
+        if log_level == 'DEBUG':
+            self.log_level = logging.DEBUG
+        elif log_level == 'INFO':
+            self.log_level = logging.INFO
+        elif log_level == 'WARNING':
+            self.log_level = logging.WARNING
+        elif log_level == 'ERROR':
+            self.log_level = logging.ERROR
+        elif log_level == 'CRITICAL':
+            self.log_level = logging.CRITICAL
+
         self.packages_requests_dir = self.config.get("packages", "requests_dir")
+
         self.feed_content_dir = self.config.get("feed", "content_dir")
         self.flickr_content_dir = self.config.get("flickr", "content_dir")
         self.instagram_content_dir = self.config.get("instagram", "content_dir")
         self.tumblr_content_dir = self.config.get("tumblr", "content_dir")
         self.twitter_content_dir = self.config.get("twitter", "content_dir")
 
-        # Create logger, handler, and formatter and set logging level
-        # TODO: Standardize and move to a utility
+        # Create a logger
         root = logging.getLogger()
-        root.setLevel(logging.INFO)
-        formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S")
+        root.setLevel(self.log_level)
+        formatter = logging.Formatter(
+            "%(asctime)s %(name)s %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S")
         for handler in root.handlers:
             root.removeHandler(handler)
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        root.addHandler(console_handler)
-        file_handler = logging.FileHandler("BluPenAuthor.log", mode='w', encoding='utf-8')
-        file_handler.setFormatter(formatter)
-        root.addHandler(file_handler)
+        if self.add_console_handler:
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            root.addHandler(console_handler)
+        if self.add_file_handler:
+            file_handler = logging.handlers.RotatingFileHandler(
+                self.log_file_name, maxBytes=1000000, backupCount=5, encoding='utf-8')
+            file_handler.setFormatter(formatter)
+            root.addHandler(file_handler)
         self.logger = logging.getLogger("BluPenAuthor")
 
-    def collect_feed_author_content(self, source_url, use_uuid=False, do_purge=False):
+    def collect_feed_author_content(self, source_url):
         """Collect content created by a feed author.
 
         """
-        # Create the content directory for the feed author, if needed
-        self.logger.info("collecting feed content")
-        if use_uuid:
-            content_dir = os.path.join(self.feed_content_dir, source_path, self.uuid)
-        else:
-            content_dir = os.path.join(self.feed_content_dir, source_path)
-        if not os.path.exists(content_dir):
-            os.makedirs(content_dir)
-
-        # Remove pickle file, if requested
-        feed_author = FeedAuthor(self, source_url, content_dir)
-        if do_purge and os.path.exists(feed_author.pickle_file_name):
-            os.remove(feed_author.pickle_file_name)
-
-        # Get and dump, or load, content and download images
+        self.logger.info(u"collecting feed content")
+        feed_author = FeedAuthor(self, source_url, self.feed_content_dir)
         if not os.path.exists(feed_author.pickle_file_name):
-            feed_author.set_content()
+            feed_author.set_content(do_purge=self.do_purge)
             feed_author.set_image_urls()
             feed_author.download_images()
             feed_author.dump()
         else:
             feed_author.load()
-        self.logger.info("feed content collected")
+        self.logger.info(u"feed content collected")
 
-    def collect_flickr_group_content(self, name, nsid, use_uuid=False, do_purge=True):
+    def collect_flickr_group_content(self, source_word_str, group_id):
         """Collect content created by a Flickr group.
         
         """
-        # Create the content directory for the Flickr group, if
-        # needed
-        self.logger.info("collecting flickr content")
-        if use_uuid:
-            content_dir = os.path.join(self.flickr_content_dir, nsid, self.uuid)
-        else:
-            content_dir = os.path.join(self.flickr_content_dir, nsid)
-        if not os.path.exists(content_dir):
-            os.makedirs(content_dir)
-
-        # Remove pickle file, if requested
-        flickr_group = FlickrGroup(self, u"@" + name, nsid, content_dir)
-        if do_purge and os.path.exists(flickr_group.pickle_file_name):
-            os.remove(flickr_group.pickle_file_name)
-
-        # Get and dump, or load, photosets, and download photos
+        self.logger.info(u"collecting flickr content")
+        flickr_group = FlickrGroup(self, source_word_str, group_id, self.flickr_content_dir)
         if not os.path.exists(flickr_group.pickle_file_name): 
-            flickr_group.set_photos()
+            flickr_group.set_photos(do_purge=self.do_purge)
             flickr_group.download_photos()
             flickr_group.dump()
         else:
             flickr_group.load()
-        self.logger.info("flickr content collected")
+        self.logger.info(u"flickr content collected")
 
-    def collect_instagram_author_content(self, source_words_str, use_uuid=False, do_purge=False):
+    def collect_instagram_author_content(self, source_word_str):
         """Collect content created by a Instagram author.
         
         """
-        # Create the content directory for the Instagram author, if needed
-        self.logger.info("collecting instagram content")
-        if use_uuid:
-            content_dir = os.path.join(self.instagram_content_dir, source_path, self.uuid)
-        else:
-            content_dir = os.path.join(self.instagram_content_dir, source_path)
-        if not os.path.exists(content_dir):
-            os.makedirs(content_dir)
-
-        # Remove pickle file, if requested
-        instagram_author = InstagramAuthor(self, source_words_str, content_dir)
-        if do_purge and os.path.exists(instagram_author.pickle_file_name):
-            os.remove(instagram_author.pickle_file_name)
-
-        # Get and dump, or load, content
+        self.logger.info(u"collecting instagram content")
+        instagram_author = InstagramAuthor(self, source_word_str, self.instagram_content_dir)
         if not os.path.exists(instagram_author.pickle_file_name): 
-            instagram_author.set_media()
+            instagram_author.set_media(do_purge=self.do_purge)
             instagram_author.download_images()
             instagram_author.dump()
         else:
             instagram_author.load()
-        self.logger.info("instagram content collected")
+        self.logger.info(u"instagram content collected")
 
-    def collect_tumblr_author_content(self, subdomain, use_uuid=False, do_purge=False):
+    def collect_tumblr_author_content(self, subdomain):
         """Collect content created by a Tumblr author.
         
         """
-        # Create the content directory for the Tumblr author, if
-        # needed
-        self.logger.info("collecting tumblr content")
-        if use_uuid:
-            content_dir = os.path.join(self.tumblr_content_dir, subdomain, self.uuid)
-        else:
-            content_dir = os.path.join(self.tumblr_content_dir, subdomain)
-        if not os.path.exists(content_dir):
-            os.makedirs(content_dir)
-
-        # Remove pickle file, get posts, and download photos
-        tumblr_author = TumblrAuthor(self, subdomain, content_dir)
-        if do_purge and os.path.exists(tumblr_author.pickle_file_name):
-            os.remove(tumblr_author.pickle_file_name)
-
-        # Get and dump, or load, posts and download photos
+        self.logger.info(u"collecting tumblr content")
+        tumblr_author = TumblrAuthor(self, subdomain, self.tumblr_content_dir)
         if not os.path.exists(tumblr_author.pickle_file_name):
-            tumblr_author.set_posts()
+            tumblr_author.set_posts(do_purge=self.do_purge)
             tumblr_author.dump()
             tumblr_author.download_photos()
         else:
             tumblr_author.load()
-        self.logger.info("tumblr content collected")
+        self.logger.info(u"tumblr content collected")
 
-    def collect_twitter_author_content(self, source_words_str, zip_file_name="", use_uuid=False, do_purge=False):
+    def collect_twitter_author_content(self, source_words_str, zip_file_name=""):
         """Collect content created by a Twitter author.
         
         """
-        # Create the content directory for the Twitter authors, if
-        # needed
-        self.logger.info("collecting tumblr content")
-        if use_uuid:
-            content_dir = os.path.join(self.twitter_content_dir, source_path, self.uuid)
-        else:
-            content_dir = os.path.join(self.twitter_content_dir, source_path)
-        if not os.path.exists(content_dir):
-            os.makedirs(content_dir)
-
-        # Remove pickle file, if needed
-        twitter_author = TwitterAuthor(self, source_words_str, content_dir)
-        if do_purge and os.path.exists(twitter_author.pickle_file_name):
-            os.remove(twitter_author.pickle_file_name)
-
-        # Extract zip archive, if needed
-        use_archive = False
-        if zip_file_name != "":
-            use_archive = True
-            TwitterUtility.extract_tweets_from_archive(zip_file_name, content_dir)
-
-        # Get and dump, or first load, tweets and images
+        self.logger.info(u"collecting twitter content")
+        twitter_author = TwitterAuthor(self, source_words_str, self.twitter_content_dir)
         if not os.path.exists(twitter_author.pickle_file_name):
-            if not use_archive:
-                twitter_author.set_tweets()
+            if zip_file_name == "":
+                twitter_author.set_tweets(do_purge=self.do_purge)
             else:
-                twitter_author.set_tweets_from_archive()
-            twitter_author.content_set = True
+                TwitterUtility.extract_tweets_from_archive(zip_file_name, twitter_author.content_dir)
+                twitter_author.set_tweets_from_archive(do_purge=self.do_purge)
             twitter_author.dump()
         else:
             twitter_author.load()
-        self.logger.info("tumblr content collected")
+        self.logger.info(u"twitter content collected")
 
 if __name__ == "__main__":
     """Collects content for each source of a collection.
@@ -233,7 +182,7 @@ if __name__ == "__main__":
     inp_file_name, inp_req_data = qu.read_queue(bpa.authors_requests_dir)
     out_file_name = os.path.basename(inp_file_name); out_req_data = {}
     if inp_file_name == "" or inp_req_data == {}:
-        bpa.logger.info("Nothing to do, exiting")
+        bpa.logger.info(u"Nothing to do, exiting")
         sys.exit()
 
     # Get author content from the specified service
@@ -244,14 +193,32 @@ if __name__ == "__main__":
             if not group['include']:
                 continue
             groups.append(group)
-            bpa.collect_flickr_group_content(group['name'], group['nsid'])
+            source_word_str = u"@" + group['name']
+            group_id = group["nsid"]
+            bpa.collect_flickr_group_content(source_word_str, group_id)
         out_req_data['groups'] = groups
 
     elif inp_req_data['service'] == 'tumblr':
-        pass
+        out_req_data['service'] = 'tumblr'
+        authors = []
+        for author in inp_req_data['authors']:
+            if not author['include']:
+                continue
+            authors.append(author)
+            subdomain = urlparse.urlparse(author['url']).netloc
+            bpa.collect_tumblr_author_content(subdomain)
+        out_req_data['authors'] = authors
 
     elif inp_req_data['service'] == 'twitter':
-        pass
+        out_req_data['service'] = 'twitter'
+        authors = []
+        for author in inp_req_data['authors']:
+            if not author['include']:
+                continue
+            authors.append(author)
+            source_words_str = u"@" + author['screen_name']
+            bpa.collect_twitter_author_content(source_words_str)
+        out_req_data['authors'] = authors
 
     # Write the input request JSON document to authors/did-pop
     qu.write_queue(bpa.authors_requests_dir, out_file_name, inp_req_data)

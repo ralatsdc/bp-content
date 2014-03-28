@@ -36,7 +36,7 @@ class FlickrGroup:
          self.source_type,
          self.source_word) = self.authors_utility.process_source_words(source_word_str)
         self.group_id = group_id
-        self.content_dir = content_dir
+        self.content_dir = os.path.join(content_dir, self.source_path)
         self.pickle_file_name = os.path.join(self.content_dir, group_id + ".pkl")
         self.requested_dt = requested_dt
         self.max_photos = max_photos
@@ -68,45 +68,66 @@ class FlickrGroup:
             self.logger.error(err_msg)
             raise Exception(err_msg.encode('utf-8'))
 
-    def set_photos(self):
+    def set_photos(self, do_purge=False):
         """Gets recent photos for this group from Flickr, and parses
         attributes and values.
 
         """
-        # Get photos by group identifier
-        photos = self.get_photos_by_source(self.group_id)
+        # Create content directory, if it does not exist
+        if not os.path.exists(self.content_dir):
+            os.makedirs(self.content_dir)
 
-        # Parse attributes and values
-        self.photos = []
-        iPh = -1
-        for photo in photos:
-            iPh += 1
-            if iPh > self.max_photos - 1:
-                break
-            self.photos.append({})
+        # Remove pickle file, if requested
+        if do_purge and os.path.exists(self.pickle_file_name):
+            os.remove(self.pickle_file_name)
 
-            # Usual
-            self.photos[-1]['id'] = photo.get("id")
-            self.photos[-1]['owner'] = photo.get("owner")
-            self.photos[-1]['secret'] = photo.get("secret")
-            self.photos[-1]['server'] = photo.get("server")
-            self.photos[-1]['farm'] = photo.get("farm")
-            self.photos[-1]['title'] = photo.get("title")
-            self.photos[-1]['ispublic'] = photo.get("ispublic")
-            self.photos[-1]['isfriend'] = photo.get("isfriend")
-            self.photos[-1]['isfamily'] = photo.get("isfamily")
-            self.photos[-1]['ownername'] = photo.get("ownername")
-            self.photos[-1]['dateadded'] = photo.get("dateadded")
+        # Create and dump, or load, the FlickrAuthor pickle
+        if not os.path.exists(self.pickle_file_name):
+            self.logger.info(u"{0} getting photos for {1}".format(
+                self.source_log, self.group_id))
 
-            # Extras
-            self.photos[-1]['dateupload'] = photo.get("dateupload")
-            self.photos[-1]['datetaken'] = photo.get("datetaken")
-            self.photos[-1]['latitude'] = photo.get("latitude")
-            self.photos[-1]['longitude'] = photo.get("longitude")
-            self.photos[-1]['tags'] = photo.get("tags")
-            self.photos[-1]['url_m'] = photo.get("url_m")
+            # Get photos by group identifier
+            photos = self.get_photos_by_source(self.group_id)
 
-        self.content_set = True
+            # Parse attributes and values
+            self.photos = []
+            iPh = -1
+            for photo in photos:
+                iPh += 1
+                if iPh > self.max_photos - 1:
+                    break
+                self.photos.append({})
+
+                # Usual
+                self.photos[-1]['id'] = photo.get("id")
+                self.photos[-1]['owner'] = photo.get("owner")
+                self.photos[-1]['secret'] = photo.get("secret")
+                self.photos[-1]['server'] = photo.get("server")
+                self.photos[-1]['farm'] = photo.get("farm")
+                self.photos[-1]['title'] = photo.get("title")
+                self.photos[-1]['ispublic'] = photo.get("ispublic")
+                self.photos[-1]['isfriend'] = photo.get("isfriend")
+                self.photos[-1]['isfamily'] = photo.get("isfamily")
+                self.photos[-1]['ownername'] = photo.get("ownername")
+                self.photos[-1]['dateadded'] = photo.get("dateadded")
+
+                # Extras
+                self.photos[-1]['dateupload'] = photo.get("dateupload")
+                self.photos[-1]['datetaken'] = photo.get("datetaken")
+                self.photos[-1]['latitude'] = photo.get("latitude")
+                self.photos[-1]['longitude'] = photo.get("longitude")
+                self.photos[-1]['tags'] = photo.get("tags")
+                self.photos[-1]['url_m'] = photo.get("url_m")
+
+            self.content_set = True
+
+            # Dumps attributes pickle
+            self.dump()
+
+        else:
+
+            # Load attributes pickle
+            self.load()
 
     def get_photos_by_source(self, group_id , per_page=500, page=1):
         """Makes multiple attempts to get photos by source, sleeping

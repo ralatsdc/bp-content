@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 # Standard library imports
-from datetime import datetime, date, timedelta
-from glob import glob
+import datetime
+import glob
 import logging
 import math
 import os
@@ -11,18 +11,18 @@ import random
 import re
 import shutil
 import simplejson as json
-from time import sleep
+import time
 import webcolors
 
 # Third-party imports
 from PIL import Image
-import lxml.html
+import lxml
 import numpy as np
 import twitter
 
 # Local imports
 from utility.AuthorsUtility import AuthorsUtility
-from ServiceError import ServiceError
+from utility.ServiceError import ServiceError
 
 class TwitterAuthor:
     """Represents authors on Twitter by their creative output. Authors
@@ -30,36 +30,42 @@ class TwitterAuthor:
 
     """
     def __init__(self, blu_pen_author, source_words_str, content_dir,
-                 start_date=date(2006, 07, 15) - timedelta(2), stop_date=date.today() + timedelta(2),
-                 max_length=320, max_frequency=20, number_of_api_attempts=4, seconds_between_api_attempts=1):
+                 start_date=datetime.date(2006, 07, 15) - datetime.timedelta(2),
+                 stop_date=datetime.date.today() + datetime.timedelta(2),
+                 max_length=320, max_frequency=20,
+                 number_of_api_attempts=4, seconds_between_api_attempts=1):
         """Constructs a TwitterAuthor instance given source words.
 
         """
+        # Process the source word string to create log and path
+        # strings, and assign input argument attributes
         self.blu_pen_author = blu_pen_author
         self.authors_utility = AuthorsUtility()
-
         (self.source_log,
          self.source_path,
          self.source_header,
          self.source_label,
          self.source_types,
          self.source_words) = self.authors_utility.process_source_words(source_words_str)
-
-        self.content_dir = content_dir
+        if not isinstance(self.source_types, list):
+            self.source_types = [self.source_types]
+        if not isinstance(self.source_words, list):
+            self.source_words = [self.source_words]
+        self.content_dir = os.path.join(content_dir, self.source_path)
+        self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
         self.start_date = start_date
         self.stop_date = stop_date
+        self.twitter_start_date = datetime.date(2006, 07, 15) - datetime.timedelta(2)
+        self.twitter_stop_date = datetime.date.today() + datetime.timedelta(2)
         self.max_length = max_length / len(self.source_words) # per source word
         self.max_frequency = max_frequency
         self.number_of_api_attempts = number_of_api_attempts
         self.seconds_between_api_attempts = seconds_between_api_attempts
 
-        self.twitter_start_date = date(2006, 07, 15) - timedelta(2)
-        self.twitter_stop_date = date.today() + timedelta(2)
+        # Initialize created attributes
         self.page = [0] * len(self.source_words)
         self.max_id = [0] * len(self.source_words)
         self.since_id = [0] * len(self.source_words)
-
-        self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
 
         self.last_tweets = {}
 
@@ -77,14 +83,13 @@ class TwitterAuthor:
         self.length = np.zeros((len(self.source_words), 1))
         self.count = np.zeros((len(self.source_words), 1))
         self.volume = np.zeros((24, 12))
-
         self.frequency = {}
 
         self.content_set = False
 
         self.logger = logging.getLogger(__name__)
 
-    def set_tweets(self, count=100, parameter="max_id"):
+    def set_tweets(self, count=100, parameter="max_id", do_purge=False):
         """Gets recents tweets from Twitter for all source words. Note
         that the default Twitter API behavior is to provide recent
         tweets first. Then additional tweets may be obtained by paging
@@ -93,341 +98,360 @@ class TwitterAuthor:
         than a since tweet identifier.
 
         """
-        # Load attributes pickle, if it exists, and initialize loop
-        # variables
-        if os.path.exists(self.pickle_file_name):
-            self.load()
+        # Create content directory, if it does not exist
+        if not os.path.exists(self.content_dir):
+            os.makedirs(self.content_dir)
 
-        n_before_twitter_start_tot = 0 # Before twitter start date
-        n_after_twitter_stop_tot = 0 # After twitter stop date
-        n_after_stop_tot = 0 # After stop date
-        n_convert_exceptions_tot = 0 # With convert exceptions
-        n_flash_objects_tot = 0 # With flash objects
-        n_duplicate_texts_tot = 0 # With duplicate texts
+        # Remove pickle file, if requested
+        if do_purge and os.path.exists(self.pickle_file_name):
+            os.remove(self.pickle_file_name)
 
-        # Get one page of tweets for each source word in turn until
-        # all tweets for each source word have been gotten (defined as
-        # a tweet before the start date, or more dates than the
-        # maximum length)
-        nSrc = len(self.source_words)
-        do_get_source_content = [True] * nSrc
-        while True in do_get_source_content:
-            for iSrc in range(nSrc):
-                # Skip source words for which all tweets have been
-                # gotten
-                if not do_get_source_content[iSrc]:
-                    continue
-                self.logger.info("{0} getting content for {1}{2}".format(
-                        self.source_log, self.source_types[iSrc], self.source_words[iSrc]))
-                # Note that the final request must return no
-                # tweets, otherwise, this while loop never terminates.
-                # Note also that the page parameter, though valid, is
-                # no longer used in API requests.
-                self.page[iSrc] += 1
-                try:
-                    if parameter == "max_id":
-                        # Note that since the max_id parameter is
-                        # inclusive, it is reduced by one so the Tweet
-                        # with the matching identifier will not be
-                        # returned again.
-                        tweets = self.get_tweets_by_source(
-                            self.source_types[iSrc], self.source_words[iSrc],
-                            count=count, page=self.page[iSrc], max_id=self.max_id[iSrc] - 1)
-                    elif parameter == "since_id":
-                        # Note that since the since_id parameter is
-                        # not inclusive, it is unchanged and the Tweet
-                        # with the matching identifier will not be
-                        # returned again.
-                        tweets = self.get_tweets_by_source(
-                            self.source_types[iSrc], self.source_words[iSrc],
-                            count=count, page=self.page[iSrc], since_id=self.since_id[iSrc])
-                    if len(tweets) == 0 or tweets == self.last_tweets:
-                        if self.length[iSrc] > 0:
-                            self.logger.debug("{0} =0= tweets found".format(
-                                self.source_log))
-                            do_get_source_content[iSrc] = False
-                            continue
-                        else:
-                            # No tweets found, so raise an exception to catch below
-                            self.logger.warning("{0} =1= no tweets found".format(
-                                self.source_log))
-                            raise Exception("No tweets found")
-                    self.logger.debug(
-                        "{0} got page {1} of {2} before {3} or after {4} for {5}{6} containing {7} tweets".format(
-                        self.source_log, self.page[iSrc], count, self.max_id[iSrc], self.since_id[iSrc],
-                        self.source_types[iSrc], self.source_words[iSrc], len(tweets)))
-                    self.last_tweets = tweets
-                except Exception as exc:
-                    message = str(exc)
-                    if message.find("No tweets found") != -1:
-                        # No tweets found, so catch the exception raised
-                        # above, and raise the exception again so that the
-                        # task can fail immediately, if considering
-                        # the last source word
-                        self.logger.warning("{0} =2= no tweets found".format(
-                            self.source_log))
-                        if iSrc == nSrc - 1:
-                            raise Exception("No tweets found")
-                    elif message.find("Rate limit exceeded") != -1:
-                        # Rate limit exceeded, so catch the exception
-                        # raised by the Twitter API, and raise the
-                        # exception again so that the task can handle
-                        # it with the correct (very long) delay
-                        self.logger.warning("{0} =3= rate limit exceeded".format(
-                            self.source_log))
-                        raise Exception("Rate limit exceeded")
-                    elif message.find("Capacity Error") != -1:
-                        # Capacity exceeded, so catch the exception
-                        # raised by the Twitter API, and raise the
-                        # exception again so that the task can handle
-                        # it with the correct (somewhat long) delay
-                        self.logger.warning("{0} =3= Capacity exceeded".format(
-                            self.source_log))
-                        raise Exception("Capacity exceeded")
-                    else:
-                        if self.length[iSrc] > 0:
-                            self.logger.debug("{0} =0= tweets found".format(
-                                self.source_log))
-                            do_get_source_content[iSrc] = False
-                            continue
-                        else:
-                            # Try getting the timeline for a known user
-                            try:
-                                source_type = "@"
-                                source_word = "BluePeninsula"
-                                tweets = self.get_tweets_by_source(
-                                    source_type, source_word, count=count)
-                                self.logger.debug("{0} got {1} tweets for {2}{3}".format(
-                                        self.source_log, len(tweets), source_type, source_word))
-                            except Exception as exc:
-                                # Problem with twitter, so raise an
-                                # exception so that the task can handle it
-                                # with the correct (short) delay
-                                self.logger.warning("{0} =4= problem with twitter for {1}{2}: {3}".format(
-                                        self.source_log, source_type, source_word, exc))
-                                raise Exception("Problem with twitter")
-                            # No tweets found, so raise an exception
-                            # so that the task can fail immediately,
-                            # if considering the last source word
-                            self.logger.warning("{0} =5= no tweets found".format(
+        # Create and dump, or load, the TwitterSources pickle
+        if not os.path.exists(self.pickle_file_name):
+
+            # Load attributes pickle, if it exists, and initialize loop
+            # variables
+            if os.path.exists(self.pickle_file_name):
+                self.load()
+
+            n_before_twitter_start_tot = 0 # Before twitter start date
+            n_after_twitter_stop_tot = 0 # After twitter stop date
+            n_after_stop_tot = 0 # After stop date
+            n_convert_exceptions_tot = 0 # With convert exceptions
+            n_flash_objects_tot = 0 # With flash objects
+            n_duplicate_texts_tot = 0 # With duplicate texts
+
+            # Get one page of tweets for each source word in turn until
+            # all tweets for each source word have been gotten (defined as
+            # a tweet before the start date, or more dates than the
+            # maximum length)
+            nSrc = len(self.source_words)
+            do_get_source_content = [True] * nSrc
+            while True in do_get_source_content:
+                for iSrc in range(nSrc):
+                    # Skip source words for which all tweets have been
+                    # gotten
+                    if not do_get_source_content[iSrc]:
+                        continue
+                    self.logger.info(u"{0} getting content for {1}{2}".format(
+                            self.source_log, self.source_types[iSrc], self.source_words[iSrc]))
+                    # Note that the final request must return no
+                    # tweets, otherwise, this while loop never terminates.
+                    # Note also that the page parameter, though valid, is
+                    # no longer used in API requests.
+                    self.page[iSrc] += 1
+                    try:
+                        if parameter == "max_id":
+                            # Note that since the max_id parameter is
+                            # inclusive, it is reduced by one so the Tweet
+                            # with the matching identifier will not be
+                            # returned again.
+                            tweets = self.get_tweets_by_source(
+                                self.source_types[iSrc], self.source_words[iSrc],
+                                count=count, page=self.page[iSrc], max_id=self.max_id[iSrc] - 1)
+                        elif parameter == "since_id":
+                            # Note that since the since_id parameter is
+                            # not inclusive, it is unchanged and the Tweet
+                            # with the matching identifier will not be
+                            # returned again.
+                            tweets = self.get_tweets_by_source(
+                                self.source_types[iSrc], self.source_words[iSrc],
+                                count=count, page=self.page[iSrc], since_id=self.since_id[iSrc])
+                        if len(tweets) == 0 or tweets == self.last_tweets:
+                            if self.length[iSrc] > 0:
+                                self.logger.debug(u"{0} =0= tweets found".format(
+                                    self.source_log))
+                                do_get_source_content[iSrc] = False
+                                continue
+                            else:
+                                # No tweets found, so raise an exception to catch below
+                                self.logger.warning(u"{0} =1= no tweets found".format(
+                                    self.source_log))
+                                raise Exception("No tweets found")
+                        self.logger.debug(
+                            u"{0} got page {1} of {2} before {3} or after {4} for {5}{6} containing {7} tweets".format(
+                            self.source_log, self.page[iSrc], count, self.max_id[iSrc], self.since_id[iSrc],
+                            self.source_types[iSrc], self.source_words[iSrc], len(tweets)))
+                        self.last_tweets = tweets
+                    except Exception as exc:
+                        message = str(exc)
+                        if message.find("No tweets found") != -1:
+                            # No tweets found, so catch the exception raised
+                            # above, and raise the exception again so that the
+                            # task can fail immediately, if considering
+                            # the last source word
+                            self.logger.warning(u"{0} =2= no tweets found".format(
                                 self.source_log))
                             if iSrc == nSrc - 1:
                                 raise Exception("No tweets found")
+                        elif message.find("Rate limit exceeded") != -1:
+                            # Rate limit exceeded, so catch the exception
+                            # raised by the Twitter API, and raise the
+                            # exception again so that the task can handle
+                            # it with the correct (very long) delay
+                            self.logger.warning(u"{0} =3= rate limit exceeded".format(
+                                self.source_log))
+                            raise Exception("Rate limit exceeded")
+                        elif message.find("Capacity Error") != -1:
+                            # Capacity exceeded, so catch the exception
+                            # raised by the Twitter API, and raise the
+                            # exception again so that the task can handle
+                            # it with the correct (somewhat long) delay
+                            self.logger.warning(u"{0} =4= Capacity exceeded".format(
+                                self.source_log))
+                            raise Exception("Capacity exceeded")
+                        else:
+                            if self.length[iSrc] > 0:
+                                self.logger.debug(u"{0} =5= tweets found".format(
+                                    self.source_log))
+                                do_get_source_content[iSrc] = False
+                                continue
+                            else:
+                                # Try getting the timeline for a known user
+                                try:
+                                    source_type = "@"
+                                    source_word = "BluePeninsula"
+                                    tweets = self.get_tweets_by_source(
+                                        source_type, source_word, count=count)
+                                    self.logger.debug(u"{0} got {1} tweets for {2}{3}".format(
+                                            self.source_log, len(tweets), source_type, source_word))
+                                except Exception as exc:
+                                    # Problem with twitter, so raise an
+                                    # exception so that the task can handle it
+                                    # with the correct (short) delay
+                                    self.logger.warning(u"{0} =6= problem with twitter for {1}{2}: {3}".format(
+                                            self.source_log, source_type, source_word, exc))
+                                    raise Exception("Problem with twitter")
+                                # No tweets found, so raise an exception
+                                # so that the task can fail immediately,
+                                # if considering the last source word
+                                self.logger.warning(u"{0} =7= no tweets found".format(
+                                    self.source_log))
+                                if iSrc == nSrc - 1:
+                                    raise Exception("No tweets found")
 
-                # Process each tweet in reverse chronological order
-                n_before_twitter_start_cur = 0 # Before twitter start date
-                n_after_twitter_stop_cur = 0 # After twitter stop date
-                n_after_stop_cur = 0 # After stop date
-                n_convert_exceptions_cur = 0 # With convert exceptions
-                n_flash_objects_cur = 0 # With flash objects
-                n_duplicate_texts_cur = 0 # With duplicate texts
-                def convert_string_datetime(tweet):
-                    if self.source_types[iSrc] == "@":
-                        tweet_dt = datetime.strptime(tweet.created_at, "%a %b %d %H:%M:%S +%f %Y")
-                    else: # self.source_types[iSrc] = "#":
-                        tweet_dt = datetime.strptime(tweet.created_at, "%a, %d %b %Y %H:%M:%S +%f")
-                    return tweet_dt
-                for tweet in sorted(tweets, key=convert_string_datetime, reverse=True):
-
-                    # Skip the current tweet if it is after the
-                    # twitter stop date, before the twitter start
-                    # date, or after the stop date. Skip all remaining
-                    # tweets if the current tweet is before the start
-                    # date, or if the maximum number of tweets have
-                    # been collected.
-                    if self.source_types[iSrc] == "@":
-                        tweet_dt = datetime.strptime(tweet.created_at, "%a %b %d %H:%M:%S +%f %Y")
-                    else: # self.source_types[iSrc] = "#":
-                        tweet_dt = datetime.strptime(tweet.created_at, "%a, %d %b %Y %H:%M:%S +%f")
-                    if date(tweet_dt.year, tweet_dt.month, tweet_dt.day) > self.twitter_stop_date:
-                        self.logger.debug("{0} continuing: {1} after twitter stop date {2}".format(
-                                self.source_log, tweet_dt, self.twitter_stop_date))
-                        n_after_twitter_stop_cur += 1
-                        n_after_twitter_stop_tot += 1
-                        continue
-                    if date(tweet_dt.year, tweet_dt.month, tweet_dt.day) < self.twitter_start_date:
-                        self.logger.debug("{0} continuing: {1} before twitter start date {2}".format(
-                                self.source_log, tweet_dt, self.twitter_start_date))
-                        n_before_twitter_start_cur += 1
-                        n_before_twitter_start_tot += 1
-                        continue
-                    if date(tweet_dt.year, tweet_dt.month, tweet_dt.day) > self.stop_date:
-                        self.logger.debug("{0} continuing: {1} after stop date {2}".format(
-                                self.source_log, tweet_dt, self.stop_date))
-                        n_after_stop_cur += 1
-                        n_after_stop_tot += 1
-                        continue
-                    if date(tweet_dt.year, tweet_dt.month, tweet_dt.day) < self.start_date:
-                        self.logger.debug("{0} continuing: {1} before start date {2}".format(
-                                self.source_log, tweet_dt, self.start_date))
-                        do_get_source_content[iSrc] = False
-                        continue
-                    if self.length[iSrc] == self.max_length:
-                        self.logger.debug("{0} breaking: {1} exceeded max length {2}".format(
-                                self.source_log, tweet_dt, self.max_length))
-                        do_get_source_content[iSrc] = False
-                        break
-
-                    # Convert HTML entities
-                    try:
-                        text = lxml.html.fromstring(tweet.text).text_content()
-                    except Exception as exc:
-                        self.logger.error("{0} continuing: couldn't convert HTML entities in {1}: {2}".format(
-                                self.source_log, tweet.text, exc))
-                        n_convert_exceptions_cur += 1
-                        n_convert_exceptions_tot += 1
-                        continue
-
-                    # Remove the unicode replacement character
-                    text = text.replace(u'\ufffd', '')
-
-                    # Select the encoding
-                    text = text.encode('utf_8')
-
-                    # Watch for flash
-                    if text.find("registerObject") != -1:
-                        self.logger.warning("{0} continuing: contains flash object".format(
-                            self.source_log))
-                        n_flash_objects_cur += 1
-                        n_flash_objects_tot += 1
-                        continue
-
-                    # Skip the current tweet, if it has already been
-                    # processed
-                    if tweet.id in self.tweet_id:
-                        self.logger.debug("{0} continuing: duplicate tweet text {1}".format(
-                            self.source_log, text))
-                        n_duplicate_texts_cur += 1
-                        n_duplicate_texts_tot += 1
-                        continue
-                    else:
-                        self.tweet_id.append(tweet.id)
-                        if self.max_id[iSrc] == 0 or self.max_id[iSrc] == -1 or tweet.id < self.max_id[iSrc]:
-                            self.max_id[iSrc] = tweet.id
-                        if self.since_id[iSrc] == 0 or tweet.id > self.since_id[iSrc]:
-                            self.since_id[iSrc] = tweet.id
-
-                    # Add and count this tweet
-                    self.tweets.add(tweet)
-                    self.length[iSrc] += 1
-                    if self.count[iSrc] < tweet.user.statuses_count:
-                        self.count[iSrc] = tweet.user.statuses_count
-
-                    # Convert and append create date and time
-                    if self.source_types[iSrc] == "@":
-                        self.created_dt.append(datetime.strptime(tweet.created_at, "%a %b %d %H:%M:%S +%f %Y"))
-                    else: # self.source_types[iSrc] = "#":
-                        self.created_dt.append(datetime.strptime(tweet.created_at, "%a, %d %b %Y %H:%M:%S +%f"))
-
-                    # Append text symbol
-                    if nSrc == 1:
-                        self.text_symbol.append("bullet")
-                    else:
+                    # Process each tweet in reverse chronological order
+                    n_before_twitter_start_cur = 0 # Before twitter start date
+                    n_after_twitter_stop_cur = 0 # After twitter stop date
+                    n_after_stop_cur = 0 # After stop date
+                    n_convert_exceptions_cur = 0 # With convert exceptions
+                    n_flash_objects_cur = 0 # With flash objects
+                    n_duplicate_texts_cur = 0 # With duplicate texts
+                    def convert_string_datetime(tweet):
                         if self.source_types[iSrc] == "@":
-                            found_all = False
+                            tweet_dt = datetime.datetime.strptime(tweet.created_at, "%a %b %d %H:%M:%S +%f %Y")
+                        else: # self.source_types[iSrc] = "#":
+                            tweet_dt = datetime.datetime.strptime(tweet.created_at, "%a, %d %b %Y %H:%M:%S +%f")
+                        return tweet_dt
+                    for tweet in sorted(tweets, key=convert_string_datetime, reverse=True):
+
+                        # Skip the current tweet if it is after the
+                        # twitter stop date, before the twitter start
+                        # date, or after the stop date. Skip all remaining
+                        # tweets if the current tweet is before the start
+                        # date, or if the maximum number of tweets have
+                        # been collected.
+                        if self.source_types[iSrc] == "@":
+                            tweet_dt = datetime.datetime.strptime(tweet.created_at, "%a %b %d %H:%M:%S +%f %Y")
+                        else: # self.source_types[iSrc] = "#":
+                            tweet_dt = datetime.datetime.strptime(tweet.created_at, "%a, %d %b %Y %H:%M:%S +%f")
+                        if datetime.date(tweet_dt.year, tweet_dt.month, tweet_dt.day) > self.twitter_stop_date:
+                            self.logger.debug(u"{0} continuing: {1} after twitter stop date {2}".format(
+                                    self.source_log, tweet_dt, self.twitter_stop_date))
+                            n_after_twitter_stop_cur += 1
+                            n_after_twitter_stop_tot += 1
+                            continue
+                        if datetime.date(tweet_dt.year, tweet_dt.month, tweet_dt.day) < self.twitter_start_date:
+                            self.logger.debug(u"{0} continuing: {1} before twitter start date {2}".format(
+                                    self.source_log, tweet_dt, self.twitter_start_date))
+                            n_before_twitter_start_cur += 1
+                            n_before_twitter_start_tot += 1
+                            continue
+                        if datetime.date(tweet_dt.year, tweet_dt.month, tweet_dt.day) > self.stop_date:
+                            self.logger.debug(u"{0} continuing: {1} after stop date {2}".format(
+                                    self.source_log, tweet_dt, self.stop_date))
+                            n_after_stop_cur += 1
+                            n_after_stop_tot += 1
+                            continue
+                        if datetime.date(tweet_dt.year, tweet_dt.month, tweet_dt.day) < self.start_date:
+                            self.logger.debug(u"{0} continuing: {1} before start date {2}".format(
+                                    self.source_log, tweet_dt, self.start_date))
+                            do_get_source_content[iSrc] = False
+                            continue
+                        if self.length[iSrc] == self.max_length:
+                            self.logger.debug(u"{0} breaking: {1} exceeded max length {2}".format(
+                                    self.source_log, tweet_dt, self.max_length))
+                            do_get_source_content[iSrc] = False
+                            break
+
+                        # Convert HTML entities
+                        try:
+                            text = lxml.html.fromstring(tweet.text).text_content()
+                        except Exception as exc:
+                            self.logger.error(u"{0} continuing: couldn't convert HTML entities in {1}: {2}".format(
+                                    self.source_log, tweet.text, exc))
+                            n_convert_exceptions_cur += 1
+                            n_convert_exceptions_tot += 1
+                            continue
+
+                        # Remove the unicode replacement character
+                        text = text.replace(u'\ufffd', '')
+
+                        # Select the encoding
+                        text = text.encode('utf_8')
+
+                        # Watch for flash
+                        if text.find("registerObject") != -1:
+                            self.logger.warning(u"{0} continuing: contains flash object".format(
+                                self.source_log))
+                            n_flash_objects_cur += 1
+                            n_flash_objects_tot += 1
+                            continue
+
+                        # Skip the current tweet, if it has already been
+                        # processed
+                        if tweet.id in self.tweet_id:
+                            self.logger.debug(u"{0} continuing: duplicate tweet text {1}".format(
+                                self.source_log, text))
+                            n_duplicate_texts_cur += 1
+                            n_duplicate_texts_tot += 1
+                            continue
                         else:
-                            found_all = True
-                            for jSrc in range(nSrc):
-                                if tweet.text.lower().find(self.source_words[jSrc].lower()) == -1:
-                                    found_all = False
-                                    break
-                        # TODO: Use more symbols.
-                        if found_all:
+                            self.tweet_id.append(tweet.id)
+                            if self.max_id[iSrc] == 0 or self.max_id[iSrc] == -1 or tweet.id < self.max_id[iSrc]:
+                                self.max_id[iSrc] = tweet.id
+                            if self.since_id[iSrc] == 0 or tweet.id > self.since_id[iSrc]:
+                                self.since_id[iSrc] = tweet.id
+
+                        # Add and count this tweet
+                        self.tweets.add(tweet)
+                        self.length[iSrc] += 1
+                        if self.count[iSrc] < tweet.user.statuses_count:
+                            self.count[iSrc] = tweet.user.statuses_count
+
+                        # Convert and append create date and time
+                        if self.source_types[iSrc] == "@":
+                            self.created_dt.append(datetime.datetime.strptime(tweet.created_at, "%a %b %d %H:%M:%S +%f %Y"))
+                        else: # self.source_types[iSrc] = "#":
+                            self.created_dt.append(datetime.datetime.strptime(tweet.created_at, "%a, %d %b %Y %H:%M:%S +%f"))
+
+                        # Append text symbol
+                        if nSrc == 1:
                             self.text_symbol.append("bullet")
-                        elif iSrc == 0:
-                            self.text_symbol.append("clubsuit")
                         else:
-                            self.text_symbol.append("spadesuit")
+                            if self.source_types[iSrc] == "@":
+                                found_all = False
+                            else:
+                                found_all = True
+                                for jSrc in range(nSrc):
+                                    if tweet.text.lower().find(self.source_words[jSrc].lower()) == -1:
+                                        found_all = False
+                                        break
+                            # TODO: Use more symbols.
+                            if found_all:
+                                self.text_symbol.append("bullet")
+                            elif iSrc == 0:
+                                self.text_symbol.append("clubsuit")
+                            else:
+                                self.text_symbol.append("spadesuit")
 
-                    # Append clean text
-                    self.clean_text.append(text)
+                        # Append clean text
+                        self.clean_text.append(text)
 
-                    # Convert color from hex to RGB
-                    try:
-                        sidebar_fill_color = webcolors.hex_to_rgb(
-                            "#" + tweet.user.profile_sidebar_fill_color)
-                    except Exception as exc:
-                        sidebar_fill_color = webcolors.hex_to_rgb("#000000")
-                    try:
-                        link_color = webcolors.hex_to_rgb("#" + tweet.user.profile_link_color)
-                    except Exception as exc:
-                        link_color = webcolors.hex_to_rgb("#000000")
-                    try:
-                        text_color = webcolors.hex_to_rgb("#" + tweet.user.profile_text_color)
-                    except Exception as exc:
-                        text_color = webcolors.hex_to_rgb("#000000")
-                    try:
-                        background_color = webcolors.hex_to_rgb(
-                            "#" + tweet.user.profile_background_color)
-                    except Exception as exc:
-                        background_color = webcolors.hex_to_rgb("#000000")
+                        # Convert color from hex to RGB
+                        try:
+                            sidebar_fill_color = webcolors.hex_to_rgb(
+                                "#" + tweet.user.profile_sidebar_fill_color)
+                        except Exception as exc:
+                            sidebar_fill_color = webcolors.hex_to_rgb("#000000")
+                        try:
+                            link_color = webcolors.hex_to_rgb("#" + tweet.user.profile_link_color)
+                        except Exception as exc:
+                            link_color = webcolors.hex_to_rgb("#000000")
+                        try:
+                            text_color = webcolors.hex_to_rgb("#" + tweet.user.profile_text_color)
+                        except Exception as exc:
+                            text_color = webcolors.hex_to_rgb("#000000")
+                        try:
+                            background_color = webcolors.hex_to_rgb(
+                                "#" + tweet.user.profile_background_color)
+                        except Exception as exc:
+                            background_color = webcolors.hex_to_rgb("#000000")
 
-                    # Scale RGB values
-                    self.sidebar_fill_rgb.append([c / 255.0 for c in sidebar_fill_color])
-                    self.link_rgb.append([c / 255.0 for c in link_color])
-                    self.text_rgb.append([c / 255.0 for c in text_color])
-                    self.background_rgb.append([c / 255.0 for c in background_color])
+                        # Scale RGB values
+                        self.sidebar_fill_rgb.append([c / 255.0 for c in sidebar_fill_color])
+                        self.link_rgb.append([c / 255.0 for c in link_color])
+                        self.text_rgb.append([c / 255.0 for c in text_color])
+                        self.background_rgb.append([c / 255.0 for c in background_color])
 
-                    # Increment tweet volume
-                    # Twenty-four hour clock is zero based
-                    twt_hour = int(self.created_dt[-1].strftime("%H"))
-                    # Months are one based
-                    twt_month = int(self.created_dt[-1].strftime("%m")) - 1
-                    self.volume[twt_hour, twt_month] += 1
-                    
-                # Dump attributes pickle after each tweet page
+                        # Increment tweet volume
+                        # Twenty-four hour clock is zero based
+                        twt_hour = int(self.created_dt[-1].strftime("%H"))
+                        # Months are one based
+                        twt_month = int(self.created_dt[-1].strftime("%m")) - 1
+                        self.volume[twt_hour, twt_month] += 1
+                        
+                    # Dump attributes pickle after each tweet page
+                    self.dump()
+                    self.logger.debug(u"{0} found {1} tweets before twitter start date {2}".format(
+                            self.source_log, n_before_twitter_start_cur, self.twitter_start_date))
+                    self.logger.debug(u"{0} found {1} tweets after twitter stop date {2}".format(
+                            self.source_log, n_after_twitter_stop_cur, self.twitter_stop_date))
+                    self.logger.debug(u"{0} found {1} tweets after stop date {2}".format(
+                            self.source_log, n_after_stop_cur, self.stop_date))
+                    self.logger.debug(u"{0} found {1} tweets with convert exceptions".format(
+                        self.source_log, n_convert_exceptions_cur))
+                    self.logger.debug(u"{0} found {1} tweets with flash objects".format(
+                        self.source_log, n_flash_objects_cur))
+                    self.logger.debug(u"{0} found {1} tweets with duplicate texts".format(
+                        self.source_log, n_duplicate_texts_cur))
+
+                # Dump attributes pickle after each source word
                 self.dump()
-                self.logger.debug("{0} found {1} tweets before twitter start date {2}".format(
-                        self.source_log, n_before_twitter_start_cur, self.twitter_start_date))
-                self.logger.debug("{0} found {1} tweets after twitter stop date {2}".format(
-                        self.source_log, n_after_twitter_stop_cur, self.twitter_stop_date))
-                self.logger.debug("{0} found {1} tweets after stop date {2}".format(
-                        self.source_log, n_after_stop_cur, self.stop_date))
-                self.logger.debug("{0} found {1} tweets with convert exceptions".format(
-                    self.source_log, n_convert_exceptions_cur))
-                self.logger.debug("{0} found {1} tweets with flash objects".format(
-                    self.source_log, n_flash_objects_cur))
-                self.logger.debug("{0} found {1} tweets with duplicate texts".format(
-                    self.source_log, n_duplicate_texts_cur))
+                self.logger.info(u"{0} found {1} tweets before twitter start date {2}".format(
+                        self.source_log, n_before_twitter_start_tot, self.twitter_start_date))
+                self.logger.info(u"{0} found {1} tweets after twitter stop date {2}".format(
+                        self.source_log, n_after_twitter_stop_tot, self.twitter_stop_date))
+                self.logger.info(u"{0} found {1} tweets after stop date {2}".format(
+                        self.source_log, n_after_stop_tot, self.stop_date))
+                self.logger.info(u"{0} found {1} tweets with convert exceptions".format(
+                    self.source_log, n_convert_exceptions_tot))
+                self.logger.info(u"{0} found {1} tweets with flash objects".format(
+                    self.source_log, n_flash_objects_tot))
+                self.logger.info(u"{0} found {1} tweets with duplicate texts".format(
+                    self.source_log, n_duplicate_texts_tot))
 
-            # Dump attributes pickle after each source word
+            # Compare length of found tweets to length of expected tweets
+            length_fnd = len(self.clean_text)
+            length_exp = int(min(self.count.sum(), self.max_length * len(self.source_words)))
+            if (length_fnd < length_exp):
+                self.logger.info(u"{0} found {1} tweets is less than expected {2} tweets by {3} tweet(s)".format(
+                    self.source_log, length_fnd, length_exp, length_exp - length_fnd))
+
+            # Sort tweet values chronologically
+            self.sort_tweets()
+
+            # Compute word frequency
+            self.compute_word_frequency()
+
+            # Dumps attributes pickle
             self.dump()
-            self.logger.info("{0} found {1} tweets before twitter start date {2}".format(
-                    self.source_log, n_before_twitter_start_tot, self.twitter_start_date))
-            self.logger.info("{0} found {1} tweets after twitter stop date {2}".format(
-                    self.source_log, n_after_twitter_stop_tot, self.twitter_stop_date))
-            self.logger.info("{0} found {1} tweets after stop date {2}".format(
-                    self.source_log, n_after_stop_tot, self.stop_date))
-            self.logger.info("{0} found {1} tweets with convert exceptions".format(
-                self.source_log, n_convert_exceptions_tot))
-            self.logger.info("{0} found {1} tweets with flash objects".format(
-                self.source_log, n_flash_objects_tot))
-            self.logger.info("{0} found {1} tweets with duplicate texts".format(
-                self.source_log, n_duplicate_texts_tot))
 
-        # Compare length of found tweets to length of expected tweets
-        length_fnd = len(self.clean_text)
-        length_exp = int(min(self.count.sum(), self.max_length * len(self.source_words)))
-        if (length_fnd < length_exp):
-            self.logger.info("{0} found {1} tweets is less than expected {2} tweets by {3} tweet(s)".format(
-                self.source_log, length_fnd, length_exp, length_exp - length_fnd))
+        else:
 
-        # Sort tweet values chronologically
-        self.sort_tweets()
-
-        # Compute word frequency
-        self.compute_word_frequency()
+            # Load attributes pickle
+            self.load()
 
     def get_tweets_by_source(self, source_type, source_word, count=0, page=0, max_id=0, since_id=0):
         """Makes multiple attempts to get source content, sleeping
         before attempts.
 
         """
-        tweets = []
+        tweets = None
 
         # Make multiple attempts to get source content
-        iAttempts = 1
-        while len(tweets) == 0 and iAttempts < self.number_of_api_attempts:
+        iAttempts = 0
+        while tweets is None and iAttempts < self.number_of_api_attempts:
             iAttempts += 1
 
             # Draw a set of random credentials and create a
@@ -441,9 +465,9 @@ class TwitterAuthor:
 
             # Sleep before attempt
             seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-            self.logger.info("{0} =7= sleeping for {1} seconds".format(
+            self.logger.info(u"{0} =8= sleeping for {1} seconds".format(
                 self.source_log, seconds_between_api_attempts))
-            sleep(seconds_between_api_attempts)
+            time.sleep(seconds_between_api_attempts)
 
             # Make attempt to get source content
             try:
@@ -478,8 +502,8 @@ class TwitterAuthor:
                         raise Exception("A request should not use both max_id and since_id.")
 
             except Exception as exc:
-                tweets = []
-                self.logger.warning("{0} =8= couldn't get content for {1}{2}: {3}".format(
+                tweets = None
+                self.logger.warning(u"{0} =9= couldn't get content for {1}{2}: {3}".format(
                     self.source_log, source_type, source_word, exc))
 
         return tweets
@@ -593,105 +617,126 @@ class TwitterAuthor:
 
         return credentials
 
-    def set_tweets_from_archive(self):
+    def set_tweets_from_archive(self, do_purge=False):
         """Gets content from JSON tweet data files extracted from a
         Twitter zip file archive.
 
         """
-        # Process each JSON file
-        n_convert_exceptions = 0 # With convert exceptions
-        n_flash_objects = 0 # With flash objects
-        n_duplicate_texts = 0 # With duplicate texts
-        json_file_names = glob(self.content_dir + "/data/js/tweets/*.js")
-        for json_file_name in json_file_names:
+        # Create content directory, if it does not exist
+        if not os.path.exists(self.content_dir):
+            os.makedirs(self.content_dir)
 
-            # Read current JSON file into a string
-            json_file = open(json_file_name, 'r')
-            json_str = json_file.read()
-            json_file.close()
+        # Remove pickle file, if requested
+        if do_purge and os.path.exists(self.pickle_file_name):
+            os.remove(self.pickle_file_name)
 
-            # Remove leading assignment statement
-            json_str = re.sub('^.*\n.*\[', '[', json_str)
+        # Create and dump, or load, the TwitterSources pickle
+        if not os.path.exists(self.pickle_file_name):
+            self.logger.info(u"{0} getting tweets for {1}{2}".format(
+                self.source_log, self.source_types[iSrc], self.source_words[iSrc]))
 
-            # Load and process tweets
-            try:
-                tweets = json.loads(json_str)
-            except Exception as exc:
-                # TODO: Add logging message.
-                continue
-            for tweet in tweets:
+            # Process each JSON file
+            n_convert_exceptions = 0 # With convert exceptions
+            n_flash_objects = 0 # With flash objects
+            n_duplicate_texts = 0 # With duplicate texts
+            json_file_names = glob.glob(self.content_dir + "/data/js/tweets/*.js")
+            for json_file_name in json_file_names:
 
-                # Convert HTML entities
+                # Read current JSON file into a string
+                json_file = open(json_file_name, 'r')
+                json_str = json_file.read()
+                json_file.close()
+
+                # Remove leading assignment statement
+                json_str = re.sub('^.*\n.*\[', '[', json_str)
+
+                # Load and process tweets
                 try:
-                    text = lxml.html.fromstring(tweet['text']).text_content()
+                    tweets = json.loads(json_str)
                 except Exception as exc:
-                    self.logger.error("{0} continuing: couldn't convert HTML entities in {1}: {2}".format(
-                            self.source_log, tweet['text'], exc))
-                    n_convert_exceptions += 1
+                    # TODO: Add logging message.
                     continue
+                for tweet in tweets:
 
-                # Remove the unicode replacement character
-                text = text.replace(u'\ufffd', '')
+                    # Convert HTML entities
+                    try:
+                        text = lxml.html.fromstring(tweet['text']).text_content()
+                    except Exception as exc:
+                        self.logger.error(u"{0} continuing: couldn't convert HTML entities in {1}: {2}".format(
+                                self.source_log, tweet['text'], exc))
+                        n_convert_exceptions += 1
+                        continue
 
-                # Select the encoding
-                text = text.encode('utf_8')
+                    # Remove the unicode replacement character
+                    text = text.replace(u'\ufffd', '')
 
-                # Watch for flash
-                if text.find("registerObject") != -1:
-                    self.logger.warning("{0} continuing: contains flash object".format(
-                        self.source_log))
-                    n_flash_objects += 1
-                    continue
+                    # Select the encoding
+                    text = text.encode('utf_8')
 
-                # Skip the current tweet, if it has already been
-                # processed
-                if tweet['id'] in self.tweet_id:
-                    self.logger.debug("{0} continuing: duplicate tweet text {1}".format(
-                        self.source_log, text))
-                    n_duplicate_texts += 1
-                    continue
-                else:
-                    self.tweet_id.append(tweet['id'])
+                    # Watch for flash
+                    if text.find("registerObject") != -1:
+                        self.logger.warning(u"{0} continuing: contains flash object".format(
+                            self.source_log))
+                        n_flash_objects += 1
+                        continue
 
-                # Add and count this tweet
-                self.tweets.add(str(tweet))
-                self.length[0] += 1
+                    # Skip the current tweet, if it has already been
+                    # processed
+                    if tweet['id'] in self.tweet_id:
+                        self.logger.debug(u"{0} continuing: duplicate tweet text {1}".format(
+                            self.source_log, text))
+                        n_duplicate_texts += 1
+                        continue
+                    else:
+                        self.tweet_id.append(tweet['id'])
 
-                # Convert and append create date and time
-                self.created_dt.append(
-                    datetime.strptime(
-                        tweet['created_at'][0:19], "%Y-%m-%d %H:%M:%S"))
+                    # Add and count this tweet
+                    self.tweets.add(str(tweet))
+                    self.length[0] += 1
 
-                # Append text symbol
-                self.text_symbol.append("bullet")
+                    # Convert and append create date and time
+                    self.created_dt.append(
+                        datetime.datetime.strptime(
+                            tweet['created_at'][0:19], "%Y-%m-%d %H:%M:%S"))
 
-                # Append clean text
-                self.clean_text.append(text)
+                    # Append text symbol
+                    self.text_symbol.append("bullet")
 
-                # Convert color from hex to RGB
-                sidebar_fill_color = webcolors.hex_to_rgb("#000000")
-                link_color = webcolors.hex_to_rgb("#000000")
-                text_color = webcolors.hex_to_rgb("#000000")
-                background_color = webcolors.hex_to_rgb("#000000")
+                    # Append clean text
+                    self.clean_text.append(text)
 
-                # Scale RGB values
-                self.sidebar_fill_rgb.append([c / 255.0 for c in sidebar_fill_color])
-                self.link_rgb.append([c / 255.0 for c in link_color])
-                self.text_rgb.append([c / 255.0 for c in text_color])
-                self.background_rgb.append([c / 255.0 for c in background_color])
+                    # Convert color from hex to RGB
+                    sidebar_fill_color = webcolors.hex_to_rgb("#000000")
+                    link_color = webcolors.hex_to_rgb("#000000")
+                    text_color = webcolors.hex_to_rgb("#000000")
+                    background_color = webcolors.hex_to_rgb("#000000")
 
-                # Increment tweet volume
-                # Twenty-four hour clock is zero based
-                twt_hour = int(self.created_dt[-1].strftime("%H"))
-                # Months are one based
-                twt_month = int(self.created_dt[-1].strftime("%m")) - 1
-                self.volume[twt_hour, twt_month] += 1
+                    # Scale RGB values
+                    self.sidebar_fill_rgb.append([c / 255.0 for c in sidebar_fill_color])
+                    self.link_rgb.append([c / 255.0 for c in link_color])
+                    self.text_rgb.append([c / 255.0 for c in text_color])
+                    self.background_rgb.append([c / 255.0 for c in background_color])
 
-        # Sort tweet values chronologically
-        self.sort_tweets()
+                    # Increment tweet volume
+                    # Twenty-four hour clock is zero based
+                    twt_hour = int(self.created_dt[-1].strftime("%H"))
+                    # Months are one based
+                    twt_month = int(self.created_dt[-1].strftime("%m")) - 1
+                    self.volume[twt_hour, twt_month] += 1
 
-        # Compute word frequency
-        self.compute_word_frequency()
+            # Sort tweet values chronologically
+            self.sort_tweets()
+
+            # Compute word frequency
+            self.compute_word_frequency()
+
+            # Dumps attributes pickle
+            self.dump()
+
+        else:
+
+            # Load attributes pickle
+            self.load()
 
     def sort_tweets(self):
         """Sort tweet values chronologically.
@@ -710,7 +755,7 @@ class TwitterAuthor:
         self.link_rgb = list(link_rgb)
         self.text_rgb = list(text_rgb)
         self.background_rgb = list(background_rgb)
-        self.logger.info("{0} set {1} tweets".format(
+        self.logger.info(u"{0} set {1} tweets".format(
             self.source_log, len(self.clean_text)))
 
     def compute_word_frequency(self):
@@ -766,7 +811,7 @@ class TwitterAuthor:
 
         pickle.dump(p, pickle_file)
 
-        self.logger.info("{0} dumped {1} tweets to {2}".format(
+        self.logger.info(u"{0} dumped {1} tweets to {2}".format(
                 self.source_log, len(self.clean_text), pickle_file_name))
 
         pickle_file.close()
@@ -803,7 +848,7 @@ class TwitterAuthor:
 
         self.content_set = p['content_set']
 
-        self.logger.info("{0} loaded {1} tweets from {2}".format(
+        self.logger.info(u"{0} loaded {1} tweets from {2}".format(
                 self.source_log, len(self.clean_text), pickle_file_name))
 
         pickle_file.close()

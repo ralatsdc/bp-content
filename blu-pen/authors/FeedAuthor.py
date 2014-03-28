@@ -1,93 +1,115 @@
 # -*- coding: utf-8 -*-
 
 # Standard library imports
-from datetime import datetime
+import datetime
 import logging
 import math
 import os
 import pickle
-from time import sleep
-from urlparse import urlparse
+import time
+import urlparse
 
 # Third-party imports
 import feedparser
-from lxml.html import soupparser
+import lxml
 
 # Local imports
 from utility.AuthorsUtility import AuthorsUtility
 
 class FeedAuthor:
-    """Represents authors of Feeds by their creative output. Authors
-    are selected by URL.
+    """Represents authors of Feeds by their creative output.
 
     """
     def __init__(self, blu_pen_author, source_url, content_dir,
-                 requested_dt=datetime.utcnow(), number_of_api_attempts=1, seconds_between_api_attempts=1):
+                 requested_dt=datetime.datetime.utcnow(),
+                 number_of_api_attempts=1, seconds_between_api_attempts=1):
         """Constructs a FeedAuthor instance.
 
         """
+        # Process the source word string to create log and path
+        # strings, and assign input argument attributes
         self.blu_pen_author = blu_pen_author
         self.authors_utility = AuthorsUtility()
-
-        self.source_log = urlparse(source_url).netloc
-        self.source_path = urlparse(source_url).netloc
+        self.source_log = urlparse.urlparse(source_url).netloc
+        self.source_path = urlparse.urlparse(source_url).netloc
         self.source_url = source_url
-
-        self.content_dir = content_dir
+        self.content_dir = os.path.join(content_dir, self.source_path)
+        self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
         self.requested_dt = requested_dt
         self.number_of_api_attempts = number_of_api_attempts
         self.seconds_between_api_attempts = seconds_between_api_attempts
 
-        self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
-
+        # Initialize created attributes
         self.content = None
         self.feed = {}
         self.entries = []
         self.content_set = False
 
-        self.logger = logging.getLogger("blu-pen.FeedAuthor")
+        # Create a logger
+        self.logger = logging.getLogger("FeedAuthor")
 
-    def set_content(self):
+    def set_content(self, do_purge=False):
         """Gets the feed content from the source URL, then assigns
         values to selected keys.
 
         """
-        # Get recent feed content
-        self.content = self.get_content_by_url(self.source_url)
-        if self.content is None:
-            return
+        # Create content directory, if it does not exist
+        if not os.path.exists(self.content_dir):
+            os.makedirs(self.content_dir)
 
-        # Set feed content, if it exsits
-        if 'feed' in self.content:
+        # Remove pickle file, if requested
+        if do_purge and os.path.exists(self.pickle_file_name):
+            os.remove(self.pickle_file_name)
 
-            # Assign feed keys to set
-            feed_keys = ["title", "author", "publisher",
-                         "published_parsed", "update_parsed", "license"]
+        # Create and dump, or load, the FeedAuthor pickle
+        if not os.path.exists(self.pickle_file_name):
+            self.logger.info(u"{0} getting content for {1}".format(
+                self.source_log, source_url))
 
-            # Assign value for key, if in feed, or None
-            for key in feed_keys:
-                if key in self.content['feed']:
-                    self.feed[key] = self.content['feed'][key]
-                else:
-                    self.feed[key] = None
+            # Get recent feed content
+            self.content = self.get_content_by_url(self.source_url)
+            if self.content is None:
+                return
 
-        # Set entries content, if it exsits
-        if 'entries' in self.content:
+            # Set feed content, if it exsits
+            if 'feed' in self.content:
 
-            # Assign entry keys to set
-            entry_keys = ["title", "author", "publisher", "content",
-                          "published_parsed", "created_parsed", "expired_parsed", "updated_parsed", "license"]
+                # Assign feed keys to set
+                feed_keys = ["title", "author", "publisher",
+                             "published_parsed", "update_parsed", "license"]
 
-            # Assign value for key, if in entry, or None
-            for entry in self.content['entries']:
-                self.entries.append({})
-                for key in entry_keys:
-                    if key in entry:
-                        self.entries[-1][key] = entry[key]
+                # Assign value for key, if in feed, or None
+                for key in feed_keys:
+                    if key in self.content['feed']:
+                        self.feed[key] = self.content['feed'][key]
                     else:
-                        self.entries[-1][key] = None
+                        self.feed[key] = None
 
-        self.content_set = True
+            # Set entries content, if it exsits
+            if 'entries' in self.content:
+
+                # Assign entry keys to set
+                entry_keys = ["title", "author", "publisher", "content",
+                              "published_parsed", "created_parsed", "expired_parsed", "updated_parsed", "license"]
+
+                # Assign value for key, if in entry, or None
+                for entry in self.content['entries']:
+                    self.entries.append({})
+                    for key in entry_keys:
+                        if key in entry:
+                            self.entries[-1][key] = entry[key]
+                        else:
+                            self.entries[-1][key] = None
+
+            self.content_set = True
+
+            # Dumps attributes pickle
+            self.dump()
+
+        else:
+
+            # Load attributes pickle
+            self.load()
 
     def get_content_by_url(self, source_url):
         """Makes multiple attempts to get content by URL, sleeping
@@ -103,23 +125,23 @@ class FeedAuthor:
 
             # Sleep before attempt
             seconds_between_api_attempts = self.seconds_between_api_attempts * math.pow(2, iAttempts - 1)
-            self.logger.info("{0} sleeping for {1} seconds".format(
+            self.logger.info(u"{0} sleeping for {1} seconds".format(
                 self.source_log, seconds_between_api_attempts))
-            sleep(seconds_between_api_attempts)
+            time.sleep(seconds_between_api_attempts)
 
             # Make attempt to get content by URL
             try:
                 content = feedparser.parse(source_url)
-                self.logger.info("{0} collected content for {1}".format(
+                self.logger.info(u"{0} collected content for {1}".format(
                     self.source_log, source_url))
             except Exception as exc:
                 content = None
-                self.logger.warning("{0} couldn't get content for {1}: {2}".format(
+                self.logger.warning(u"{0} couldn't get content for {1}: {2}".format(
                     self.source_log, source_url, exc))
 
         return content
 
-    def set_image_urls_as_recent(self):
+    def set_image_urls(self):
         """Find and set image URLs for each entry of type 'text/html'.
 
         """
@@ -132,7 +154,7 @@ class FeedAuthor:
             if content['type'] == 'text/html':
 
                 # Parse the HTML content
-                root = soupparser.fromstring(content['value'])
+                root = lxml.html.soupparser.fromstring(content['value'])
 
                 # Consider each element
                 for element in root.iter():
@@ -163,10 +185,10 @@ class FeedAuthor:
                 # Download image to file
                 if not os.path.exists(image_file_name):
                     self.authors_utility.download_file(image_url, image_file_name)
-                    self.logger.info("{0} image downloaded to file {1}".format(
+                    self.logger.info(u"{0} image downloaded to file {1}".format(
                         self.source_path, image_file_name))
                 else:
-                    self.logger.info("{0} image already downloaded to file {1}".format(
+                    self.logger.info(u"{0} image already downloaded to file {1}".format(
                         self.source_path, image_file_name))
 
     def dump(self, pickle_file_name=None):
@@ -195,7 +217,7 @@ class FeedAuthor:
 
         pickle.dump(p, pickle_file)
 
-        self.logger.info("{0} dumped content to {1}".format(
+        self.logger.info(u"{0} dumped content to {1}".format(
             self.source_log, pickle_file_name))
 
         pickle_file.close()
@@ -224,7 +246,7 @@ class FeedAuthor:
         self.entries = p['entries']
         self.content_set = p['content_set']
 
-        self.logger.info("{0} loaded content from {1}".format(
+        self.logger.info(u"{0} loaded content from {1}".format(
             self.source_log, pickle_file_name))
 
         pickle_file.close()
