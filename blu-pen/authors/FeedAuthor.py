@@ -64,7 +64,7 @@ class FeedAuthor:
         # Create and dump, or load, the FeedAuthor pickle
         if not os.path.exists(self.pickle_file_name):
             self.logger.info(u"{0} getting content for {1}".format(
-                self.source_log, source_url))
+                self.source_log, self.source_url))
 
             # Get recent feed content
             self.content = self.get_content_by_url(self.source_url)

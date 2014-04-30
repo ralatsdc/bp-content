@@ -26,13 +26,13 @@ from TwitterUtility import TwitterUtility
 from utility.ProcessingError import ProcessingError
 from utility.QueueUtility import QueueUtility
 
-class BluPenAuthors:
+class BluPenAuthor:
     """Represents Blue Peninsula source authors content.
 
     """
     def __init__(self, config_file,
                  uuid=str(uuid.uuid4()), requested_dt=datetime.datetime.now()):
-        """Constructs a BluPenAuthors instance.
+        """Constructs a BluPenAuthor instance.
 
         """
         # Identify this instance
@@ -178,7 +178,7 @@ if __name__ == "__main__":
 
     # Read the input request JSON document from authors/queue
     qu = QueueUtility()
-    bpa = BluPenAuthors(args.config_file)
+    bpa = BluPenAuthor(args.config_file)
     inp_file_name, inp_req_data = qu.read_queue(bpa.authors_requests_dir)
     out_file_name = os.path.basename(inp_file_name); out_req_data = {}
     if inp_file_name == "" or inp_req_data == {}:
@@ -186,7 +186,18 @@ if __name__ == "__main__":
         sys.exit()
 
     # Get author content from the specified service
-    if inp_req_data['service'] == 'flickr':
+    if inp_req_data['service'] == 'feed':
+        out_req_data['service'] = 'feed'
+        authors = []
+        for author in inp_req_data['authors']:
+            if not author['include']:
+                continue
+            authors.append(author)
+            source_url = author['url']
+            bpa.collect_feed_author_content(source_url)
+        out_req_data['authors'] = authors
+
+    elif inp_req_data['service'] == 'flickr':
         out_req_data['service'] = 'flickr'
         groups = []
         for group in inp_req_data['groups']:
