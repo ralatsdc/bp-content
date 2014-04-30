@@ -1,0 +1,13 @@
+Metadata-Version: 1.1
+Name: PCV
+Version: 1.0
+Summary: UNKNOWN
+Home-page: https://github.com/jesolem/PCV
+Author: Jan Erik Solem
+Author-email: UNKNOWN
+License: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
+Requires: NumPy
+Requires: Matplotlib
+Requires: SciPy
