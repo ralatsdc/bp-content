@@ -1,0 +1,204 @@
+running install
+running build
+running build_py
+running build_ext
+--- using frameworks at /Library/Frameworks
+--------------------------------------------------------------------
+PIL 1.1.7 SETUP SUMMARY
+--------------------------------------------------------------------
+version       1.1.7
+platform      darwin 2.7.5 (default, Aug 25 2013, 00:04:04)
+              [GCC 4.2.1 Compatible Apple LLVM 5.0 (clang-500.0.68)]
+--------------------------------------------------------------------
+--- TKINTER support available
+--- JPEG support available
+--- ZLIB (PNG/ZIP) support available
+--- FREETYPE2 support available
+*** LITTLECMS support not available
+--------------------------------------------------------------------
+To add a missing option, make sure you have the required
+library, and set the corresponding ROOT variable in the
+setup.py script.
+
+To check the build, run the selftest.py script.
+running build_scripts
+running install_lib
+copying build/lib.macosx-10.9-intel-2.7/__init__.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/_imaging.so -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/_imagingft.so -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/_imagingmath.so -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/_imagingtk.so -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ArgImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/BdfFontFile.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/BmpImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/BufrStubImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ContainerIO.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/CurImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/DcxImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/EpsImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ExifTags.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/FitsStubImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/FliImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/FontFile.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/FpxImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/GbrImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/GdImageFile.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/GifImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/GimpGradientFile.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/GimpPaletteFile.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/GribStubImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/Hdf5StubImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/IcnsImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/IcoImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/Image.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageChops.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageCms.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageColor.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageDraw.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageDraw2.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageEnhance.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageFile.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageFileIO.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageFilter.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageFont.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageGL.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageGrab.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageMath.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageMode.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageOps.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImagePalette.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImagePath.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageQt.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageSequence.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageShow.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageStat.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageTk.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageTransform.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImageWin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/ImtImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/IptcImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/JpegImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/McIdasImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/MicImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/MpegImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/MspImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/OleFileIO.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/PaletteFile.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/PalmImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/PcdImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/PcfFontFile.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/PcxImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/PdfImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/PixarImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/PngImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/PpmImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/PsdImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/PSDraw.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/SgiImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/SpiderImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/SunImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/TarIO.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/TgaImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/TiffImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/TiffTags.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/WalImageFile.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/WmfImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/XbmImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/XpmImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+copying build/lib.macosx-10.9-intel-2.7/XVThumbImagePlugin.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/__init__.py to __init__.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ArgImagePlugin.py to ArgImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/BdfFontFile.py to BdfFontFile.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/BmpImagePlugin.py to BmpImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/BufrStubImagePlugin.py to BufrStubImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ContainerIO.py to ContainerIO.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/CurImagePlugin.py to CurImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/DcxImagePlugin.py to DcxImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/EpsImagePlugin.py to EpsImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ExifTags.py to ExifTags.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/FitsStubImagePlugin.py to FitsStubImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/FliImagePlugin.py to FliImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/FontFile.py to FontFile.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/FpxImagePlugin.py to FpxImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/GbrImagePlugin.py to GbrImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/GdImageFile.py to GdImageFile.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/GifImagePlugin.py to GifImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/GimpGradientFile.py to GimpGradientFile.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/GimpPaletteFile.py to GimpPaletteFile.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/GribStubImagePlugin.py to GribStubImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/Hdf5StubImagePlugin.py to Hdf5StubImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/IcnsImagePlugin.py to IcnsImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/IcoImagePlugin.py to IcoImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/Image.py to Image.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageChops.py to ImageChops.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageCms.py to ImageCms.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageColor.py to ImageColor.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageDraw.py to ImageDraw.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageDraw2.py to ImageDraw2.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageEnhance.py to ImageEnhance.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageFile.py to ImageFile.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageFileIO.py to ImageFileIO.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageFilter.py to ImageFilter.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageFont.py to ImageFont.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageGL.py to ImageGL.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageGrab.py to ImageGrab.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageMath.py to ImageMath.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageMode.py to ImageMode.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageOps.py to ImageOps.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImagePalette.py to ImagePalette.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImagePath.py to ImagePath.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageQt.py to ImageQt.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageSequence.py to ImageSequence.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageShow.py to ImageShow.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageStat.py to ImageStat.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageTk.py to ImageTk.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageTransform.py to ImageTransform.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImageWin.py to ImageWin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImImagePlugin.py to ImImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/ImtImagePlugin.py to ImtImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/IptcImagePlugin.py to IptcImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/JpegImagePlugin.py to JpegImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/McIdasImagePlugin.py to McIdasImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/MicImagePlugin.py to MicImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/MpegImagePlugin.py to MpegImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/MspImagePlugin.py to MspImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/OleFileIO.py to OleFileIO.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/PaletteFile.py to PaletteFile.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/PalmImagePlugin.py to PalmImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/PcdImagePlugin.py to PcdImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/PcfFontFile.py to PcfFontFile.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/PcxImagePlugin.py to PcxImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/PdfImagePlugin.py to PdfImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/PixarImagePlugin.py to PixarImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/PngImagePlugin.py to PngImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/PpmImagePlugin.py to PpmImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/PsdImagePlugin.py to PsdImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/PSDraw.py to PSDraw.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/SgiImagePlugin.py to SgiImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/SpiderImagePlugin.py to SpiderImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/SunImagePlugin.py to SunImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/TarIO.py to TarIO.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/TgaImagePlugin.py to TgaImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/TiffImagePlugin.py to TiffImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/TiffTags.py to TiffTags.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/WalImageFile.py to WalImageFile.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/WmfImagePlugin.py to WmfImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/XbmImagePlugin.py to XbmImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/XpmImagePlugin.py to XpmImagePlugin.pyc
+byte-compiling /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/XVThumbImagePlugin.py to XVThumbImagePlugin.pyc
+running install_scripts
+copying build/scripts-2.7/pilconvert.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/bin
+copying build/scripts-2.7/pildriver.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/bin
+copying build/scripts-2.7/pilfile.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/bin
+copying build/scripts-2.7/pilfont.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/bin
+copying build/scripts-2.7/pilprint.py -> /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/bin
+changing mode of /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/bin/pilconvert.py to 755
+changing mode of /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/bin/pildriver.py to 755
+changing mode of /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/bin/pilfile.py to 755
+changing mode of /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/bin/pilfont.py to 755
+changing mode of /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/bin/pilprint.py to 755
+running install_egg_info
+Writing /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL/PIL-1.1.7-py2.7.egg-info
+creating /Users/raymondleclair/Projects/Blue-Peninsula/bp-content/local/lib/python/PIL.pth
+writing list of installed files to '.files'

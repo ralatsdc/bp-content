@@ -34,7 +34,8 @@ def libinclude(root):
 # TIFF_ROOT = libinclude("/opt/tiff")
 
 TCL_ROOT = None
-JPEG_ROOT = None
+# JPEG_ROOT = None
+JPEG_ROOT = libinclude("/opt/local/lib")
 ZLIB_ROOT = None
 TIFF_ROOT = None
 FREETYPE_ROOT = None

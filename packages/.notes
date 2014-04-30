@@ -1,0 +1,6 @@
+2014-04-10
+----------
+Install using the home scheme:
+https://docs.python.org/2/install/#alternate-installation-the-home-scheme
+
+python setup.py install --home=~/Projects/Blue-Peninsula/bp-content/local --record=.files
