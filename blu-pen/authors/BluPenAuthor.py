@@ -4,7 +4,6 @@
 # Standard library imports
 import ConfigParser
 import argparse
-import codecs
 import datetime
 import logging
 import logging.handlers

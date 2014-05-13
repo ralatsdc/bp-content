@@ -5,7 +5,6 @@
 from __future__ import division
 import ConfigParser
 import argparse
-import codecs
 import json
 import logging
 import logging.handlers
