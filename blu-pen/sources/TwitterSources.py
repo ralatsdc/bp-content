@@ -25,7 +25,7 @@ class TwitterSources:
 
     """
     def __init__(self, source_word_str, content_dir,
-                 number_of_api_attempts=4, seconds_between_api_attempts=1):
+                 number_of_api_attempts=8, seconds_between_api_attempts=0.1):
         """Constructs a TwitterSources instance given a source word.
 
         """

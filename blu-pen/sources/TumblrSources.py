@@ -25,7 +25,7 @@ class TumblrSources:
     def __init__(self, source_word_str, content_dir,
                  consumer_key="7c3XQwWIUJS9hjJ9EPzhx2qlySQ5J2sIRgXRN89Ld03AGtK1KP",
                  secret_key="R8Y1Qj7wODcorDid3A24Ct1bfUg0wGoT9iB4n2GgXwKcTb6csb",
-                 number_of_api_attempts=4, seconds_between_api_attempts=1):
+                 number_of_api_attempts=8, seconds_between_api_attempts=0.1):
         """Constructs a TumblrSources instance given a configuration
         file and source word.
 
