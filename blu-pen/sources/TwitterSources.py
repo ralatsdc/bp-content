@@ -64,7 +64,7 @@ class TwitterSources:
             self.logger.error(err_msg)
             raise Exception(err_msg.encode('utf-8'))
 
-    def set_sources(self, do_purge=False):
+    def set_sources(self, max_n_pages=5, do_purge=False):
         """Create and dump, or load, the TwitterSources pickle.
 
         """
@@ -81,8 +81,9 @@ class TwitterSources:
             self.logger.info(u"{0}: finding sources using {1}".format(
                 self.source_log, self.source_type + self.source_word))
 
-            # Select one hundred users
-            for page in range(1, 6):
+            # Select the maximum number of pages, default is six pages
+            # (about 100 users)
+            for page in range(1, max_n_pages):
                 self.users.extend(self.get_users_by_source(self.source_type, self.source_word, page=page))
             
             # Assign arrays of values for selecting users

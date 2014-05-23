@@ -70,7 +70,7 @@ class TumblrSources:
             self.logger.error(err_msg)
             raise Exception(err_msg.encode('utf-8'))
 
-    def set_sources(self, do_purge=False):
+    def set_sources(self, max_n_host_names=100, do_purge=False):
         """Create and dump, or load, the TumblrSources pickle.
 
         """
@@ -94,7 +94,7 @@ class TumblrSources:
             additional_names_found = True
             self.logger.info(u"{0}: found {1} unique blog host names using {2}".format(
                 self.source_log, n_host_names, self.source_type + self.source_word))
-            while additional_names_found and n_host_names < 1000:
+            while additional_names_found and n_host_names < max_n_host_names:
                 ns = self.get_blog_names_by_posts_with_tag(self.source_type, self.source_word, before=ns['time_stamp'])
                 self.host_names = self.host_names.union(ns['host_names'])
                 if len(self.host_names) > n_host_names:
