@@ -54,10 +54,10 @@ class FlickrGroup:
         self.api = flickrapi.FlickrAPI(self.api_key)
 
         # Create a logger
-        self.logger = logging.getLogger(u"FlickrAuthor")
+        self.logger = logging.getLogger(u"FlickrGroup")
 
         # Check input arguments
-        if not self.source_type == "@":
+        if not self.source_type == u'@':
             err_msg = u"{0} can only search by group (@)".format(
                 self.source_log)
             self.logger.error(err_msg)
@@ -81,13 +81,15 @@ class FlickrGroup:
         if do_purge and os.path.exists(self.pickle_file_name):
             os.remove(self.pickle_file_name)
 
-        # Create and dump, or load, the FlickrAuthor pickle
+        # Create and dump, or load, the FlickrGroup pickle
         if not os.path.exists(self.pickle_file_name):
             self.logger.info(u"{0} getting photos for {1}".format(
                 self.source_log, self.group_id))
 
             # Get photos by group identifier
             photos = self.get_photos_by_source(self.group_id)
+            if photos == None:
+                photos = []
 
             # Parse attributes and values
             self.photos = []
@@ -226,7 +228,7 @@ class FlickrGroup:
         return photos
 
     def download_photos(self):
-        """Download all photos by this author from Flickr.
+        """Download all photos by this group from Flickr.
 
         """
         for photo in self.photos:

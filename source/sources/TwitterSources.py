@@ -132,7 +132,7 @@ class TwitterSources:
             try:
 
                 # Select the API method by source type
-                if source_type == "@":
+                if source_type == u'@':
                     if not max_id == 0 or not since_id == 0:
                         raise Exception("A search for users cannot contain a max_id or since_id parameter.")
 
@@ -143,7 +143,7 @@ class TwitterSources:
                     else:
                         users = api.GetUsersSearch(term=source_word, count=count, page=page)
 
-                else: # source_type == "#":
+                else: # source_type == u'#':
                     if not page == 0:
                         raise Exception("A search for tweets cannot contain a page parameter.")
 

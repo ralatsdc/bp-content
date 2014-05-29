@@ -315,7 +315,7 @@ class AuthorsUtility:
                 hyp_word = hyp_word.replace(rep_char, rep_char + "-")
         return hyp_word
 
-    def process_source_words(self, source_words_str):
+    def process_source_words(self, source_words_str, default_type=u'@', do_split=False):
         """Processes source words to identify types, and create log,
         path, header, and label strings. The source words are assumed
         to be contained in a single string and delimited by plus
@@ -326,65 +326,69 @@ class AuthorsUtility:
         # only two of each, and words only if of the first type
         source_types = []
         source_words = []
-        for word in source_words_str.split("+"):
+        if do_split:
+            words = source_words_str.split("+")
+        else:
+            words = [source_words_str]
+        for word in words:
             if len(source_types) == 0:
-                if word[0] == "@":
+                if word[0] == u'@':
                     # First author explicit
-                    source_types.append("@")
+                    source_types.append(u'@')
                     source_words.append(word[1:])
-                elif word[0] == "#":
+                elif word[0] == u'#':
                     # First hashtag explicit
-                    source_types.append("#")
+                    source_types.append(u'#')
                     source_words.append(word[1:])
                 else:
                     # First author assumed
-                    source_types.append("@")
+                    source_types.append(default_type)
                     source_words.append(word)
             else:
-                if word[0] == "@" and source_types[0] == "@":
+                if word[0] == u'@' and source_types[0] == u'@':
                     # Second author explicit if first author found
-                    source_types.append("@")
+                    source_types.append(u'@')
                     source_words.append(word[1:])
-                elif word[0] == "#" and source_types[0] == "#":
+                elif word[0] == u'#' and source_types[0] == u'#':
                     # Second hashtag explicit if first hashtag found
-                    source_types.append("#")
+                    source_types.append(u'#')
                     source_words.append(word[1:])
-                elif word[0] != "#" and source_types[0] == "@":
+                elif word[0] != u'#' and source_types[0] == u'@':
                     # Second author assumed if first author found
-                    source_types.append("@")
+                    source_types.append(u'@')
                     source_words.append(word)
             if len(source_words) == 2:
                 break
         
         # Create log, path, header, label, and url strings
         if len(source_words) == 1:
-            if source_types[0] == "@":
+            if source_types[0] == u'@':
                 source_log = source_words[0]
                 source_path = "by_" + source_words[0]
                 source_header = source_words[0]
                 source_label = "by " + source_words[0]
-            elif source_types[0] == "#":
+            elif source_types[0] == u'#':
                 source_log = source_words[0]
                 source_path = "for_" + source_words[0]
                 source_header = source_words[0]
                 source_label = "for " + source_words[0]
         else:
-            if source_types[0] == "@" and source_types[1] == "@":
+            if source_types[0] == u'@' and source_types[1] == u'@':
                 source_log = source_words[0] + " and " + source_words[1]
                 source_path = "by_" + source_words[0] + "_and_" + source_words[1]
                 source_header = source_words[0] + " and " + source_words[1]
                 source_label = "by " + source_words[0] + " and " + source_words[1]
-            if source_types[0] == "@" and source_types[1] == "#":
+            if source_types[0] == u'@' and source_types[1] == u'#':
                 source_log = source_words[0] + " and " + source_words[1]
                 source_path = "by_" + source_words[0] + "_and_for_" + source_words[1]
                 source_header = source_words[0] + " and " + source_words[1]
                 source_label = "by " + source_words[0] + " and for " + source_words[1]
-            if source_types[0] == "#" and source_types[1] == "@":
+            if source_types[0] == u'#' and source_types[1] == u'@':
                 source_log = source_words[0] + " and " + source_words[1]
                 source_path = "for_" + source_words[0] + "_and_by_" + source_words[1]
                 source_header = source_words[0] + " and " + source_words[1]
                 source_label = "for " + source_words[0] + " and by " + source_words[1]
-            if source_types[0] == "#" and source_types[1] == "#":
+            if source_types[0] == u'#' and source_types[1] == u'#':
                 source_log = source_words[0] + " and " + source_words[1]
                 source_path = "for_" + source_words[0] + "_and_" + source_words[1]
                 source_header = source_words[0] + " and " + source_words[1]

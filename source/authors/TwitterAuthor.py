@@ -32,8 +32,7 @@ class TwitterAuthor:
     def __init__(self, blu_pen_author, source_words_str, content_dir,
                  start_date=datetime.date(2006, 07, 15) - datetime.timedelta(2),
                  stop_date=datetime.date.today() + datetime.timedelta(2),
-                 max_length=320, max_frequency=20,
-                 number_of_api_attempts=4, seconds_between_api_attempts=1):
+                 max_length=100, number_of_api_attempts=4, seconds_between_api_attempts=1):
         """Constructs a TwitterAuthor instance given source words.
 
         """
@@ -58,7 +57,6 @@ class TwitterAuthor:
         self.twitter_start_date = datetime.date(2006, 07, 15) - datetime.timedelta(2)
         self.twitter_stop_date = datetime.date.today() + datetime.timedelta(2)
         self.max_length = max_length / len(self.source_words) # per source word
-        self.max_frequency = max_frequency
         self.number_of_api_attempts = number_of_api_attempts
         self.seconds_between_api_attempts = seconds_between_api_attempts
 
@@ -209,7 +207,7 @@ class TwitterAuthor:
                             else:
                                 # Try getting the timeline for a known user
                                 try:
-                                    source_type = "@"
+                                    source_type = u'@'
                                     source_word = "BluePeninsula"
                                     tweets = self.get_tweets_by_source(
                                         source_type, source_word, count=count)
@@ -238,9 +236,9 @@ class TwitterAuthor:
                     n_flash_objects_cur = 0 # With flash objects
                     n_duplicate_texts_cur = 0 # With duplicate texts
                     def convert_string_datetime(tweet):
-                        if self.source_types[iSrc] == "@":
+                        if self.source_types[iSrc] == u'@':
                             tweet_dt = datetime.datetime.strptime(tweet.created_at, "%a %b %d %H:%M:%S +%f %Y")
-                        else: # self.source_types[iSrc] = "#":
+                        else: # self.source_types[iSrc] = u'#':
                             tweet_dt = datetime.datetime.strptime(tweet.created_at, "%a, %d %b %Y %H:%M:%S +%f")
                         return tweet_dt
                     for tweet in sorted(tweets, key=convert_string_datetime, reverse=True):
@@ -251,9 +249,9 @@ class TwitterAuthor:
                         # tweets if the current tweet is before the start
                         # date, or if the maximum number of tweets have
                         # been collected.
-                        if self.source_types[iSrc] == "@":
+                        if self.source_types[iSrc] == u'@':
                             tweet_dt = datetime.datetime.strptime(tweet.created_at, "%a %b %d %H:%M:%S +%f %Y")
-                        else: # self.source_types[iSrc] = "#":
+                        else: # self.source_types[iSrc] = u'#':
                             tweet_dt = datetime.datetime.strptime(tweet.created_at, "%a, %d %b %Y %H:%M:%S +%f")
                         if datetime.date(tweet_dt.year, tweet_dt.month, tweet_dt.day) > self.twitter_stop_date:
                             self.logger.debug(u"{0} continuing: {1} after twitter stop date {2}".format(
@@ -330,16 +328,16 @@ class TwitterAuthor:
                             self.count[iSrc] = tweet.user.statuses_count
 
                         # Convert and append create date and time
-                        if self.source_types[iSrc] == "@":
+                        if self.source_types[iSrc] == u'@':
                             self.created_dt.append(datetime.datetime.strptime(tweet.created_at, "%a %b %d %H:%M:%S +%f %Y"))
-                        else: # self.source_types[iSrc] = "#":
+                        else: # self.source_types[iSrc] = u'#':
                             self.created_dt.append(datetime.datetime.strptime(tweet.created_at, "%a, %d %b %Y %H:%M:%S +%f"))
 
                         # Append text symbol
                         if nSrc == 1:
                             self.text_symbol.append("bullet")
                         else:
-                            if self.source_types[iSrc] == "@":
+                            if self.source_types[iSrc] == u'@':
                                 found_all = False
                             else:
                                 found_all = True
@@ -361,20 +359,20 @@ class TwitterAuthor:
                         # Convert color from hex to RGB
                         try:
                             sidebar_fill_color = webcolors.hex_to_rgb(
-                                "#" + tweet.user.profile_sidebar_fill_color)
+                                u'#' + tweet.user.profile_sidebar_fill_color)
                         except Exception as exc:
                             sidebar_fill_color = webcolors.hex_to_rgb("#000000")
                         try:
-                            link_color = webcolors.hex_to_rgb("#" + tweet.user.profile_link_color)
+                            link_color = webcolors.hex_to_rgb(u'#' + tweet.user.profile_link_color)
                         except Exception as exc:
                             link_color = webcolors.hex_to_rgb("#000000")
                         try:
-                            text_color = webcolors.hex_to_rgb("#" + tweet.user.profile_text_color)
+                            text_color = webcolors.hex_to_rgb(u'#' + tweet.user.profile_text_color)
                         except Exception as exc:
                             text_color = webcolors.hex_to_rgb("#000000")
                         try:
                             background_color = webcolors.hex_to_rgb(
-                                "#" + tweet.user.profile_background_color)
+                                u'#' + tweet.user.profile_background_color)
                         except Exception as exc:
                             background_color = webcolors.hex_to_rgb("#000000")
 
@@ -471,7 +469,7 @@ class TwitterAuthor:
 
             # Make attempt to get source content
             try:
-                if source_type == "@":
+                if source_type == u'@':
                     if not max_id > 0 and not since_id > 0:
                         tweets = api.GetUserTimeline(screen_name=source_word,
                                                      count=count,
@@ -487,7 +485,7 @@ class TwitterAuthor:
                     else:
                         raise Exception("A request should not use both max_id and since_id.")
 
-                else: # source_type == "#":
+                else: # source_type == u'#':
                     term = source_type + source_word
                     if not max_id > 0 and not since_id > 0:
                         tweets = api.GetSearch(term=term,
@@ -765,7 +763,7 @@ class TwitterAuthor:
         p_starts_with = re.compile("^[a-zA-Z@#]")
         p_contains = re.compile("[a-zA-Z0-9@#&_]+")
         for text in self.clean_text:
-            words = text.replace("@", " @").replace("#", " #").split()
+            words = text.replace('@', ' @').replace('#', ' #').split()
             for word in words:
                 m_starts_with = p_starts_with.match(word)
                 m_contains = p_contains.match(word)

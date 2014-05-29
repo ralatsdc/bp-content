@@ -38,7 +38,7 @@ class TumblrSources:
          self.source_header,
          self.source_label,
          self.source_type,
-         self.source_word) = self.authors_utility.process_source_words(source_word_str)
+         self.source_word) = self.authors_utility.process_source_words(source_word_str, default_type=u'#')
 
         # Assign input atributes
         self.content_dir = os.path.join(content_dir, self.source_path)
@@ -64,7 +64,7 @@ class TumblrSources:
                 self.source_path)
             self.logger.error(err_msg)
             raise Exception(err_msg.encode('utf-8'))
-        if not self.source_type == "#":
+        if not self.source_type == u'#':
             err_msg = u"{0} can only search for posts with tag (#)".format(
                 self.source_path)
             self.logger.error(err_msg)

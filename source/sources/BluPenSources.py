@@ -102,13 +102,14 @@ class BluPenSources:
             fs.set_sources(do_purge=self.do_purge)
 
             # Accumulate arrays of values for selecting groups
-            nsid.extend(fs.nsid)
-            name.extend(fs.name)
-            eighteenplus.extend(fs.eighteenplus)
-            members.extend(fs.members)
-            pool_count.extend(fs.pool_count)
-            topic_count.extend(fs.topic_count)
-            description.extend(fs.description)
+            if not fs.nsid in nsid:
+                nsid.extend(fs.nsid)
+                name.extend(fs.name)
+                eighteenplus.extend(fs.eighteenplus)
+                members.extend(fs.members)
+                pool_count.extend(fs.pool_count)
+                topic_count.extend(fs.topic_count)
+                description.extend(fs.description)
 
         # Compute z-scores based on number of photos, number of members,
         # and the members to photos ratio
@@ -296,12 +297,13 @@ class BluPenSources:
             ts.set_sources(do_purge=self.do_purge)
 
             # Accumulate created atributes
-            name.extend(ts.name)
-            description.extend(ts.description)
-            screen_name.extend(ts.screen_name)
-            created_at.extend(ts.created_at)
-            statuses_count.extend(ts.statuses_count)
-            followers_count.extend(ts.followers_count)
+            if not ts.screen_name in screen_name:
+                name.extend(ts.name)
+                description.extend(ts.description)
+                screen_name.extend(ts.screen_name)
+                created_at.extend(ts.created_at)
+                statuses_count.extend(ts.statuses_count)
+                followers_count.extend(ts.followers_count)
 
         # Compute scores based on number of statuses, number of
         # followers, and the followers to statuses ratio

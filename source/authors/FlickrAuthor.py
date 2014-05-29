@@ -56,7 +56,7 @@ class FlickrAuthor:
         self.logger = logging.getLogger("FlickrAuthor")
 
         # Check input arguments
-        if not self.source_type == "@":
+        if not self.source_type == u'@':
             err_msg = u"{0} can only search by group (@)".format(
                 self.source_log)
             self.logger.error(err_msg)

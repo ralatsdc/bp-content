@@ -1,0 +1,12 @@
+{
+    "status": "done",
+    "service": "feed",
+    "authors": [
+        {
+            "url": "http://www.hrc.co.nz/feed",
+            "include": true,
+            "description": "Promotes and educates the New Zealand public on human rights.",
+            "title": "Human Rights Commission"
+        }
+    ]
+}

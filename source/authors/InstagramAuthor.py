@@ -55,7 +55,7 @@ class InstagramAuthor:
         self.logger = logging.getLogger(__name__)
         
         # Check input arguments
-        if not self.source_type == "#":
+        if not self.source_type == u'#':
             err_msg = u"{0} can only search by tag (#)".format(
                 self.source_log)
             self.logger.error(err_msg)
@@ -118,13 +118,13 @@ class InstagramAuthor:
             try:
 
                 # Make an API request based on source type
-                if source_type == "@":
+                if source_type == u'@':
 
                     # Get the most recent media published by a user: currently not supported
                     self.logger.warning(u"{0} couldn't get content for {1}{2}: {3}".format(
                         self.source_log, source_type, source_word, exc))
 
-                else: # source_type == "#":
+                else: # source_type == u'#':
 
                     # Get a list of recently tagged media
                     if count is not None and max_id is not None:

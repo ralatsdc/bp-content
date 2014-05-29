@@ -69,7 +69,7 @@ class FlickrSources:
                 self.source_path)
             self.logger.error(err_msg)
             raise Exception(err_msg.encode('utf-8'))
-        if not self.source_type == "@":
+        if not self.source_type == u'@':
             err_msg = u"{0} can only search by group (@)".format(
                 self.source_path)
             self.logger.error(err_msg)

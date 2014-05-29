@@ -79,7 +79,7 @@ class TumblrAuthor:
         
             # Get sets of posts, containing the maximum number of posts,
             # until all posts are collected
-            while len(self.posts) < self.max_posts:
+            while len(self.posts) < min(self.info['posts'], self.max_posts):
                 offset = len(self.posts)
                 self.posts.extend(self.get_posts_by_subdomain(self.subdomain, limit=limit, offset=offset))
                 self.logger.info(u"{0} collected {1} total posts for {2}".format(

@@ -154,7 +154,10 @@ class BluPenAuthor:
         twitter_author = TwitterAuthor(self, source_words_str, self.twitter_content_dir)
         if not os.path.exists(twitter_author.pickle_file_name):
             if zip_file_name == "":
-                twitter_author.set_tweets(do_purge=self.do_purge)
+                try:
+                    twitter_author.set_tweets(do_purge=self.do_purge)
+                except Exception as exc:
+                    self.logger.warning(u"Failed setting tweets: {0}".format(exc))
             else:
                 TwitterUtility.extract_tweets_from_archive(zip_file_name, twitter_author.content_dir)
                 twitter_author.set_tweets_from_archive(do_purge=self.do_purge)
@@ -173,11 +176,15 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config-file",
                         default="BluPenAuthor.cfg",
                         help="the configuration file")
+    parser.add_argument("-p", "--do-purge",
+                        action="store_true",
+                        help="purge existing authors")
     args = parser.parse_args()
 
     # Read the input request JSON document from authors/queue
     qu = QueueUtility()
     bpa = BluPenAuthor(args.config_file)
+    bpa.do_purge = args.do_purge
     inp_file_name, inp_req_data = qu.read_queue(bpa.authors_requests_dir)
     out_file_name = os.path.basename(inp_file_name); out_req_data = {}
     if inp_file_name == "" or inp_req_data == {}:
@@ -203,7 +210,7 @@ if __name__ == "__main__":
             if not group['include']:
                 continue
             groups.append(group)
-            source_word_str = u"@" + group['name']
+            source_word_str = u'@' + group['name']
             group_id = group["nsid"]
             bpa.collect_flickr_group_content(source_word_str, group_id)
         out_req_data['groups'] = groups
@@ -226,7 +233,7 @@ if __name__ == "__main__":
             if not author['include']:
                 continue
             authors.append(author)
-            source_words_str = u"@" + author['screen_name']
+            source_words_str = u'@' + author['screen_name']
             bpa.collect_twitter_author_content(source_words_str)
         out_req_data['authors'] = authors
 
