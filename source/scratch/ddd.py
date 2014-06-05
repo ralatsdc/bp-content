@@ -1,3 +1,5 @@
+# Clustering
+
 """
 Non-interactive demonstration of the clusterers with simple 2-D data.
 """

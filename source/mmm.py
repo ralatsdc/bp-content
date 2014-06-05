@@ -48,10 +48,10 @@ terciles = [25, 75]
 
 for country in source_countries:
 
-    keys = []
-    tags = {}
+    collected_tags = {}
 
     out_data = []
+    out_tags = []
 
     out_file_name = "{0}.json".format(country)
     out_file_path = os.path.join(out_dir_name, out_file_name)
@@ -92,7 +92,7 @@ for country in source_countries:
                     except Exception as exc:
                         print exc
                         raise exc
-
+                        
                     """
                     author.keys()
                     [u'url',
@@ -127,6 +127,7 @@ for country in source_countries:
                     """
 
                     data = {}
+
                     data['service'] = "feed"
                     data['type'] = type
                     data['volume'] = 0
@@ -136,6 +137,25 @@ for country in source_countries:
                     data['source'] = author['title']
 
                     out_data.append(data)
+
+                    tags = {}
+
+                    for entry in feed_author.entries:
+                        if not entry['content'] == None and 'tags' in entry['content'][0]:
+                            for tag in entry['content'][0]['tags']:
+                                key = tag.encode('utf-8')
+
+                                if not key in tags:
+                                    tags[key] = 1
+                                else:
+                                    tags[key] += 1
+
+                                if not key in collected_tags:
+                                    collected_tags[key] = 1
+                                else:
+                                    collected_tags[key] += 1
+
+                    out_tags.append(tags)
 
             if inp_data['service'] == "flickr":
 
@@ -205,28 +225,49 @@ for country in source_countries:
                     age = np.append(age, np.mean(days_fr_upload[0 : min(max_dates, len(days_fr_upload))]))
                     engagement = np.append(engagement, group['members'] / group['photos'])
 
-                if len(volume) > 0:
-                    volume = np.digitize(volume, sorted(np.percentile(volume, terciles))) - 1
-                    frequency = np.digitize(frequency, sorted(np.percentile(frequency, percentiles))) - 50
-                    age = np.digitize(age, sorted(np.percentile(age, percentiles))) - 50
-                    engagement = np.digitize(engagement, sorted(np.percentile(engagement, terciles))) - 1
+                    tags = {}
 
-                    i_group = -1
-                    for group in inp_data['groups']:
-                        if not group['include']:
-                            continue
-                        i_group += 1
+                    for photo in flickr_group.photos:
+                        if 'tags' in photo:
+                            for tag in photo['tags'].split():
+                                key = tag.encode('utf-8')
 
-                        data = {}
-                        data['service'] = "flickr"
-                        data['type'] = type
-                        data['volume'] = volume[i_group]
-                        data['frequency'] = frequency[i_group]
-                        data['age'] = age[i_group]
-                        data['engagement'] = engagement[i_group]
-                        data['source'] = group['name']
+                                if not key in tags:
+                                    tags[key] = 1
+                                else:
+                                    tags[key] += 1
 
-                        out_data.append(data)
+                                if not key in collected_tags:
+                                    collected_tags[key] = 1
+                                else:
+                                    collected_tags[key] += 1
+
+                    out_tags.append(tags)
+
+                volume = np.digitize(volume, sorted(np.percentile(volume, terciles))) - 1
+                frequency = np.digitize(frequency, sorted(np.percentile(frequency, percentiles))) - 50
+                age = np.digitize(age, sorted(np.percentile(age, percentiles))) - 50
+                engagement = np.digitize(engagement, sorted(np.percentile(engagement, terciles))) - 1
+
+                i_group = -1
+                for group in inp_data['groups']:
+                    if not group['include']:
+                        continue
+                    i_group += 1
+
+                    data = {}
+
+                    data['service'] = "flickr"
+                    data['type'] = type
+                    data['volume'] = volume[i_group]
+                    data['frequency'] = frequency[i_group]
+                    data['age'] = age[i_group]
+                    data['engagement'] = engagement[i_group]
+                    data['source'] = group['name']
+
+                    out_data.append(data)
+
+
 
             elif inp_data['service'] == "tumblr":
 
@@ -297,28 +338,47 @@ for country in source_countries:
                     age = np.append(age, np.mean(days_fr_post[0 : min(max_dates, len(days_fr_post))]))
                     engagement = np.append(engagement, author['likes'] / author['posts'])
 
-                if len(volume) > 0:
-                    volume = np.digitize(volume, sorted(np.percentile(volume, terciles))) - 1
-                    frequency = np.digitize(frequency, sorted(np.percentile(frequency, percentiles))) - 50
-                    age = np.digitize(age, sorted(np.percentile(age, percentiles))) - 50
-                    engagement = np.digitize(engagement, sorted(np.percentile(engagement, terciles))) - 1
+                    tags = {}
 
-                    i_author = -1
-                    for author in inp_data['authors']:
-                        if not author['include']:
-                            continue
-                        i_author += 1
+                    for post in tumblr_author.posts:
+                        if 'tags' in post:
+                            for tag in post['tags']:
+                                key = tag.encode('utf-8')
 
-                        data = {}
-                        data['service'] = "tumblr"
-                        data['type'] = type
-                        data['volume'] = volume[i_author]
-                        data['frequency'] = frequency[i_author]
-                        data['age'] = age[i_author]
-                        data['engagement'] = engagement[i_author]
-                        data['source'] = author['name']
+                                if not key in tags:
+                                    tags[key] = 1
+                                else:
+                                    tags[key] += 1
 
-                        out_data.append(data)
+                                if not key in collected_tags:
+                                    collected_tags[key] = 1
+                                else:
+                                    collected_tags[key] += 1
+
+                    out_tags.append(tags)
+
+                volume = np.digitize(volume, sorted(np.percentile(volume, terciles))) - 1
+                frequency = np.digitize(frequency, sorted(np.percentile(frequency, percentiles))) - 50
+                age = np.digitize(age, sorted(np.percentile(age, percentiles))) - 50
+                engagement = np.digitize(engagement, sorted(np.percentile(engagement, terciles))) - 1
+
+                i_author = -1
+                for author in inp_data['authors']:
+                    if not author['include']:
+                        continue
+                    i_author += 1
+
+                    data = {}
+
+                    data['service'] = "tumblr"
+                    data['type'] = type
+                    data['volume'] = volume[i_author]
+                    data['frequency'] = frequency[i_author]
+                    data['age'] = age[i_author]
+                    data['engagement'] = engagement[i_author]
+                    data['source'] = author['name']
+
+                    out_data.append(data)
 
             elif inp_data['service'] == "twitter":
 
@@ -412,29 +472,61 @@ for country in source_countries:
                     age = np.append(age, np.mean(days_fr_tweet[0 : min(max_dates, len(days_fr_tweet))]))
                     engagement = np.append(engagement, author['followers'] / author['statuses'])
 
-                if len(volume) > 0:
-                    volume = np.digitize(volume, sorted(np.percentile(volume, terciles))) - 1
-                    frequency = np.digitize(frequency, sorted(np.percentile(frequency, percentiles))) - 50
-                    age = np.digitize(age, sorted(np.percentile(age, percentiles))) - 50
-                    engagement = np.digitize(engagement, sorted(np.percentile(engagement, terciles))) - 1
+                    tags = {}
 
-                    i_author = -1
-                    for author in inp_data['authors']:
-                        if not author['include']:
-                            continue
-                        i_author += 1
+                    for text in twitter_author.clean_text:
+                        for tag in [token[1:] for token in text.split() if token.startswith('#')]:
+                            key = tag # Already unicode
 
-                        data = {}
-                        data['service'] = "twitter"
-                        data['type'] = type
-                        data['volume'] = volume[i_author]
-                        data['frequency'] = frequency[i_author]
-                        data['age'] = age[i_author]
-                        data['engagement'] = engagement[i_author]
-                        data['source'] = author['name']
+                            if not key in tags:
+                                tags[key] = 1
+                            else:
+                                tags[key] += 1
 
-                        out_data.append(data)
+                            if not key in collected_tags:
+                                collected_tags[key] = 1
+                            else:
+                                collected_tags[key] += 1
+
+                    out_tags.append(tags)
+
+                volume = np.digitize(volume, sorted(np.percentile(volume, terciles))) - 1
+                frequency = np.digitize(frequency, sorted(np.percentile(frequency, percentiles))) - 50
+                age = np.digitize(age, sorted(np.percentile(age, percentiles))) - 50
+                engagement = np.digitize(engagement, sorted(np.percentile(engagement, terciles))) - 1
+
+                i_author = -1
+                for author in inp_data['authors']:
+                    if not author['include']:
+                        continue
+                    i_author += 1
+
+                    data = {}
+
+                    data['service'] = "twitter"
+                    data['type'] = type
+                    data['volume'] = volume[i_author]
+                    data['frequency'] = frequency[i_author]
+                    data['age'] = age[i_author]
+                    data['engagement'] = engagement[i_author]
+                    data['source'] = author['name']
+
+                    out_data.append(data)
+
+    common_tags = set()
+
+    for tags in out_tags:
+        pprint.pprint(tags)
+
+        if len(common_tags) == 0:
+            common_tags.union(tags.keys())
+        else:
+            common_tags.intersection(tags.keys())
+
+    pprint.pprint(common_tags)
 
     out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
     out_file.write(json.dumps(out_data, ensure_ascii=False, indent=4, separators=(',', ': ')))
     out_file.close()
+
+    break
