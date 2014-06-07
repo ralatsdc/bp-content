@@ -1,5 +1,6 @@
 *~
 *.log*
+*.json
 *.out
 *.pyc
 content/authors/feed/*

@@ -283,34 +283,34 @@ class TwitterAuthor:
                             break
 
                         # Convert HTML entities
-                        try:
-                            text = lxml.html.fromstring(tweet.text).text_content()
-                        except Exception as exc:
-                            self.logger.error(u"{0} continuing: couldn't convert HTML entities in {1}: {2}".format(
-                                    self.source_log, tweet.text, exc))
-                            n_convert_exceptions_cur += 1
-                            n_convert_exceptions_tot += 1
-                            continue
+                        # try:
+                        #     text = lxml.html.fromstring(tweet.text).text_content()
+                        # except Exception as exc:
+                        #     self.logger.error(u"{0} continuing: couldn't convert HTML entities in {1}: {2}".format(
+                        #             self.source_log, tweet.text, exc))
+                        #     n_convert_exceptions_cur += 1
+                        #     n_convert_exceptions_tot += 1
+                        #     continue
 
                         # Remove the unicode replacement character
-                        text = text.replace(u'\ufffd', '')
+                        # text = text.replace(u'\ufffd', '')
 
                         # Select the encoding
-                        text = text.encode('utf_8')
+                        # text = text.encode('utf_8')
 
                         # Watch for flash
-                        if text.find("registerObject") != -1:
-                            self.logger.warning(u"{0} continuing: contains flash object".format(
-                                self.source_log))
-                            n_flash_objects_cur += 1
-                            n_flash_objects_tot += 1
-                            continue
+                        # if text.find("registerObject") != -1:
+                        #     self.logger.warning(u"{0} continuing: contains flash object".format(
+                        #         self.source_log))
+                        #     n_flash_objects_cur += 1
+                        #     n_flash_objects_tot += 1
+                        #     continue
 
                         # Skip the current tweet, if it has already been
                         # processed
                         if tweet.id in self.tweet_id:
                             self.logger.debug(u"{0} continuing: duplicate tweet text {1}".format(
-                                self.source_log, text))
+                                self.source_log, tweet.text))
                             n_duplicate_texts_cur += 1
                             n_duplicate_texts_tot += 1
                             continue
@@ -354,7 +354,7 @@ class TwitterAuthor:
                                 self.text_symbol.append("spadesuit")
 
                         # Append clean text
-                        self.clean_text.append(text)
+                        self.clean_text.append(tweet.text)
 
                         # Convert color from hex to RGB
                         try:
@@ -657,32 +657,32 @@ class TwitterAuthor:
                 for tweet in tweets:
 
                     # Convert HTML entities
-                    try:
-                        text = lxml.html.fromstring(tweet['text']).text_content()
-                    except Exception as exc:
-                        self.logger.error(u"{0} continuing: couldn't convert HTML entities in {1}: {2}".format(
-                                self.source_log, tweet['text'], exc))
-                        n_convert_exceptions += 1
-                        continue
+                    # try:
+                    #     text = lxml.html.fromstring(tweet['text']).text_content()
+                    # except Exception as exc:
+                    #     self.logger.error(u"{0} continuing: couldn't convert HTML entities in {1}: {2}".format(
+                    #             self.source_log, tweet['text'], exc))
+                    #     n_convert_exceptions += 1
+                    #     continue
 
                     # Remove the unicode replacement character
-                    text = text.replace(u'\ufffd', '')
+                    # text = text.replace(u'\ufffd', '')
 
                     # Select the encoding
-                    text = text.encode('utf_8')
+                    # text = text.encode('utf_8')
 
                     # Watch for flash
-                    if text.find("registerObject") != -1:
-                        self.logger.warning(u"{0} continuing: contains flash object".format(
-                            self.source_log))
-                        n_flash_objects += 1
-                        continue
+                    # if text.find("registerObject") != -1:
+                    #     self.logger.warning(u"{0} continuing: contains flash object".format(
+                    #         self.source_log))
+                    #     n_flash_objects += 1
+                    #     continue
 
                     # Skip the current tweet, if it has already been
                     # processed
                     if tweet['id'] in self.tweet_id:
                         self.logger.debug(u"{0} continuing: duplicate tweet text {1}".format(
-                            self.source_log, text))
+                            self.source_log, tweet.text))
                         n_duplicate_texts += 1
                         continue
                     else:
@@ -701,7 +701,7 @@ class TwitterAuthor:
                     self.text_symbol.append("bullet")
 
                     # Append clean text
-                    self.clean_text.append(text)
+                    self.clean_text.append(tweet_text)
 
                     # Convert color from hex to RGB
                     sidebar_fill_color = webcolors.hex_to_rgb("#000000")

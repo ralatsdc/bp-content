@@ -95,7 +95,7 @@ class BluPenAuthor:
         """
         self.logger.info(u"collecting feed content")
         feed_author = FeedAuthor(self, source_url, self.feed_content_dir)
-        if not os.path.exists(feed_author.pickle_file_name):
+        if not os.path.exists(feed_author.pickle_file_name) or self.do_purge:
             feed_author.set_content(do_purge=self.do_purge)
             feed_author.set_image_urls()
             feed_author.download_images()
@@ -110,7 +110,7 @@ class BluPenAuthor:
         """
         self.logger.info(u"collecting flickr content")
         flickr_group = FlickrGroup(self, source_word_str, group_id, self.flickr_content_dir)
-        if not os.path.exists(flickr_group.pickle_file_name): 
+        if not os.path.exists(flickr_group.pickle_file_name) or self.do_purge:
             flickr_group.set_photos(do_purge=self.do_purge)
             flickr_group.download_photos()
             flickr_group.dump()
@@ -124,7 +124,7 @@ class BluPenAuthor:
         """
         self.logger.info(u"collecting instagram content")
         instagram_author = InstagramAuthor(self, source_word_str, self.instagram_content_dir)
-        if not os.path.exists(instagram_author.pickle_file_name): 
+        if not os.path.exists(instagram_author.pickle_file_name) or self.do_purge:
             instagram_author.set_media(do_purge=self.do_purge)
             instagram_author.download_images()
             instagram_author.dump()
@@ -138,7 +138,7 @@ class BluPenAuthor:
         """
         self.logger.info(u"collecting tumblr content")
         tumblr_author = TumblrAuthor(self, subdomain, self.tumblr_content_dir)
-        if not os.path.exists(tumblr_author.pickle_file_name):
+        if not os.path.exists(tumblr_author.pickle_file_name) or self.do_purge:
             tumblr_author.set_posts(do_purge=self.do_purge)
             tumblr_author.dump()
             tumblr_author.download_photos()
@@ -152,7 +152,7 @@ class BluPenAuthor:
         """
         self.logger.info(u"collecting twitter content")
         twitter_author = TwitterAuthor(self, source_words_str, self.twitter_content_dir)
-        if not os.path.exists(twitter_author.pickle_file_name):
+        if not os.path.exists(twitter_author.pickle_file_name) or self.do_purge:
             if zip_file_name == "":
                 try:
                     twitter_author.set_tweets(do_purge=self.do_purge)

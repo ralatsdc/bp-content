@@ -24,13 +24,12 @@ blu_pen_author = BluPenAuthor(config_file)
 authors_utility = AuthorsUtility()
 
 inp_dir_name = "/Users/raymondleclair/Projects/Blue-Peninsula/bp-content/requests/authors/did-pop"
-out_dir_name = "/Users/raymondleclair/Projects/Blue-Peninsula/bp-packages/source/exercise-05/json"
 
 source_countries = [
-    "philippines",
     "car",
     "haiti",
     "japan",
+    "philippines",
     "south-sudan",
     "syria",
     "zimbabwe"
@@ -48,13 +47,10 @@ terciles = [25, 75]
 
 for country in source_countries:
 
-    collected_tags = {}
-
-    out_data = []
-    out_tags = []
-
-    out_file_name = "{0}.json".format(country)
-    out_file_path = os.path.join(out_dir_name, out_file_name)
+    collection = {}
+    collection['sources'] = []
+    collection['common-tags'] = {}
+    collection['crisis-tags'] = {}
 
     for type in source_types:
 
@@ -72,7 +68,7 @@ for country in source_countries:
             if not os.path.exists(inp_file_path):
                 continue
 
-            inp_file = codecs.open(inp_file_path, 'r')
+            inp_file = codecs.open(inp_file_path, encoding='utf-8', mode='r')
             inp_data = json.loads(inp_file.read())
             inp_file.close()
 
@@ -130,32 +126,27 @@ for country in source_countries:
 
                     data['service'] = "feed"
                     data['type'] = type
+                    data['name'] = author['title']
                     data['volume'] = 0
                     data['frequency'] = 0
                     data['age'] = 0
                     data['engagement'] = 0
-                    data['source'] = author['title']
-
-                    out_data.append(data)
 
                     tags = {}
 
                     for entry in feed_author.entries:
-                        if not entry['content'] == None and 'tags' in entry['content'][0]:
-                            for tag in entry['content'][0]['tags']:
-                                key = tag.encode('utf-8')
+                        if entry['content'] == None or not 'tags' in entry['content'][0]:
+                            continue
+                        for tag in entry['content'][0]['tags']:
+                            key = tag # .encode('utf-8')
 
-                                if not key in tags:
-                                    tags[key] = 1
-                                else:
-                                    tags[key] += 1
-
-                                if not key in collected_tags:
-                                    collected_tags[key] = 1
-                                else:
-                                    collected_tags[key] += 1
-
-                    out_tags.append(tags)
+                            if not key in tags:
+                                tags[key] = 1
+                            else:
+                                tags[key] += 1
+                    
+                    if len(tags) > 0:
+                        collection['sources'].append({'data': data, 'tags': tags})
 
             if inp_data['service'] == "flickr":
 
@@ -163,6 +154,8 @@ for country in source_countries:
                 frequency = np.array([])
                 age = np.array([])
                 engagement = np.array([])
+
+                cur_tags = []
 
                 for group in inp_data['groups']:
                     if not group['include']:
@@ -228,21 +221,20 @@ for country in source_countries:
                     tags = {}
 
                     for photo in flickr_group.photos:
-                        if 'tags' in photo:
-                            for tag in photo['tags'].split():
-                                key = tag.encode('utf-8')
+                        if not 'tags' in photo:
+                            continue
+                        for tag in photo['tags'].split():
+                            key = tag # .encode('utf-8')
 
-                                if not key in tags:
-                                    tags[key] = 1
-                                else:
-                                    tags[key] += 1
+                            if not key in tags:
+                                tags[key] = 1
+                            else:
+                                tags[key] += 1
 
-                                if not key in collected_tags:
-                                    collected_tags[key] = 1
-                                else:
-                                    collected_tags[key] += 1
+                    cur_tags.append(tags)
 
-                    out_tags.append(tags)
+                if len(volume) == 0:
+                    continue
 
                 volume = np.digitize(volume, sorted(np.percentile(volume, terciles))) - 1
                 frequency = np.digitize(frequency, sorted(np.percentile(frequency, percentiles))) - 50
@@ -259,15 +251,14 @@ for country in source_countries:
 
                     data['service'] = "flickr"
                     data['type'] = type
+                    data['name'] = group['nsid']
                     data['volume'] = volume[i_group]
                     data['frequency'] = frequency[i_group]
                     data['age'] = age[i_group]
                     data['engagement'] = engagement[i_group]
-                    data['source'] = group['name']
 
-                    out_data.append(data)
-
-
+                    if len(cur_tags[i_group]) > 0:
+                        collection['sources'].append({'data': data, 'tags': cur_tags[i_group]})
 
             elif inp_data['service'] == "tumblr":
 
@@ -275,6 +266,8 @@ for country in source_countries:
                 frequency = np.array([])
                 age = np.array([])
                 engagement = np.array([])
+
+                cur_tags = []
 
                 for author in inp_data['authors']:
                     if not author['include']:
@@ -341,21 +334,20 @@ for country in source_countries:
                     tags = {}
 
                     for post in tumblr_author.posts:
-                        if 'tags' in post:
-                            for tag in post['tags']:
-                                key = tag.encode('utf-8')
+                        if not 'tags' in post:
+                            continue
+                        for tag in post['tags']:
+                            key = tag # .encode('utf-8')
 
-                                if not key in tags:
-                                    tags[key] = 1
-                                else:
-                                    tags[key] += 1
+                            if not key in tags:
+                                tags[key] = 1
+                            else:
+                                tags[key] += 1
 
-                                if not key in collected_tags:
-                                    collected_tags[key] = 1
-                                else:
-                                    collected_tags[key] += 1
+                    cur_tags.append(tags)
 
-                    out_tags.append(tags)
+                if len(volume) == 0:
+                    continue
 
                 volume = np.digitize(volume, sorted(np.percentile(volume, terciles))) - 1
                 frequency = np.digitize(frequency, sorted(np.percentile(frequency, percentiles))) - 50
@@ -372,13 +364,14 @@ for country in source_countries:
 
                     data['service'] = "tumblr"
                     data['type'] = type
+                    data['name'] = author['url']
                     data['volume'] = volume[i_author]
                     data['frequency'] = frequency[i_author]
                     data['age'] = age[i_author]
                     data['engagement'] = engagement[i_author]
-                    data['source'] = author['name']
 
-                    out_data.append(data)
+                    if len(cur_tags[i_author]) > 0:
+                        collection['sources'].append({'data': data, 'tags': cur_tags[i_author]})
 
             elif inp_data['service'] == "twitter":
 
@@ -386,6 +379,8 @@ for country in source_countries:
                 frequency = np.array([])
                 age = np.array([])
                 engagement = np.array([])
+
+                cur_tags = []
 
                 for author in inp_data['authors']:
                     if not author['include']:
@@ -483,12 +478,10 @@ for country in source_countries:
                             else:
                                 tags[key] += 1
 
-                            if not key in collected_tags:
-                                collected_tags[key] = 1
-                            else:
-                                collected_tags[key] += 1
+                    cur_tags.append(tags)
 
-                    out_tags.append(tags)
+                if len(volume) == 0:
+                    continue
 
                 volume = np.digitize(volume, sorted(np.percentile(volume, terciles))) - 1
                 frequency = np.digitize(frequency, sorted(np.percentile(frequency, percentiles))) - 50
@@ -505,28 +498,98 @@ for country in source_countries:
 
                     data['service'] = "twitter"
                     data['type'] = type
+                    data['name'] = author['screen_name']
                     data['volume'] = volume[i_author]
                     data['frequency'] = frequency[i_author]
                     data['age'] = age[i_author]
                     data['engagement'] = engagement[i_author]
-                    data['source'] = author['name']
 
-                    out_data.append(data)
+                    if len(cur_tags[i_author]) > 0:
+                        collection['sources'].append({'data': data, 'tags': cur_tags[i_author]})
 
-    common_tags = set()
+    for source in collection['sources']:
+        tag_type = source['data']['type'] + '-tags'
+        for tag in source['tags']:
+            if not tag in collection[tag_type]:
+                collection[tag_type][tag] = 1 # source['tags'][tag]
+            else:
+                collection[tag_type][tag] += 1 # source['tags'][tag]
 
-    for tags in out_tags:
-        pprint.pprint(tags)
+    for source in collection['sources']:
+        source['data']['score'] = 0
+        source['data']['include'] = False
+        tag_type = source['data']['type'] + '-tags'
+        for tag in source['tags']:
+            source['data']['score'] += source['tags'][tag] * collection[tag_type][tag]
 
-        if len(common_tags) == 0:
-            common_tags.union(tags.keys())
-        else:
-            common_tags.intersection(tags.keys())
+    n_included = 3
 
-    pprint.pprint(common_tags)
+    included = {}
+    included['common'] = {}
+    included['common']['feed'] = 0
+    included['common']['flickr'] = 0
+    included['common']['tumblr'] = 0
+    included['common']['twitter'] = 0
+    included['crisis'] = {}
+    included['crisis']['feed'] = 0
+    included['crisis']['flickr'] = 0
+    included['crisis']['tumblr'] = 0
+    included['crisis']['twitter'] = 0
+
+    for source in sorted(collection['sources'], key=lambda source: source['data']['score'], reverse=True):
+        type = source['data']['type']
+        service = source['data']['service']
+        if included[type][service] < n_included:
+            included[type][service] += 1
+            source['data']['include'] = True
+
+    collection['data'] = []
+    for source in collection['sources']:
+        data = source['data']
+        collection['data'].append(data)
+        
+    out_file_name = "{0}.json".format(country)
+
+    out_dir_name = "/Users/raymondleclair/Projects/Blue-Peninsula/bp-content/source"
+    out_file_path = os.path.join(out_dir_name, out_file_name)
 
     out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
-    out_file.write(json.dumps(out_data, ensure_ascii=False, indent=4, separators=(',', ': ')))
+
+    out_file.write(u'{\n')
+    out_file.write(u'    "sources": [\n')
+    for source in collection['sources']:
+        out_file.write(u'        {\n')
+        out_file.write(u'            "data": {\n')
+        data = source['data']
+        for key in data:
+            out_file.write(u'                "{0}": "{1}"\n'.format(key, data[key]))
+        out_file.write(u'            }\n')
+        out_file.write(u'            "tags": {\n')
+        tags = source['tags']
+        for key in sorted(tags, key=tags.get, reverse=True):
+            out_file.write(u'                "{0}": "{1}"\n'.format(key, tags[key]))
+        out_file.write(u'            }\n')
+        out_file.write(u'        }\n')
+    out_file.write(u'    ]\n')
+    out_file.write(u'    "common-tags": {\n')
+    tags = collection['common-tags']
+    for key in sorted(tags, key=tags.get, reverse=True):
+        out_file.write(u'        "{0}": "{1}"\n'.format(key, tags[key]))
+    out_file.write(u'   }\n')
+    out_file.write(u'}\n')
+    out_file.write(u'    "crisis-tags": {\n')
+    tags = collection['crisis-tags']
+    for key in sorted(tags, key=tags.get, reverse=True):
+        out_file.write(u'        "{0}": "{1}"\n'.format(key, tags[key]))
+    out_file.write(u'   }\n')
+    out_file.write(u'}\n')
+
     out_file.close()
 
-    break
+    out_dir_name = "/Users/raymondleclair/Projects/Blue-Peninsula/bp-packages/source/exercise-05/json"
+    out_file_path = os.path.join(out_dir_name, out_file_name)
+
+    out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+    out_file.write(json.dumps(collection['data'], ensure_ascii=False, indent=4, separators=(',', ': ')))
+    out_file.close()
+
