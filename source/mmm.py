@@ -543,11 +543,6 @@ for country in source_countries:
             included[type][service] += 1
             source['data']['include'] = True
 
-    collection['data'] = []
-    for source in collection['sources']:
-        data = source['data']
-        collection['data'].append(data)
-        
     out_file_name = "{0}.json".format(country)
 
     out_dir_name = "/Users/raymondleclair/Projects/Blue-Peninsula/bp-content/source"
@@ -586,10 +581,44 @@ for country in source_countries:
 
     out_file.close()
 
+    n_tag = 10
+
+    export = {}
+    export['data'] = []
+    export['tags'] = {}
+    export['tags']['common'] = {}
+    export['tags']['crisis'] = {}
+
+    for source in collection['sources']:
+        data = source['data']
+        tags = source['tags']
+
+        export['data'].append(data)
+
+        if data['include']:
+            i_tag = 0
+            for tag in sorted(tags, key=tags.get, reverse=True):
+                i_tag += 1
+                if not tag in export['tags'][data['type']]:
+                    export['tags'][data['type']][tag] = tags[tag]
+                else:
+                    export['tags'][data['type']][tag] += tags[tag]
+                if i_tag > n_tag:
+                    break
+
+    for type in ['common', 'crisis']:
+        tags = export['tags'][type]
+        i_tag = 0
+        for tag in sorted(tags, key=tags.get, reverse=True):
+            i_tag += 1
+            if i_tag < n_tag:
+                continue
+            del tags[tag]
+
     out_dir_name = "/Users/raymondleclair/Projects/Blue-Peninsula/bp-packages/source/exercise-05/json"
     out_file_path = os.path.join(out_dir_name, out_file_name)
 
     out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
-    out_file.write(json.dumps(collection['data'], ensure_ascii=False, indent=4, separators=(',', ': ')))
+    out_file.write(json.dumps(export, ensure_ascii=False, indent=4, separators=(',', ': ')))
     out_file.close()
 
