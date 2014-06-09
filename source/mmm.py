@@ -49,8 +49,9 @@ for country in source_countries:
 
     collection = {}
     collection['sources'] = []
-    collection['common-tags'] = {}
-    collection['crisis-tags'] = {}
+    collection['tags'] = {}
+    collection['tags']['common'] = {}
+    collection['tags']['crisis'] = {}
 
     for type in source_types:
 
@@ -508,19 +509,20 @@ for country in source_countries:
                         collection['sources'].append({'data': data, 'tags': cur_tags[i_author]})
 
     for source in collection['sources']:
-        tag_type = source['data']['type'] + '-tags'
-        for tag in source['tags']:
-            if not tag in collection[tag_type]:
-                collection[tag_type][tag] = 1 # source['tags'][tag]
+        tags = source['tags']
+        type = source['data']['type']
+        for tag in tags:
+            if not tag in collection['tags'][type]:
+                collection['tags'][type][tag] = 1
             else:
-                collection[tag_type][tag] += 1 # source['tags'][tag]
+                collection['tags'][type][tag] += 1
 
     for source in collection['sources']:
+        tags = source['tags']
+        type = source['data']['type']
         source['data']['score'] = 0
-        source['data']['include'] = False
-        tag_type = source['data']['type'] + '-tags'
-        for tag in source['tags']:
-            source['data']['score'] += source['tags'][tag] * collection[tag_type][tag]
+        for tag in tags:
+            source['data']['score'] += tags[tag] * collection['tags'][type][tag]
 
     n_included = 3
 
@@ -539,6 +541,7 @@ for country in source_countries:
     for source in sorted(collection['sources'], key=lambda source: source['data']['score'], reverse=True):
         type = source['data']['type']
         service = source['data']['service']
+        source['data']['include'] = False
         if included[type][service] < n_included:
             included[type][service] += 1
             source['data']['include'] = True
@@ -551,71 +554,138 @@ for country in source_countries:
     out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
 
     out_file.write(u'{\n')
-    out_file.write(u'    "sources": [\n')
+    out_file.write(u'    "+ sources": [\n')
+
     for source in collection['sources']:
         out_file.write(u'        {\n')
-        out_file.write(u'            "data": {\n')
+        out_file.write(u'            "- data": {\n')
         data = source['data']
         for key in data:
             out_file.write(u'                "{0}": "{1}"\n'.format(key, data[key]))
         out_file.write(u'            }\n')
-        out_file.write(u'            "tags": {\n')
+        out_file.write(u'            "- tags": {\n')
         tags = source['tags']
         for key in sorted(tags, key=tags.get, reverse=True):
             out_file.write(u'                "{0}": "{1}"\n'.format(key, tags[key]))
         out_file.write(u'            }\n')
         out_file.write(u'        }\n')
+
     out_file.write(u'    ]\n')
-    out_file.write(u'    "common-tags": {\n')
-    tags = collection['common-tags']
-    for key in sorted(tags, key=tags.get, reverse=True):
-        out_file.write(u'        "{0}": "{1}"\n'.format(key, tags[key]))
-    out_file.write(u'   }\n')
-    out_file.write(u'}\n')
-    out_file.write(u'    "crisis-tags": {\n')
-    tags = collection['crisis-tags']
-    for key in sorted(tags, key=tags.get, reverse=True):
-        out_file.write(u'        "{0}": "{1}"\n'.format(key, tags[key]))
-    out_file.write(u'   }\n')
+    out_file.write(u'    "+ tags": {\n')
+    out_file.write(u'        "- common": [\n')
+    out_file.write(u'            {\n')
+
+    tags = collection['tags']['common']
+    for tag in sorted(tags, key=tags.get, reverse=True):
+        out_file.write(u'                "{0}": "{1}"\n'.format(tag, tags[tag]))
+
+    out_file.write(u'            }\n')
+    out_file.write(u'        ]\n')
+    out_file.write(u'        "- crisis": [\n')
+    out_file.write(u'            {\n')
+
+    tags = collection['tags']['crisis']
+    for tag in sorted(tags, key=tags.get, reverse=True):
+        out_file.write(u'                "{0}": "{1}"\n'.format(tag, tags[tag]))
+
+    out_file.write(u'            }\n')
+    out_file.write(u'        ]\n')
+    out_file.write(u'    }\n')
     out_file.write(u'}\n')
 
     out_file.close()
 
-    n_tag = 10
+    n_included = 10
 
+    """
     export = {}
-    export['data'] = []
-    export['tags'] = {}
-    export['tags']['common'] = {}
-    export['tags']['crisis'] = {}
+    export['selected'] = []
+    export['included'] = []
 
     for source in collection['sources']:
-        data = source['data']
-        tags = source['tags']
+        src_data = source['data']
+        src_tags = source['tags']
 
-        export['data'].append(data)
+        export['selected'].append(src_data)
 
-        if data['include']:
-            i_tag = 0
-            for tag in sorted(tags, key=tags.get, reverse=True):
-                i_tag += 1
-                if not tag in export['tags'][data['type']]:
-                    export['tags'][data['type']][tag] = tags[tag]
+        if src_data['include']:
+            i_included = 0
+            for src_tag in sorted(src_tags, key=src_tags.get, reverse=True):
+                i_included += 1
+
+                exp_tags = [element['tag'] for element in export['included']]
+
+                if not src_tag in exp_tags:
+                    element = {
+                        'tag': src_tag,
+                        'count': src_tags[src_tag],
+                        'total': src_tags[src_tag],
+                        'service': src_data['service'],
+                        'type': src_data['type'],
+                        'name': src_data['name'],
+                        'volume': src_data['volume'],
+                        'frequency': src_data['frequency'],
+                        'age': src_data['age'],
+                        'engagement': src_data['engagement']
+                    }
+                    export['included'].append(element)
+
                 else:
-                    export['tags'][data['type']][tag] += tags[tag]
-                if i_tag > n_tag:
+                    i_element = exp_tags.index(src_tag)
+                    element = export['included'][i_element]
+                    if src_tags[src_tag] > element['count']:
+                        element['count'] = src_tags[src_tag]
+                        element['total'] += src_tags[src_tag]
+                        element['service'] = src_data['service']
+                        element['type'] = src_data['type']
+                        element['name'] = src_data['name']
+                        element['volume'] = src_data['volume']
+                        element['frequency'] = src_data['frequency']
+                        element['age'] = src_data['age']
+                        element['engagement'] = src_data['engagement']
+
+                if i_included > n_included:
                     break
 
-    for type in ['common', 'crisis']:
-        tags = export['tags'][type]
-        i_tag = 0
-        for tag in sorted(tags, key=tags.get, reverse=True):
-            i_tag += 1
-            if i_tag < n_tag:
-                continue
-            del tags[tag]
+    included = {}
+    included['common'] = 0
+    included['crisis'] = 0
 
-    out_dir_name = "/Users/raymondleclair/Projects/Blue-Peninsula/bp-packages/source/exercise-05/json"
+    elements = []
+
+    for element in sorted(export['included'], key=lambda element: element['total'], reverse=True):
+        type = element['type']
+        if included[type] < n_included:
+            included[type] += 1
+            elements.append(element)
+        if included['common'] > n_included -1 and included['crisis'] > n_included - 1:
+            break
+
+    export['included'] = elements
+    """
+
+    export = {}
+    export['sources'] = []
+    export['tags'] = []
+
+    for source in collection['sources']:
+        export['sources'].append(source['data'])
+
+    n_tags = 10
+
+    i_tags = {}
+    i_tags['common'] = 0
+    i_tags['crisis'] = 0
+
+    for type in collection['tags']:
+        tags = collection['tags'][type]
+        for key in sorted(tags, key=tags.get, reverse=True):
+            tag = {'tag': key, 'type': type, 'count': tags[key]}
+            if i_tags[type] < n_tags and not tag in export['tags']:
+                i_tags[type] += 1
+                export['tags'].append(tag)
+
+    out_dir_name = "/Users/raymondleclair/Projects/Blue-Peninsula/bp-collections/source/crisis.countries/json"
     out_file_path = os.path.join(out_dir_name, out_file_name)
 
     out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
