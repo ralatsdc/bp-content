@@ -10,19 +10,18 @@ import logging.handlers
 import os
 import sys
 import urlparse
-import uuid
+from uuid import uuid4
 
 # Third-party imports
 
 # Local imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from FeedAuthor import FeedAuthor
-from FlickrGroup import FlickrGroup
-from InstagramAuthor import InstagramAuthor
-from TumblrAuthor import TumblrAuthor
-from TwitterAuthor import TwitterAuthor
-from TwitterUtility import TwitterUtility
-from utility.ProcessingError import ProcessingError
+from authors.FeedAuthor import FeedAuthor
+from authors.FlickrGroup import FlickrGroup
+from authors.InstagramAuthor import InstagramAuthor
+from authors.TumblrAuthor import TumblrAuthor
+from authors.TwitterAuthor import TwitterAuthor
+from authors.TwitterUtility import TwitterUtility
 from utility.QueueUtility import QueueUtility
 
 class BluPenAuthor:
@@ -30,7 +29,7 @@ class BluPenAuthor:
 
     """
     def __init__(self, config_file,
-                 uuid=str(uuid.uuid4()), requested_dt=datetime.datetime.now()):
+                 uuid=uuid4(), requested_dt=datetime.datetime.now()):
         """Constructs a BluPenAuthor instance.
 
         """
@@ -46,7 +45,7 @@ class BluPenAuthor:
         # Assign atributes
         self.authors_requests_dir = self.config.get("authors", "requests_dir")
 
-        self.do_purge = self.config.getboolean("authors", "do_purge")
+        self.do_purge = self.config.getboolean("authors", "do_purgeurge")
 
         self.add_console_handler = self.config.getboolean("authors", "add_console_handler")
         self.add_file_handler = self.config.getboolean("authors", "add_file_handler")
@@ -63,7 +62,7 @@ class BluPenAuthor:
         elif log_level == 'CRITICAL':
             self.log_level = logging.CRITICAL
 
-        self.packages_requests_dir = self.config.get("packages", "requests_dir")
+        self.collections_requests_dir = self.config.get("collections", "requests_dir")
 
         self.feed_content_dir = self.config.get("feed", "content_dir")
         self.flickr_content_dir = self.config.get("flickr", "content_dir")
@@ -106,7 +105,7 @@ class BluPenAuthor:
 
     def collect_flickr_group_content(self, source_word_str, group_id):
         """Collect content created by a Flickr group.
-        
+
         """
         self.logger.info(u"collecting flickr content")
         flickr_group = FlickrGroup(self, source_word_str, group_id, self.flickr_content_dir)
@@ -120,7 +119,7 @@ class BluPenAuthor:
 
     def collect_instagram_author_content(self, source_word_str):
         """Collect content created by a Instagram author.
-        
+
         """
         self.logger.info(u"collecting instagram content")
         instagram_author = InstagramAuthor(self, source_word_str, self.instagram_content_dir)
@@ -134,7 +133,7 @@ class BluPenAuthor:
 
     def collect_tumblr_author_content(self, subdomain):
         """Collect content created by a Tumblr author.
-        
+
         """
         self.logger.info(u"collecting tumblr content")
         tumblr_author = TumblrAuthor(self, subdomain, self.tumblr_content_dir)
@@ -148,7 +147,7 @@ class BluPenAuthor:
 
     def collect_twitter_author_content(self, source_words_str, zip_file_name=""):
         """Collect content created by a Twitter author.
-        
+
         """
         self.logger.info(u"collecting twitter content")
         twitter_author = TwitterAuthor(self, source_words_str, self.twitter_content_dir)
@@ -168,7 +167,7 @@ class BluPenAuthor:
 
 if __name__ == "__main__":
     """Collects content for each source of a collection.
-        
+
     """
     # Parse command line arguments
     parser = argparse.ArgumentParser(
@@ -240,5 +239,5 @@ if __name__ == "__main__":
     # Write the input request JSON document to authors/did-pop
     qu.write_queue(bpa.authors_requests_dir, out_file_name, inp_req_data)
 
-    # Write the output request JSON document to packages/do-push
-    qu.write_queue(bpa.packages_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")
+    # Write the output request JSON document to collections/do-push
+    qu.write_queue(bpa.collections_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")
