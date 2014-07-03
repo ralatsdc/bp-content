@@ -5,7 +5,6 @@
 from __future__ import division
 import ConfigParser
 import argparse
-import json
 import logging
 import logging.handlers
 import os
@@ -17,9 +16,9 @@ import numpy as np
 
 # Local imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from FlickrSources import FlickrSources
-from TumblrSources import TumblrSources
-from TwitterSources import TwitterSources
+from sources.FlickrSources import FlickrSources
+from sources.TumblrSources import TumblrSources
+from sources.TwitterSources import TwitterSources
 from utility.QueueUtility import QueueUtility
 
 class BluPenSources:

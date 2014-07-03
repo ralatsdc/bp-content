@@ -242,6 +242,6 @@ class InstagramAuthor:
         self.media_dicts = p['media_dicts']
 
         self.logger.info(u"{0} loaded {1} photosets from {2}".format(
-                self.source_log, len(self.photosets), pickle_file_name))
+            self.source_log, len(self.media_dicts), pickle_file_name))
 
         pickle_file.close()
