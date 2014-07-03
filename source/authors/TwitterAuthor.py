@@ -9,20 +9,16 @@ import os
 import pickle
 import random
 import re
-import shutil
 import simplejson as json
 import time
 import webcolors
 
 # Third-party imports
-from PIL import Image
-import lxml
 import numpy as np
 import twitter
 
 # Local imports
 from utility.AuthorsUtility import AuthorsUtility
-from utility.ServiceError import ServiceError
 
 class TwitterAuthor:
     """Represents authors on Twitter by their creative output. Authors
@@ -473,15 +469,15 @@ class TwitterAuthor:
                     if not max_id > 0 and not since_id > 0:
                         tweets = api.GetUserTimeline(screen_name=source_word,
                                                      count=count,
-                                                     include_rts=True);
+                                                     include_rts=True)
                     elif max_id > 0 and not since_id > 0:
                         tweets = api.GetUserTimeline(screen_name=source_word,
                                                      count=count, max_id=max_id,
-                                                     include_rts=True);
+                                                     include_rts=True)
                     elif not max_id > 0 and since_id > 0:
                         tweets = api.GetUserTimeline(screen_name=source_word,
                                                      count=count, since_id=since_id,
-                                                     include_rts=True);
+                                                     include_rts=True)
                     else:
                         raise Exception("A request should not use both max_id and since_id.")
 
@@ -489,13 +485,13 @@ class TwitterAuthor:
                     term = source_type + source_word
                     if not max_id > 0 and not since_id > 0:
                         tweets = api.GetSearch(term=term,
-                                               per_page=count)
+                                               count=count)
                     elif max_id > 0 and not since_id > 0:
                         tweets = api.GetSearch(term=term,
-                                               per_page=count, max_id=max_id)
+                                               count=count, max_id=max_id)
                     elif not max_id > 0 and since_id > 0:
                         tweets = api.GetSearch(term=term,
-                                               per_page=count, since_id=since_id)
+                                               count=count, since_id=since_id)
                     else:
                         raise Exception("A request should not use both max_id and since_id.")
 
@@ -631,12 +627,9 @@ class TwitterAuthor:
         # Create and dump, or load, the TwitterSources pickle
         if not os.path.exists(self.pickle_file_name):
             self.logger.info(u"{0} getting tweets for {1}{2}".format(
-                self.source_log, self.source_types[iSrc], self.source_words[iSrc]))
+                self.source_log, self.source_types, self.source_words))
 
             # Process each JSON file
-            n_convert_exceptions = 0 # With convert exceptions
-            n_flash_objects = 0 # With flash objects
-            n_duplicate_texts = 0 # With duplicate texts
             json_file_names = glob.glob(self.content_dir + "/data/js/tweets/*.js")
             for json_file_name in json_file_names:
 
@@ -680,13 +673,13 @@ class TwitterAuthor:
 
                     # Skip the current tweet, if it has already been
                     # processed
-                    if tweet['id'] in self.tweet_id:
-                        self.logger.debug(u"{0} continuing: duplicate tweet text {1}".format(
-                            self.source_log, tweet.text))
-                        n_duplicate_texts += 1
-                        continue
-                    else:
-                        self.tweet_id.append(tweet['id'])
+                    # if tweet['id'] in self.tweet_id:
+                    #     self.logger.debug(u"{0} continuing: duplicate tweet text {1}".format(
+                    #         self.source_log, tweet.text))
+                    #     n_duplicate_texts += 1
+                    #     continue
+                    # else:
+                    #     self.tweet_id.append(tweet['id'])
 
                     # Add and count this tweet
                     self.tweets.add(str(tweet))
@@ -701,7 +694,7 @@ class TwitterAuthor:
                     self.text_symbol.append("bullet")
 
                     # Append clean text
-                    self.clean_text.append(tweet_text)
+                    self.clean_text.append(tweet.text)
 
                     # Convert color from hex to RGB
                     sidebar_fill_color = webcolors.hex_to_rgb("#000000")

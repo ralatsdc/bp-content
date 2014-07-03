@@ -152,7 +152,7 @@ class TwitterUtility:
                 users = self.api.GetUsersSearch(term)
 
             else:
-                raise Exception("Unknown search type: {0}".foramt(search))
+                raise Exception("Unknown search type: {0}".format(search))
 
         except Exception as exc:
             raise ServiceError("Couldn't complete Twitter search: {0}".format(exc))
