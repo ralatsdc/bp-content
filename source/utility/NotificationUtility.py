@@ -8,6 +8,7 @@ import os
 # Third-party imports
 
 # Local imports
+from utility.AuthorsUtility import AuthorsUtility
 
 class NotificationUtility:
     """Provides notification utilities used by all Blu Pen packages.
@@ -17,6 +18,9 @@ class NotificationUtility:
         """Constructs a NotificationUtility instance.
 
         """
+        self.host_name = ""
+        self.fr_email_address = ""
+        self.fr_email_password = ""
         self.logger = logging.getLogger("NotificationUtility")
 
     def write_email_message(self, source, source_dir, content_dir, file_root, source_str, task_id):
@@ -80,12 +84,13 @@ class NotificationUtility:
 
         """
         try:
-            self.authors_utility.send_mail_html(to_email_address,
-                                                    self.fr_email_address,
-                                                    self.fr_email_password,
-                                                    subject,
-                                                    text_file_name,
-                                                    html_file_name)
+            au = AuthorsUtility()
+            au.send_mail_html(to_email_address,
+                              self.fr_email_address,
+                              self.fr_email_password,
+                              subject,
+                              text_file_name,
+                              html_file_name)
             self.logger.info("notification sent to {0}".format(
                 to_email_address))
         except Exception as exc:

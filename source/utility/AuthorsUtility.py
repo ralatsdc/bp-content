@@ -11,12 +11,12 @@ import random
 import re
 import smtplib
 from time import sleep
-import urllib, urllib2
+import urllib2
 
 # Third-party imports
 
 # Local imports
-from ServiceError import ServiceError
+from utility.ServiceError import ServiceError
 
 class AuthorsUtility:
     """Provides utilities for BluPenAuthors.
@@ -30,7 +30,7 @@ class AuthorsUtility:
         """
         self.number_of_download_attempts = number_of_download_attempts
         self.seconds_between_download_attempts = float(seconds_between_download_attempts)
-        self.max_character_repetitions = int(max_character_repetitions);
+        self.max_character_repetitions = int(max_character_repetitions)
         self.logger = logging.getLogger("AuthorsUtility")
 
     def download_file(self, req_file_url, out_file_name):
@@ -163,7 +163,7 @@ class AuthorsUtility:
                     else:
                         return unicode(entity, "iso-8859-1")
             return text # leave as is
-        return re.sub("(?s)<[^>]*>|&#?\w+;", fixup, text)
+        return re.sub(r"(?s)<[^>]*>|&#?\w+;", fixup, text)
 
     def escape_special_characters(self, text, link_style=None, for_use_in=""):
         """Escapes TeX special characters, and styles and hyphenates URLs.
