@@ -18,7 +18,7 @@ class FlickrAuthor:
     """Represents an author on Flickr by their creative output.
 
     """
-    def __init__(self, blu_pen_author, source_words_str, content_dir,
+    def __init__(self, blu_pen_author, source_word_str, content_dir,
                  requested_dt=datetime.datetime.utcnow(), max_photosets=100,
                  api_key='71ae5bd2b331d44649161f6d3ff7e6b6', api_secret='45f1be4bd59f9155',
                  number_of_api_attempts=1, seconds_between_api_attempts=1):

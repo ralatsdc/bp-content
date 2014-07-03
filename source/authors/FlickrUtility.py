@@ -2,7 +2,6 @@
 
 # Standard library imports
 import logging
-import xml
 
 # Third-party imports
 import flickrapi
@@ -25,12 +24,11 @@ class FlickrUtility:
         
         self.logger = logging.getLogger(__name__)
         
-    def get_names_from_term(self, term):
-        """Gets usernames for photos returned by searching for a term
-        in the photo's title, description or tags.
+    def get_names_from_term(self):
+        """Gets usernames for interesting photos.
 
         """
-        # Get photos by searching for a term
+        # Get interesting photos
         try:
             photos_xml = self.api.interestingness_getList()
         except Exception as exc:
