@@ -53,7 +53,7 @@ class CrisisCountryCollection:
 
         """
         # Consider each included feed author
-        for author in inp_data['author']:
+        for author in inp_data['authors']:
             if not author['include']:
                 continue
 
@@ -191,7 +191,7 @@ class CrisisCountryCollection:
         engagement = np.array([])
 
         # Consider each included tumblr author
-        for author in inp_data['author']:
+        for author in inp_data['authors']:
             if not author['include']:
                 continue
 
@@ -231,7 +231,7 @@ class CrisisCountryCollection:
 
         # Consider each included tumblr author
         i_author = -1
-        for author in inp_data['author']:
+        for author in inp_data['authors']:
             if not author['include']:
                 continue
             i_author += 1
@@ -275,7 +275,7 @@ class CrisisCountryCollection:
         engagement = np.array([])
 
         # Consider each included tumblr author
-        for author in inp_data['author']:
+        for author in inp_data['authors']:
             if not author['include']:
                 continue
 
@@ -314,7 +314,7 @@ class CrisisCountryCollection:
 
         # Consider each included tumblr author
         i_author = -1
-        for author in inp_data['author']:
+        for author in inp_data['authors']:
             if not author['include']:
                 continue
             i_author += 1
@@ -358,7 +358,7 @@ class CrisisCountryCollection:
                 # Assign name and path of input file containing author
                 # content
                 inp_file_name = "{0}-{1}-{2}.json".format(
-                    collection_service, self.collection_country, collection_type),
+                    collection_service, self.collection_country, collection_type)
                 inp_file_path = os.path.join(
                     self.blu_pen_collection.author_requests_dir, 'did-pop',
                     inp_file_name)

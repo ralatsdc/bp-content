@@ -62,7 +62,7 @@ class BluPenAuthor:
         elif log_level == 'CRITICAL':
             self.log_level = logging.CRITICAL
 
-        self.collections_requests_dir = self.config.get("collections", "requests_dir")
+        self.collection_requests_dir = self.config.get("collection", "requests_dir")
 
         self.feed_content_dir = self.config.get("feed", "content_dir")
         self.flickr_content_dir = self.config.get("flickr", "content_dir")
@@ -239,5 +239,5 @@ if __name__ == "__main__":
     # Write the input request JSON document to author/did-pop
     qu.write_queue(bpa.author_requests_dir, out_file_name, inp_req_data)
 
-    # Write the output request JSON document to collections/do-push
-    qu.write_queue(bpa.collections_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")
+    # Write the output request JSON document to collection/do-push
+    qu.write_queue(bpa.collection_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")

@@ -15,14 +15,15 @@ from uuid import uuid4
 
 # Local imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from collections.CrisisCountryCollection import CrisisCountryCollection
+from author.BluPenAuthor import BluPenAuthor
+from collection.CrisisCountryCollection import CrisisCountryCollection
 from utility.QueueUtility import QueueUtility
 
 class BluPenCollection:
     """Represents Blue Peninsula collection content.
 
     """
-    def __init__(self, config_file,
+    def __init__(self, config_file, author_config_file,
                  uuid=uuid4(), requested_dt=datetime.datetime.now()):
         """Constructs a BluPenCollection instance.
 
@@ -37,8 +38,11 @@ class BluPenCollection:
         self.config.read(self.config_file)
 
         # Assign attributes
-        self.requests_dir = self.config.get("collections", "requests_dir")
-        self.content_dir = self.config.get("collections", "content_dir")
+        self.author_config_file = author_config_file
+        self.blu_pen_author = BluPenAuthor(self.author_config_file)
+
+        self.requests_dir = self.config.get("collection", "requests_dir")
+        self.content_dir = self.config.get("collection", "content_dir")
 
         self.author_requests_dir = self.config.get("author", "requests_dir")
 
@@ -48,11 +52,11 @@ class BluPenCollection:
         self.tumblr_content_dir = self.config.get("tumblr", "content_dir")
         self.twitter_content_dir = self.config.get("twitter", "content_dir")
 
-        self.add_console_handler = self.config.getboolean("collections", "add_console_handler")
-        self.add_file_handler = self.config.getboolean("collections", "add_file_handler")
-        self.log_file_name = self.config.get("collections", "log_file_name")
+        self.add_console_handler = self.config.getboolean("collection", "add_console_handler")
+        self.add_file_handler = self.config.getboolean("collection", "add_file_handler")
+        self.log_file_name = self.config.get("collection", "log_file_name")
 
-        log_level = self.config.get("collections", "log_level")
+        log_level = self.config.get("collection", "log_level")
         if log_level == 'DEBUG':
             self.log_level = logging.DEBUG
         elif log_level == 'INFO':
@@ -101,14 +105,17 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config-file",
                         default="BluPenCollection.cfg",
                         help="the configuration file")
+    parser.add_argument("-a", "--author-config-file",
+                        default="../author/BluPenAuthor.cfg",
+                        help="the configuration file")
     parser.add_argument("-p", "--do-purge",
                         action="store_true",
                         help="purge existing content")
     args = parser.parse_args()
 
-    # Read the input request JSON document from collections/queue
+    # Read the input request JSON document from collection/queue
     qu = QueueUtility()
-    bpc = BluPenCollection(args.config_file)
+    bpc = BluPenCollection(args.config_file, args.author_config_file)
     inp_file_name, inp_req_data = qu.read_queue(bpc.requests_dir)
     out_file_name = os.path.basename(inp_file_name); out_req_data = inp_req_data
     if inp_file_name == "" or inp_req_data == {}:
@@ -119,8 +126,5 @@ if __name__ == "__main__":
     if inp_req_data['collection'] == 'crisis-country':
         bpc.assemble_crisis_country_collection(inp_req_data['country'])
 
-    # Write the input request JSON document to author/did-pop
+    # Write the input request JSON document to collection/did-pop
     qu.write_queue(bpc.requests_dir, out_file_name, inp_req_data)
-
-    # Write the output request JSON document to packages/do-push
-    qu.write_queue(bpc.requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")

@@ -26,7 +26,7 @@ class QueueUtility:
         """Read the first-in input file from queue in the specified
         directory, set status, then write the request data to output
         file in did-pop.
-        
+
         """
         # Initialize return value
         inp_file_name = ""
@@ -77,7 +77,7 @@ class QueueUtility:
 
     def write_queue(self, request_dir, out_file_name, req_data, status="done", queue="did-pop"):
         """Write the request data to the request directory in do-push.
-        
+
         """
         # Set status and write request data to output file in do-push
         req_data['status'] = status
