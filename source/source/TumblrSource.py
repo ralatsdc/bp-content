@@ -17,7 +17,7 @@ import pytumblr
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from utility.AuthorUtility import AuthorUtility
 
-class TumblrSource:
+class TumblrSource(object):
     """Represents a collection of Tumblr blogs selected by getting
     tagged posts.
 

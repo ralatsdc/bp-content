@@ -12,7 +12,7 @@ import os
 
 # Local imports
 
-class QueueUtility:
+class QueueUtility(object):
     """Provides utilities used by all Blu Pen packages.
 
     """

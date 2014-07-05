@@ -13,7 +13,7 @@ import twitter
 # Local imports
 from utility.ServiceError import ServiceError
 
-class TwitterUtility:
+class TwitterUtility(object):
     """Provides utilities for using Twitter.
 
     """

@@ -18,7 +18,7 @@ import twitter
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from utility.AuthorUtility import AuthorUtility
 
-class TwitterSource:
+class TwitterSource(object):
     """Represents a collection of Twitter users selected by searching
     for users (the default) or tweets (then looking up users) using a
     query term.

@@ -15,7 +15,7 @@ from author.BluPenAuthor import BluPenAuthor
 from author.TumblrAuthor import TumblrAuthor
 from utility.AuthorUtility import AuthorUtility
 
-class TumblrUtility:
+class TumblrUtility(object):
     """Represents utilities for using Tumblr.
 
     """

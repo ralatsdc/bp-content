@@ -14,7 +14,7 @@ import flickrapi
 # Local imports
 from utility.AuthorUtility import AuthorUtility
 
-class FlickrGroup:
+class FlickrGroup(object):
     """Represents a group on Flickr by their creative output.
 
     """

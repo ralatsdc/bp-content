@@ -16,7 +16,7 @@ import lxml
 # Local imports
 from utility.AuthorUtility import AuthorUtility
 
-class FeedAuthor:
+class FeedAuthor(object):
     """Represents author of Feeds by their creative output.
 
     """

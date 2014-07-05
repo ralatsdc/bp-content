@@ -14,7 +14,7 @@ from instagram.client import InstagramAPI
 # Local imports
 from utility.AuthorUtility import AuthorUtility
 
-class InstagramAuthor:
+class InstagramAuthor(object):
     """Represents an author on Instagram by their creative
     output.
 

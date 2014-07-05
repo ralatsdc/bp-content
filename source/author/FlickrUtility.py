@@ -8,7 +8,7 @@ import flickrapi
 
 # Local imports
 
-class FlickrUtility:
+class FlickrUtility(object):
     """Represents utilities for using Flickr.
 
     """

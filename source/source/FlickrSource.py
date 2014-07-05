@@ -17,14 +17,15 @@ import flickrapi
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from utility.AuthorUtility import AuthorUtility
 
-class FlickrSource:
+class FlickrSource(object):
     """Represents a collection of Flickr groups selected by searching
     for groups using a query term.
 
     """
     def __init__(self, source_word_str, content_dir,
-                 api_key='71ae5bd2b331d44649161f6d3ff7e6b6', api_secret='45f1be4bd59f9155',
+                 api_key='8ffebf639a0d2fd4c13b5fb71cb5ab1b', api_secret='1d23d55f573d5c58',
                  number_of_api_attempts=8, seconds_between_api_attempts=0.1):
+        # api_key='71ae5bd2b331d44649161f6d3ff7e6b6', api_secret='45f1be4bd59f9155',
         """Constructs a FlickrSource instance given a configuration
         file and source word.
 
@@ -99,7 +100,7 @@ class FlickrSource:
             for grp in self.groups:
                 info = self.get_group_info_by_id(grp['nsid'])
                 grp.update(info)
-            
+
             # Assign arrays of values for selecting groups
             for group in self.groups:
                 self.nsid.append(group['nsid'])
@@ -263,7 +264,7 @@ class FlickrSource:
             self.source_log, len(self.groups), pickle_file_name))
 
         pickle_file.close()
-        
+
     def load(self, pickle_file_name=None):
         """Loads FlickrSource attributes pickle.
 

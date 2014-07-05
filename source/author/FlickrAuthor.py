@@ -14,7 +14,7 @@ import flickrapi
 # Local imports
 from utility.AuthorUtility import AuthorUtility
 
-class FlickrAuthor:
+class FlickrAuthor(object):
     """Represents an author on Flickr by their creative output.
 
     """

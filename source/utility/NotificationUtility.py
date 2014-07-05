@@ -10,7 +10,7 @@ import os
 # Local imports
 from utility.AuthorsUtility import AuthorsUtility
 
-class NotificationUtility:
+class NotificationUtility(object):
     """Provides notification utilities used by all Blu Pen packages.
 
     """

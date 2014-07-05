@@ -19,7 +19,7 @@ import pytumblr
 # Local imports
 from utility.AuthorUtility import AuthorUtility
 
-class TumblrAuthor:
+class TumblrAuthor(object):
     """Represents an author on Tumblr by their creative
     output.
 

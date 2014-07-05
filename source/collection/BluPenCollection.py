@@ -19,7 +19,7 @@ from author.BluPenAuthor import BluPenAuthor
 from collection.CrisisCountryCollection import CrisisCountryCollection
 from utility.QueueUtility import QueueUtility
 
-class BluPenCollection:
+class BluPenCollection(object):
     """Represents Blue Peninsula collection content.
 
     """

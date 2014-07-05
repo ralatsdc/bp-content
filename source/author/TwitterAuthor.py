@@ -20,7 +20,7 @@ import webcolors
 # Local imports
 from utility.AuthorUtility import AuthorUtility
 
-class TwitterAuthor:
+class TwitterAuthor(object):
     """Represents author on Twitter by their creative output. Author
     is selected by name or tag.
 

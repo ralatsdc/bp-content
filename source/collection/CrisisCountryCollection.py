@@ -18,7 +18,7 @@ from author.FlickrGroup import FlickrGroup
 from author.TumblrAuthor import TumblrAuthor
 from author.TwitterAuthor import TwitterAuthor
 
-class CrisisCountryCollection:
+class CrisisCountryCollection(object):
     """Represents an individual crisis country collection.
 
     """

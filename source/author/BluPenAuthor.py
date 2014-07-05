@@ -24,7 +24,7 @@ from author.TwitterAuthor import TwitterAuthor
 from author.TwitterUtility import TwitterUtility
 from utility.QueueUtility import QueueUtility
 
-class BluPenAuthor:
+class BluPenAuthor(object):
     """Represents Blue Peninsula source author content.
 
     """
@@ -193,14 +193,14 @@ if __name__ == "__main__":
     # Get author content from the specified service
     if inp_req_data['service'] == 'feed':
         out_req_data['service'] = 'feed'
-        author = []
-        for author in inp_req_data['author']:
+        authors = []
+        for author in inp_req_data['authors']:
             if not author['include']:
                 continue
-            author.append(author)
+            authors.append(author)
             source_url = author['url']
             bpa.collect_feed_author_content(source_url)
-        out_req_data['author'] = author
+        out_req_data['authors'] = authors
 
     elif inp_req_data['service'] == 'flickr':
         out_req_data['service'] = 'flickr'
@@ -216,25 +216,25 @@ if __name__ == "__main__":
 
     elif inp_req_data['service'] == 'tumblr':
         out_req_data['service'] = 'tumblr'
-        author = []
-        for author in inp_req_data['author']:
+        authors = []
+        for author in inp_req_data['authors']:
             if not author['include']:
                 continue
-            author.append(author)
+            authors.append(author)
             subdomain = urlparse.urlparse(author['url']).netloc
             bpa.collect_tumblr_author_content(subdomain)
-        out_req_data['author'] = author
+        out_req_data['authors'] = authors
 
     elif inp_req_data['service'] == 'twitter':
         out_req_data['service'] = 'twitter'
-        author = []
-        for author in inp_req_data['author']:
+        authors = []
+        for author in inp_req_data['authors']:
             if not author['include']:
                 continue
-            author.append(author)
+            authors.append(author)
             source_words_str = u'@' + author['screen_name']
             bpa.collect_twitter_author_content(source_words_str)
-        out_req_data['author'] = author
+        out_req_data['authors'] = authors
 
     # Write the input request JSON document to author/did-pop
     qu.write_queue(bpa.author_requests_dir, out_file_name, inp_req_data)

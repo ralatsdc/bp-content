@@ -21,7 +21,7 @@ from source.TumblrSource import TumblrSource
 from source.TwitterSource import TwitterSource
 from utility.QueueUtility import QueueUtility
 
-class BluPenSource:
+class BluPenSource(object):
     """Selects source from selected services.
 
     """
@@ -371,11 +371,11 @@ if __name__ == "__main__":
 
     elif inp_req_data['service'] == 'tumblr':
         out_req_data['service'] = 'tumblr'
-        out_req_data['author'] = bps.get_source_from_tumblr(inp_req_data['words'], bps.tumblr_content_dir)
+        out_req_data['authors'] = bps.get_source_from_tumblr(inp_req_data['words'], bps.tumblr_content_dir)
 
     elif inp_req_data['service'] == 'twitter':
         out_req_data['service'] = 'twitter'
-        out_req_data['author'] = bps.get_source_from_twitter(inp_req_data['words'], bps.twitter_content_dir)
+        out_req_data['authors'] = bps.get_source_from_twitter(inp_req_data['words'], bps.twitter_content_dir)
 
     # Write the input request JSON document to source/did-pop
     qu.write_queue(bps.source_requests_dir, out_file_name, inp_req_data)

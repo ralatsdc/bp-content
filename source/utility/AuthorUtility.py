@@ -18,7 +18,7 @@ import urllib2
 # Local imports
 from utility.ServiceError import ServiceError
 
-class AuthorUtility:
+class AuthorUtility(object):
     """Provides utilities for BluPenAuthor.
 
     """
@@ -198,7 +198,7 @@ class AuthorUtility:
                 text = text.replace(r"_", r"\letterunderscore ")
         if for_use_in == "index":
             text = text.replace(r"\letterbackslash \letterbackslash ", "\\") # Do not use r"\\"
-            
+
         # Apply link style, if needed, and hyphenate URLs
         if text.find(r"http://") != -1 or text.find(r"www.") != -1:
             # text = text.replace(r"_", prefix + r"\letterunderscore ")
