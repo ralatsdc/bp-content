@@ -1,6 +1,6 @@
 Metadata-Version: 1.1
 Name: flickrapi
-Version: 1.4.2
+Version: 1.4.4
 Summary: The official Python interface to the Flickr API
 Home-page: http://stuvel.eu/projects/flickrapi
 Author: Sybren A. Stuvel
@@ -13,5 +13,8 @@ Classifier: Intended Audience :: Developers
 Classifier: License :: OSI Approved :: Python License (CNRI Python License)
 Classifier: Operating System :: OS Independent
 Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 2.5
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7
 Classifier: Topic :: Multimedia :: Graphics
 Classifier: Topic :: Software Development :: Libraries :: Python Modules

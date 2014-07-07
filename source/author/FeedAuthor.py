@@ -221,13 +221,13 @@ class FeedAuthor(object):
             self.source_log, pickle_file_name))
 
         pickle_file.close()
-        
+
     def load(self, pickle_file_name=None):
         """Loads FeedAuthor attributes pickle.
 
         """
         if pickle_file_name is None:
-            pickle_file_name  = self.pickle_file_name
+            pickle_file_name = self.pickle_file_name
         pickle_file = open(pickle_file_name, "rb")
 
         p = pickle.load(pickle_file)
