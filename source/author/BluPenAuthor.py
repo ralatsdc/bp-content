@@ -192,6 +192,7 @@ if __name__ == "__main__":
 
     # Get author content from the specified service
     if inp_req_data['service'] == 'feed':
+        bpa.logger.info(u"Getting feed content")
         out_req_data['service'] = 'feed'
         authors = []
         for author in inp_req_data['authors']:
@@ -203,6 +204,7 @@ if __name__ == "__main__":
         out_req_data['authors'] = authors
 
     elif inp_req_data['service'] == 'flickr':
+        bpa.logger.info(u"Getting flickr content")
         out_req_data['service'] = 'flickr'
         groups = []
         for group in inp_req_data['groups']:
@@ -215,6 +217,7 @@ if __name__ == "__main__":
         out_req_data['groups'] = groups
 
     elif inp_req_data['service'] == 'tumblr':
+        bpa.logger.info(u"Getting tumblr content")
         out_req_data['service'] = 'tumblr'
         authors = []
         for author in inp_req_data['authors']:
@@ -226,6 +229,7 @@ if __name__ == "__main__":
         out_req_data['authors'] = authors
 
     elif inp_req_data['service'] == 'twitter':
+        bpa.logger.info(u"Getting twitter content")
         out_req_data['service'] = 'twitter'
         authors = []
         for author in inp_req_data['authors']:

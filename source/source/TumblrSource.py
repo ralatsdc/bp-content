@@ -252,6 +252,8 @@ class TumblrSource(object):
         median, a "+" if above the median, or a "~" otherwise.
 
         """
+        if scores.size == 0:
+            return np.empty(scores.shape, np.str)
         threshold = np.median(scores)
         strings = []
         for score in scores:

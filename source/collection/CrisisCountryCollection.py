@@ -23,16 +23,21 @@ class CrisisCountryCollection(object):
 
     """
     def __init__(self, blu_pen_collection, collection_country,
-                 collection_services=["feed", "flickr", "tumblr", "twitter"],
-                 collection_types=["common", "crisis"]):
+                 collection_services=None, collection_types=None):
         """Constructs a CrisisCountryCollection instance.
 
         """
         # Assign input argument attributes
         self.blu_pen_collection = blu_pen_collection
         self.collection_country = collection_country
-        self.collection_services = collection_services
-        self.collection_types = collection_types
+        if collection_services is None:
+            self.collection_services = ["feed", "flickr", "tumblr", "twitter"]
+        else:
+            self.collection_services = collection_services
+        if collection_types is None:
+            self.collection_types = ["common", "crisis"]
+        else:
+            self.collection_types = collection_types
 
         # Initialize created attributes
         self.content_dir = os.path.join(self.blu_pen_collection.content_dir, "crisis_countries")
@@ -42,7 +47,7 @@ class CrisisCountryCollection(object):
         self.collection = {}
         self.collection['sources'] = []
         self.collection['tags'] = {}
-        for collection_type in collection_types:
+        for collection_type in self.collection_types:
             self.collection['tags'][collection_type] = {}
 
         # Create a logger
@@ -200,7 +205,7 @@ class CrisisCountryCollection(object):
                 tumblr_author = TumblrAuthor(
                     self.blu_pen_collection.blu_pen_author,
                     urlparse.urlparse(author['url']).netloc,
-                    self.blu_pen_collection.tumblr_contine_dir)
+                    self.blu_pen_collection.tumblr_content_dir)
                 tumblr_author.load()
             except Exception as exc:
                 self.logger.error(exc)

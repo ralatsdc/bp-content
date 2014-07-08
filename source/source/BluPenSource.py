@@ -13,6 +13,7 @@ import sys
 
 # Third-party imports
 import numpy as np
+np.seterr(divide='ignore')
 
 # Local imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -114,7 +115,7 @@ class BluPenSource(object):
         # and the members to photos ratio
         n_photos = np.array(pool_count)
         n_members = np.array(members)
-        n_trusting = n_members / n_photos
+        n_trusting = np.divide(n_members, n_photos)
 
         # Convert the numeric scores to string scores
         s_photos = fs.n_to_s(n_photos)
@@ -231,7 +232,7 @@ class BluPenSource(object):
         # and the likes to posts ratio
         np_n_posts = np.array(posts)
         np_n_likes = np.array(likes)
-        np_n_trusting = np_n_likes / np_n_posts
+        np_n_trusting = np.divide(np_n_likes, np_n_posts)
 
         # Convert the numeric scores to string scores
         np_s_posts = ts.n_to_s(np_n_posts)
@@ -308,7 +309,7 @@ class BluPenSource(object):
         # followers, and the followers to statuses ratio
         n_statuses = np.array(statuses_count)
         n_followers = np.array(followers_count)
-        n_trusting = n_followers / n_statuses
+        n_trusting = np.divide(n_followers, n_statuses)
 
         # Convert the numeric scores to string scores
         s_statuses = ts.n_to_s(n_statuses)
