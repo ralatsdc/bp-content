@@ -18,13 +18,13 @@ from author.FlickrGroup import FlickrGroup
 from author.TumblrAuthor import TumblrAuthor
 from author.TwitterAuthor import TwitterAuthor
 
-class CrisisCountryCollection(object):
-    """Represents an individual crisis country collection.
+class CrisisCollection(object):
+    """Represents an individual crisis collection.
 
     """
     def __init__(self, blu_pen_collection, collection_country,
                  collection_services=None, collection_types=None):
-        """Constructs a CrisisCountryCollection instance.
+        """Constructs a CrisisCollection instance.
 
         """
         # Assign input argument attributes
@@ -40,7 +40,7 @@ class CrisisCountryCollection(object):
             self.collection_types = collection_types
 
         # Initialize created attributes
-        self.content_dir = os.path.join(self.blu_pen_collection.content_dir, "crisis_countries")
+        self.content_dir = os.path.join(self.blu_pen_collection.content_dir, "crisis")
         self.max_dates = 20
         self.percentiles = range(1, 100, 1)
         self.terciles = [25, 75]
@@ -51,9 +51,9 @@ class CrisisCountryCollection(object):
             self.collection['tags'][collection_type] = {}
 
         # Create a logger
-        self.logger = logging.getLogger("CrisisCountryCollection")
+        self.logger = logging.getLogger("CrisisCollection")
 
-    def assemble_feed_content(self, inp_data):
+    def assemble_feed_content(self, collection_type, inp_data):
         """Assembles data and tags for all included feed author.
 
         """
@@ -76,7 +76,7 @@ class CrisisCountryCollection(object):
             # Assemble data describing included feed author
             data = {}
             data['service'] = "feed"
-            data['type'] = type
+            data['type'] = collection_type
             data['name'] = author['title']
             data['volume'] = 0
             data['frequency'] = 0
@@ -101,7 +101,7 @@ class CrisisCountryCollection(object):
             if len(tags) > 0:
                 self.collection['sources'].append({'data': data, 'tags': tags})
 
-    def assemble_flickr_content(self, inp_data):
+    def assemble_flickr_content(self, collection_type, inp_data):
         """Assembles data and tags for all included flickr groups.
 
         """
@@ -160,7 +160,7 @@ class CrisisCountryCollection(object):
             # Assemble data describing included flickr group
             data = {}
             data['service'] = "flickr"
-            data['type'] = type
+            data['type'] = collection_type
             data['name'] = group['nsid']
             data['volume'] = volume[i_group]
             data['frequency'] = frequency[i_group]
@@ -185,7 +185,7 @@ class CrisisCountryCollection(object):
             if len(tags) > 0:
                 self.collection['sources'].append({'data': data, 'tags': tags})
 
-    def assemble_tumblr_content(self, inp_data):
+    def assemble_tumblr_content(self, collection_type, inp_data):
         """Assembles data and tags for all included tumblr author
 
         """
@@ -244,7 +244,7 @@ class CrisisCountryCollection(object):
             # Assemble data describing included tumblr author
             data = {}
             data['service'] = "tumblr"
-            data['type'] = type
+            data['type'] = collection_type
             data['name'] = author['url']
             data['volume'] = volume[i_author]
             data['frequency'] = frequency[i_author]
@@ -269,7 +269,7 @@ class CrisisCountryCollection(object):
             if len(tags) > 0:
                 self.collection['sources'].append({'data': data, 'tags': tags})
 
-    def assemble_twitter_content(self, inp_data):
+    def assemble_twitter_content(self, collection_type, inp_data):
         """Assembles data and tags for all included tumblr author
 
         """
@@ -327,7 +327,7 @@ class CrisisCountryCollection(object):
             # Assemble data describing included tumblr author
             data = {}
             data['service'] = "twitter"
-            data['type'] = type
+            data['type'] = collection_type
             data['name'] = author['screen_name']
             data['volume'] = volume[i_author]
             data['frequency'] = frequency[i_author]
@@ -377,16 +377,16 @@ class CrisisCountryCollection(object):
 
                 # Assemble author content data
                 if inp_data['service'] == "feed":
-                    self.assemble_feed_content(inp_data)
+                    self.assemble_feed_content(collection_type, inp_data)
 
                 if inp_data['service'] == "flickr":
-                    self.assemble_flickr_content(inp_data)
+                    self.assemble_flickr_content(collection_type, inp_data)
 
                 elif inp_data['service'] == "tumblr":
-                    self.assemble_tumblr_content(inp_data)
+                    self.assemble_tumblr_content(collection_type, inp_data)
 
                 elif inp_data['service'] == "twitter":
-                    self.assemble_twitter_content(inp_data)
+                    self.assemble_twitter_content(collection_type, inp_data)
 
         # Initialize assembled collection sources and tags for export
         export = {}

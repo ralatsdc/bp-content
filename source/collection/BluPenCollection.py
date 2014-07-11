@@ -16,7 +16,7 @@ from uuid import uuid4
 # Local imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from author.BluPenAuthor import BluPenAuthor
-from collection.CrisisCountryCollection import CrisisCountryCollection
+from collection.CrisisCollection import CrisisCollection
 from utility.QueueUtility import QueueUtility
 
 class BluPenCollection(object):
@@ -86,14 +86,14 @@ class BluPenCollection(object):
             root.addHandler(file_handler)
         self.logger = logging.getLogger("BluPenCollection")
 
-    def assemble_crisis_country_collection(self, collection_country):
-        """Assemble the collection for the specified crisis country.
+    def assemble_crisis_collection(self, country):
+        """Assemble the crisis collection for the specified country.
 
         """
-        self.logger.info(u"assembling content for {0}".format(collection_country))
-        crisis_country_collection = CrisisCountryCollection(self, collection_country)
-        crisis_country_collection.assemble_content()
-        self.logger.info(u"content assembled for {0}".format(collection_country))
+        self.logger.info(u"assembling content for {0}".format(country))
+        crisis_collection = CrisisCollection(self, country)
+        crisis_collection.assemble_content()
+        self.logger.info(u"content assembled for {0}".format(country))
 
 if __name__ == "__main__":
     """Assembles content for each collection.
@@ -123,8 +123,8 @@ if __name__ == "__main__":
         sys.exit()
 
     # Assemble content for the specified collection
-    if inp_req_data['collection'] == 'crisis-country':
-        bpc.assemble_crisis_country_collection(inp_req_data['country'])
+    if inp_req_data['collection'] == 'crisis':
+        bpc.assemble_crisis_collection(inp_req_data['country'])
 
     # Write the input request JSON document to collection/did-pop
     qu.write_queue(bpc.requests_dir, out_file_name, inp_req_data)
