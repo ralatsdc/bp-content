@@ -30,8 +30,10 @@ class FeedAuthor(object):
         # strings, and assign input argument attributes
         self.blu_pen_author = blu_pen_author
         self.author_utility = AuthorUtility()
-        self.source_log = urlparse.urlparse(source_url).netloc
-        self.source_path = urlparse.urlparse(source_url).netloc
+        source_cmps = urlparse.urlparse(source_url)
+        source_path = os.path.dirname(source_cmps.path)
+        self.source_log = source_cmps.netloc + source_path.replace('/', '-')
+        self.source_path = source_cmps.netloc + source_path.replace('/', '-')
         self.source_url = source_url
         self.content_dir = os.path.join(content_dir, self.source_path)
         self.pickle_file_name = os.path.join(self.content_dir, self.source_path + ".pkl")
@@ -72,11 +74,20 @@ class FeedAuthor(object):
                 return
 
             # Set feed content, if it exsits
-            if 'feed' in self.content:
+            if not 'feed' in self.content:
+                self.logger.warning(u"{0} 'feed' not in content for {1}".format(
+                    self.source_log, self.source_url))
+
+            else:
 
                 # Assign feed keys to set
-                feed_keys = ["title", "author", "publisher",
-                             "published_parsed", "update_parsed", "license"]
+                feed_keys = ['title',
+                             'title_detail',
+                             'author',
+                             'publisher',
+                             'published_parsed',
+                             'update_parsed',
+                             'license']
 
                 # Assign value for key, if in feed, or None
                 for key in feed_keys:
@@ -86,11 +97,26 @@ class FeedAuthor(object):
                         self.feed[key] = None
 
             # Set entries content, if it exsits
-            if 'entries' in self.content:
+            if not 'entries' in self.content:
+                self.logger.warning(u"{0} 'entries' not in content for {1}".format(
+                    self.source_log, self.source_url))
+
+            else:
 
                 # Assign entry keys to set
-                entry_keys = ["title", "author", "publisher", "content",
-                              "published_parsed", "created_parsed", "expired_parsed", "updated_parsed", "license"]
+                entry_keys = ['title',
+                              'title_detail',
+                              'author',
+                              'publisher',
+                              'summary',
+                              'summary_detail',
+                              'content',
+                              'comments',
+                              'published_parsed',
+                              'created_parsed',
+                              'expired_parsed',
+                              'updated_parsed',
+                              'license']
 
                 # Assign value for key, if in entry, or None
                 for entry in self.content['entries']:
@@ -147,13 +173,22 @@ class FeedAuthor(object):
         """
         # Consider each entry
         for entry in self.entries:
-            content = entry['content'][0]
+            if entry['content'] != None:
+                content = entry['content'][0]
+            elif entry['summary_detail'] != None:
+                content = entry['summary_detail']
+            else:
+                continue
             content['image_urls'] = []
 
             # Convert 'text/html' entries only
+            if not 'type' in content:
+                continue
             if content['type'] == 'text/html':
 
                 # Parse the HTML content
+                if not 'value' in content:
+                    continue
                 root = lxml.html.soupparser.fromstring(content['value'])
 
                 # Consider each element
@@ -171,7 +206,12 @@ class FeedAuthor(object):
         """
         # Consider each entry
         for entry in self.entries:
-            content = entry['content'][0]
+            if entry['content'] != None:
+                content = entry['content'][0]
+            elif entry['summary_detail'] != None:
+                content = entry['summary_detail']
+            else:
+                continue
             content['image_file_names'] = []
 
             # Consider each image URLs
@@ -184,9 +224,13 @@ class FeedAuthor(object):
 
                 # Download image to file
                 if not os.path.exists(image_file_name):
-                    self.author_utility.download_file(image_url, image_file_name)
-                    self.logger.info(u"{0} image downloaded to file {1}".format(
-                        self.source_path, image_file_name))
+                    try:
+                        self.author_utility.download_file(image_url, image_file_name)
+                        self.logger.info(u"{0} image downloaded to file {1}".format(
+                            self.source_path, image_file_name))
+                    except Exception as exc:
+                        self.logger.warning(u"{0} could not download image to file {1}".format(
+                            self.source_path, image_file_name))
                 else:
                     self.logger.info(u"{0} image already downloaded to file {1}".format(
                         self.source_path, image_file_name))
