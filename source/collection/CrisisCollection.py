@@ -14,6 +14,7 @@ import numpy as np
 
 # Local imports
 from author.FeedAuthor import FeedAuthor
+from author.FeedUtility import FeedUtility
 from author.FlickrGroup import FlickrGroup
 from author.TumblrAuthor import TumblrAuthor
 from author.TwitterAuthor import TwitterAuthor
@@ -29,6 +30,7 @@ class CrisisCollection(object):
         """
         # Assign input argument attributes
         self.blu_pen_collection = blu_pen_collection
+        self.feed_utility = FeedUtility()
         self.collection_country = collection_country
         if collection_services is None:
             self.collection_services = ["feed", "flickr", "tumblr", "twitter"]
@@ -41,6 +43,7 @@ class CrisisCollection(object):
 
         # Initialize created attributes
         self.content_dir = os.path.join(self.blu_pen_collection.content_dir, "crisis")
+        # TODO: Make this a parameter
         self.max_dates = 20
         self.percentiles = range(1, 100, 1)
         self.terciles = [25, 75]
@@ -54,7 +57,7 @@ class CrisisCollection(object):
         self.logger = logging.getLogger("CrisisCollection")
 
     def assemble_feed_content(self, collection_type, inp_data):
-        """Assembles data and tags for all included feed author.
+        """Assembles data and tags for all included feed authors.
 
         """
         # Consider each included feed author
@@ -87,9 +90,10 @@ class CrisisCollection(object):
             # occurrence of each tag
             tags = {}
             for entry in feed_author.entries:
-                if entry['content'] == None or not 'tags' in entry['content'][0]:
+                content = self.feed_utility.get_content(entry)
+                if content == None or not 'tags' in content:
                     continue
-                for tag in entry['content'][0]['tags']:
+                for tag in content['tags']:
                     key = tag # .encode('utf-8')
                     if not key in tags:
                         tags[key] = 1
@@ -97,9 +101,8 @@ class CrisisCollection(object):
                         tags[key] += 1
 
             # Add assembled included feed author content to
-            # collection, if tagged
-            if len(tags) > 0:
-                self.collection['sources'].append({'data': data, 'tags': tags})
+            # collection, tagged, or not
+            self.collection['sources'].append({'data': data, 'tags': tags})
 
     def assemble_flickr_content(self, collection_type, inp_data):
         """Assembles data and tags for all included flickr groups.
@@ -270,21 +273,21 @@ class CrisisCollection(object):
                 self.collection['sources'].append({'data': data, 'tags': tags})
 
     def assemble_twitter_content(self, collection_type, inp_data):
-        """Assembles data and tags for all included tumblr author
+        """Assembles data and tags for all included twitter authors
 
         """
-        # Initialize measurements describing included tumblr author
+        # Initialize measurements describing included twitter authors
         volume = np.array([])
         frequency = np.array([])
         age = np.array([])
         engagement = np.array([])
 
-        # Consider each included tumblr author
+        # Consider each included twitter author
         for author in inp_data['authors']:
             if not author['include']:
                 continue
 
-            # Load included tumblr author content
+            # Load included twitter author content
             try:
                 twitter_author = TwitterAuthor(
                     self.blu_pen_collection.blu_pen_author,
@@ -295,21 +298,21 @@ class CrisisCollection(object):
                 self.logger.error(exc)
                 continue
 
-            # Compute measurements describing included tumblr author
+            # Compute measurements describing included twitter author
             days_fr_tweet = []
             for created_dt in twitter_author.created_dt:
                 days_fr_tweet.append((datetime.today() - created_dt).days)
             days_fr_tweet.sort()
             days_fr_tweet = np.array(days_fr_tweet)
 
-            # Accumulate measurements describing included tumblr
+            # Accumulate measurements describing included twitter
             # author
             volume = np.append(volume, author['statuses'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_tweet[0 : min(self.max_dates, len(days_fr_tweet))])))
             age = np.append(age, np.mean(days_fr_tweet[0 : min(self.max_dates, len(days_fr_tweet))]))
             engagement = np.append(engagement, author['followers'] / author['statuses'])
 
-        # Digitize measurements describing included tumblr author
+        # Digitize measurements describing included twitter author
         if len(volume) == 0:
             return
         volume = np.digitize(volume, sorted(np.percentile(volume, self.terciles))) - 1
@@ -317,14 +320,14 @@ class CrisisCollection(object):
         age = np.digitize(age, sorted(np.percentile(age, self.percentiles))) - 50
         engagement = np.digitize(engagement, sorted(np.percentile(engagement, self.terciles))) - 1
 
-        # Consider each included tumblr author
+        # Consider each included twitter author
         i_author = -1
         for author in inp_data['authors']:
             if not author['include']:
                 continue
             i_author += 1
 
-            # Assemble data describing included tumblr author
+            # Assemble data describing included twitter author
             data = {}
             data['service'] = "twitter"
             data['type'] = collection_type
@@ -334,7 +337,7 @@ class CrisisCollection(object):
             data['age'] = age[i_author]
             data['engagement'] = engagement[i_author]
 
-            # Assemble tags used by included tumblr author, counting
+            # Assemble tags used by included twitter author, counting
             # occurrence of each tag
             tags = {}
             for text in twitter_author.clean_text:
@@ -345,7 +348,7 @@ class CrisisCollection(object):
                     else:
                         tags[key] += 1
 
-            # Add assembled included tumblr author content to
+            # Add assembled included twitter author content to
             # collection, if tagged
             if len(tags) > 0:
                 self.collection['sources'].append({'data': data, 'tags': tags})
@@ -416,7 +419,7 @@ class CrisisCollection(object):
                 source['data']['score'] += source_tags[source_tag] * self.collection['tags'][collection_type][source_tag]
 
         # Identify top sources for each service by score, and append
-        # all sources for export
+        # data from all sources for export
         n_included = 3
         included = {}
         for collection_type in self.collection_types:
@@ -425,11 +428,15 @@ class CrisisCollection(object):
                 included[collection_type][collection_service] = 0
         for source in sorted(self.collection['sources'], key=lambda source: source['data']['score'], reverse=True):
             collection_type = source['data']['type']
-            source_service = source['data']['service']
-            source['data']['include'] = False
-            if included[collection_type][source_service] < n_included:
-                included[collection_type][source_service] += 1
+            collection_service = source['data']['service']
+            if collection_type == "crisis":
+                included[collection_type][collection_service] += 1
                 source['data']['include'] = True
+            else:
+                source['data']['include'] = False
+                if included[collection_type][collection_service] < n_included:
+                    included[collection_type][collection_service] += 1
+                    source['data']['include'] = True
             export['sources'].append(source['data'])
 
         # Identify top tags by occurrence, and append each for export
@@ -438,9 +445,9 @@ class CrisisCollection(object):
         for collection_type in self.collection_types:
             i_tags[collection_type] = 0
         for collection_type in self.collection_types:
-            tags = self.collection['tags'][collection_type]
-            for key in sorted(tags, key=tags.get, reverse=True):
-                tag = {'tag': key, 'type': collection_type, 'count': tags[key]}
+            collection_tags = self.collection['tags'][collection_type]
+            for collection_tag in sorted(collection_tags, key=collection_tags.get, reverse=True):
+                tag = {'tag': collection_tag, 'type': collection_type, 'count': collection_tags[collection_tag]}
                 if i_tags[collection_type] < n_tags and not tag in export['tags']:
                     i_tags[collection_type] += 1
                     export['tags'].append(tag)

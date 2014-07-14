@@ -15,6 +15,7 @@ import lxml
 
 # Local imports
 from utility.AuthorUtility import AuthorUtility
+from author.FeedUtility import FeedUtility
 
 class FeedAuthor(object):
     """Represents author of Feeds by their creative output.
@@ -30,6 +31,7 @@ class FeedAuthor(object):
         # strings, and assign input argument attributes
         self.blu_pen_author = blu_pen_author
         self.author_utility = AuthorUtility()
+        self.feed_utility = FeedUtility()
         source_cmps = urlparse.urlparse(source_url)
         source_path = os.path.dirname(source_cmps.path)
         self.source_log = source_cmps.netloc + source_path.replace('/', '-')
@@ -173,11 +175,8 @@ class FeedAuthor(object):
         """
         # Consider each entry
         for entry in self.entries:
-            if entry['content'] != None:
-                content = entry['content'][0]
-            elif entry['summary_detail'] != None:
-                content = entry['summary_detail']
-            else:
+            content = self.feed_utility.get_content(entry)
+            if content == None:
                 continue
             content['image_urls'] = []
 
@@ -206,11 +205,8 @@ class FeedAuthor(object):
         """
         # Consider each entry
         for entry in self.entries:
-            if entry['content'] != None:
-                content = entry['content'][0]
-            elif entry['summary_detail'] != None:
-                content = entry['summary_detail']
-            else:
+            content = self.feed_utility.get_content(entry)
+            if content == None:
                 continue
             content['image_file_names'] = []
 

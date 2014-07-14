@@ -108,9 +108,6 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--author-config-file",
                         default="../author/BluPenAuthor.cfg",
                         help="the configuration file")
-    parser.add_argument("-p", "--do-purge",
-                        action="store_true",
-                        help="purge existing content")
     args = parser.parse_args()
 
     # Read the input request JSON document from collection/queue
