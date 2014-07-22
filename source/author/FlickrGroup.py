@@ -236,10 +236,18 @@ class FlickrGroup(object):
             if photo_url != None:
                 head, tail = os.path.split(photo_url)
                 photo_file_name = os.path.join(self.content_dir, tail)
-                self.author_utility.download_file(photo_url, photo_file_name)
                 photo['file_name'] = photo_file_name
-                self.logger.info(u"{0} downloaded photo to file {1}".format(
-                    self.source_log, photo_file_name))
+                if not os.path.exists(photo_file_name):
+                    try:
+                        self.author_utility.download_file(photo_url, photo_file_name)
+                        self.logger.info(u"{0} photo downloaded to file {1}".format(
+                            self.source_log, photo_file_name))
+                    except Exception as exc:
+                        self.logger.warning(u"{0} could not download photo to file {1}".format(
+                            self.source_log, photo_file_name))
+                else:
+                    self.logger.info(u"{0} photo already downloaded to file {1}".format(
+                        self.source_log, photo_file_name))
 
     def dump(self, pickle_file_name=None):
         """Dump FlickrGroup attributes pickle.

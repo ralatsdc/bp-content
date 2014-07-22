@@ -139,8 +139,8 @@ class BluPenAuthor(object):
         tumblr_author = TumblrAuthor(self, subdomain, self.tumblr_content_dir)
         if not os.path.exists(tumblr_author.pickle_file_name) or self.do_purge:
             tumblr_author.set_posts(do_purge=self.do_purge)
-            tumblr_author.dump()
             tumblr_author.download_photos()
+            tumblr_author.dump()
         else:
             tumblr_author.load()
         self.logger.info(u"tumblr content collected")
