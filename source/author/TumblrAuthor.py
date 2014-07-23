@@ -245,7 +245,7 @@ class TumblrAuthor(object):
                             photo_file_name = ""
 
                     # Assign the photo file name
-                    self.posts[i_post]['photos'][i_photo]['photo-file-name'] = photo_file_name
+                    self.posts[i_post]['photos'][i_photo]['photo_file_name'] = photo_file_name
 
     def convert_text_posts(self):
         """Convert a text post containing images to a photo post.
