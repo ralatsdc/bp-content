@@ -43,8 +43,9 @@ class CrisisCollection(object):
 
         # Initialize created attributes
         self.content_dir = os.path.join(self.blu_pen_collection.content_dir, "crisis")
-        # TODO: Make this a parameter
+        # TODO: Make these parameters
         self.max_dates = 20
+        self.max_sample = 9
         self.percentiles = range(1, 100, 1)
         self.terciles = [25, 75]
         self.collection = {}
@@ -81,17 +82,30 @@ class CrisisCollection(object):
             data['service'] = "feed"
             data['type'] = collection_type
             data['name'] = author['title']
+            data['pickle'] = feed_author.pickle_file_name
             data['volume'] = 0
             data['frequency'] = 0
             data['age'] = 0
             data['engagement'] = 0
 
-            # Assemble tags used by included feed author, counting
-            # occurrence of each tag
+            # Assemble sample content created and tags used by
+            # included feed author, counting occurrence of each tag
+            sample = []
             tags = {}
             for entry in feed_author.entries:
                 content = self.feed_utility.get_content(entry)
-                if content == None or not 'tags' in content:
+
+                # Assemble sample content
+                if content == None:
+                    continue
+                if len(sample) < self.max_sample:
+                    sample.append({'type': 'text', 'value': content['value']})
+                for image_file_name in content['image_file_names']:
+                    if len(sample) < self.max_sample:
+                        sample.append({'type': 'photo', 'value': image_file_name})
+
+                # Assemble tags
+                if not 'tags' in content:
                     continue
                 for tag in content['tags']:
                     key = tag # .encode('utf-8')
@@ -100,7 +114,13 @@ class CrisisCollection(object):
                     else:
                         tags[key] += 1
 
-            # Add assembled included feed author content to
+            # Write assembled sample content for included feed author
+            out_file_path = feed_author.pickle_file_name.replace('.pkl', '.json')
+            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+            out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
+            out_file.close()
+
+            # Add assembled data and tags for included feed author to
             # collection, tagged, or not
             self.collection['sources'].append({'data': data, 'tags': tags})
 
@@ -165,15 +185,23 @@ class CrisisCollection(object):
             data['service'] = "flickr"
             data['type'] = collection_type
             data['name'] = group['nsid']
+            data['pickle'] = flickr_group.pickle_file_name
             data['volume'] = volume[i_group]
             data['frequency'] = frequency[i_group]
             data['age'] = age[i_group]
             data['engagement'] = engagement[i_group]
 
-            # Assemble tags used by included flickr group, counting
-            # occurrence of each tag
+            # Assemble sample content created and tags used by
+            # included flickr group, counting occurrence of each tag
+            sample = []
             tags = {}
             for photo in flickr_group.photos:
+
+                # Assemble sample content
+                if len(sample) < self.max_sample:
+                    sample.append({'type': 'photo', 'value': photo['file_name']})
+
+                # Assemble tags
                 if not 'tags' in photo:
                     continue
                 for tag in photo['tags'].split():
@@ -183,7 +211,13 @@ class CrisisCollection(object):
                     else:
                         tags[key] += 1
 
-            # Add assembled included flickr group content to
+            # Write assembled sample content for included flickr group
+            out_file_path = flickr_group.pickle_file_name.replace('.pkl', '.json')
+            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+            out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
+            out_file.close()
+
+            # Add assembled data and tags for included flickr group to
             # collection, if tagged
             if len(tags) > 0:
                 self.collection['sources'].append({'data': data, 'tags': tags})
@@ -249,15 +283,27 @@ class CrisisCollection(object):
             data['service'] = "tumblr"
             data['type'] = collection_type
             data['name'] = author['url']
+            data['pickle'] = tumblr_author.pickle_file_name
             data['volume'] = volume[i_author]
             data['frequency'] = frequency[i_author]
             data['age'] = age[i_author]
             data['engagement'] = engagement[i_author]
 
-            # Assemble tags used by included tumblr author, counting
-            # occurrence of each tag
+            # Assemble sample content created and tags used by
+            # included tumblr author, counting occurrence of each tag
+            sample = []
             tags = {}
             for post in tumblr_author.posts:
+
+                # Assemble sample content
+                if len(sample) < self.max_sample:
+                    if post['type'] == 'text':
+                        sample.append({'type': 'text', 'value': post['body']})
+
+                    elif post['type'] == 'photo':
+                        sample.append({'type': 'photo', 'value': post['photos'][0]['photo_file_name']})
+
+                # Assemble tags
                 if not 'tags' in post:
                     continue
                 for tag in post['tags']:
@@ -267,8 +313,15 @@ class CrisisCollection(object):
                     else:
                         tags[key] += 1
 
-            # Add assembled included tumblr author content to
-            # collection, if tagged
+            # Write assembled sample content for included tumblr
+            # author
+            out_file_path = tumblr_author.pickle_file_name.replace('.pkl', '.json')
+            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+            out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
+            out_file.close()
+
+            # Add assembled data and tags for included tumblr author
+            # to collection, if tagged
             if len(tags) > 0:
                 self.collection['sources'].append({'data': data, 'tags': tags})
 
@@ -332,15 +385,23 @@ class CrisisCollection(object):
             data['service'] = "twitter"
             data['type'] = collection_type
             data['name'] = author['screen_name']
+            data['pickle'] = twitter_author.pickle_file_name
             data['volume'] = volume[i_author]
             data['frequency'] = frequency[i_author]
             data['age'] = age[i_author]
             data['engagement'] = engagement[i_author]
 
-            # Assemble tags used by included twitter author, counting
-            # occurrence of each tag
+            # Assemble sample content created and tags used by
+            # included twitter author, counting occurrence of each tag
+            sample = []
             tags = {}
             for text in twitter_author.clean_text:
+
+                # Assemble sample content
+                if len(sample) < self.max_sample:
+                    sample.append({'type': 'text', 'value': text})
+
+                # Assemble tags
                 for tag in [token[1:] for token in text.split() if token.startswith('#')]:
                     key = tag # Already unicode
                     if not key in tags:
@@ -348,8 +409,15 @@ class CrisisCollection(object):
                     else:
                         tags[key] += 1
 
-            # Add assembled included twitter author content to
-            # collection, if tagged
+            # Write assembled sample content for included twitter
+            # author
+            out_file_path = twitter_author.pickle_file_name.replace('.pkl', '.json')
+            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+            out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
+            out_file.close()
+
+            # Add assembled data and tags for included twitter author
+            # to collection, if tagged
             if len(tags) > 0:
                 self.collection['sources'].append({'data': data, 'tags': tags})
 
