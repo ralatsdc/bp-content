@@ -42,7 +42,8 @@ class CrisisCollection(object):
             self.collection_types = collection_types
 
         # Initialize created attributes
-        self.content_dir = os.path.join(self.blu_pen_collection.content_dir, "crisis")
+        self.content_dir = os.path.join(self.blu_pen_collection.content_dir, u"crisis")
+        self.document_root = os.path.join(u"json", u"source")
         # TODO: Make these parameters
         self.max_dates = 20
         self.max_sample = 9
@@ -82,7 +83,8 @@ class CrisisCollection(object):
             data['service'] = "feed"
             data['type'] = collection_type
             data['name'] = author['title']
-            data['pickle'] = feed_author.pickle_file_name
+            json_file_name = feed_author.pickle_file_name.split('/feed/')[1].replace('.pkl', '.json')
+            data['json'] = os.path.join(self.document_root, 'feed', json_file_name)
             data['volume'] = 0
             data['frequency'] = 0
             data['age'] = 0
@@ -102,7 +104,9 @@ class CrisisCollection(object):
                     sample.append({'type': 'text', 'value': content['value']})
                 for image_file_name in content['image_file_names']:
                     if len(sample) < self.max_sample:
-                        sample.append({'type': 'photo', 'value': image_file_name})
+                        photo_file_name = os.path.join(self.document_root, 'feed',
+                                                       image_file_name.split('/feed/')[1])
+                        sample.append({'type': 'photo', 'value': photo_file_name})
 
                 # Assemble tags
                 if not 'tags' in content:
@@ -128,7 +132,9 @@ class CrisisCollection(object):
         """Assembles data and tags for all included flickr groups.
 
         """
-        # Initialize measurements describing included flickr group
+        # Initialize pickle file name for and measurements describing
+        # included flickr groups
+        pickle_file_name = []
         volume = np.array([])
         frequency = np.array([])
         age = np.array([])
@@ -159,7 +165,9 @@ class CrisisCollection(object):
             days_fr_upload.sort()
             days_fr_upload = np.array(days_fr_upload)
 
-            # Accumulate measurements describing included flickr group
+            # Accumulate pickle file name for and measurements
+            # describing included flickr group
+            pickle_file_name.append(flickr_group.pickle_file_name)
             volume = np.append(volume, group['photos'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_upload[0 : min(self.max_dates, len(days_fr_upload))])))
             age = np.append(age, np.mean(days_fr_upload[0 : min(self.max_dates, len(days_fr_upload))]))
@@ -185,7 +193,8 @@ class CrisisCollection(object):
             data['service'] = "flickr"
             data['type'] = collection_type
             data['name'] = group['nsid']
-            data['pickle'] = flickr_group.pickle_file_name
+            json_file_name = pickle_file_name[i_group].split('/flickr/')[1].replace('.pkl', '.json')
+            data['json'] = os.path.join(self.document_root, 'flickr', json_file_name)
             data['volume'] = volume[i_group]
             data['frequency'] = frequency[i_group]
             data['age'] = age[i_group]
@@ -199,7 +208,9 @@ class CrisisCollection(object):
 
                 # Assemble sample content
                 if len(sample) < self.max_sample:
-                    sample.append({'type': 'photo', 'value': photo['file_name']})
+                    photo_file_name = os.path.join(self.document_root, 'flickr',
+                                                   photo['file_name'].split('/flickr/')[1])
+                    sample.append({'type': 'photo', 'value': photo_file_name})
 
                 # Assemble tags
                 if not 'tags' in photo:
@@ -212,21 +223,22 @@ class CrisisCollection(object):
                         tags[key] += 1
 
             # Write assembled sample content for included flickr group
-            out_file_path = flickr_group.pickle_file_name.replace('.pkl', '.json')
+            out_file_path = pickle_file_name[i_group].replace('.pkl', '.json')
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
             out_file.close()
 
             # Add assembled data and tags for included flickr group to
-            # collection, if tagged
-            if len(tags) > 0:
-                self.collection['sources'].append({'data': data, 'tags': tags})
+            # collection, tagged, or not
+            self.collection['sources'].append({'data': data, 'tags': tags})
 
     def assemble_tumblr_content(self, collection_type, inp_data):
         """Assembles data and tags for all included tumblr author
 
         """
-        # Initialize measurements describing included tumblr author
+        # Initialize pickle file name for and measurements describing
+        # included tumblr author
+        pickle_file_name = []
         volume = np.array([])
         frequency = np.array([])
         age = np.array([])
@@ -256,8 +268,9 @@ class CrisisCollection(object):
             days_fr_post.sort()
             days_fr_post = np.array(days_fr_post)
 
-            # Accumulate measurements describing included tumblr
-            # author
+            # Accumulate pickle file name for and measurements
+            # describing included tumblr author
+            pickle_file_name.append(tumblr_author.pickle_file_name)
             volume = np.append(volume, author['posts'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_post[0 : min(self.max_dates, len(days_fr_post))])))
             age = np.append(age, np.mean(days_fr_post[0 : min(self.max_dates, len(days_fr_post))]))
@@ -283,7 +296,8 @@ class CrisisCollection(object):
             data['service'] = "tumblr"
             data['type'] = collection_type
             data['name'] = author['url']
-            data['pickle'] = tumblr_author.pickle_file_name
+            json_file_name = pickle_file_name[i_author].split('/tumblr/')[1].replace('.pkl', '.json')
+            data['json'] = os.path.join(self.document_root, 'tumblr', json_file_name)
             data['volume'] = volume[i_author]
             data['frequency'] = frequency[i_author]
             data['age'] = age[i_author]
@@ -301,7 +315,9 @@ class CrisisCollection(object):
                         sample.append({'type': 'text', 'value': post['body']})
 
                     elif post['type'] == 'photo':
-                        sample.append({'type': 'photo', 'value': post['photos'][0]['photo_file_name']})
+                        photo_file_name = os.path.join(self.document_root, 'tumblr',
+                                                       post['photos'][0]['photo_file_name'].split('/tumblr/')[1])
+                        sample.append({'type': 'photo', 'value': photo_file_name})
 
                 # Assemble tags
                 if not 'tags' in post:
@@ -315,21 +331,22 @@ class CrisisCollection(object):
 
             # Write assembled sample content for included tumblr
             # author
-            out_file_path = tumblr_author.pickle_file_name.replace('.pkl', '.json')
+            out_file_path = pickle_file_name[i_author].replace('.pkl', '.json')
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
             out_file.close()
 
             # Add assembled data and tags for included tumblr author
-            # to collection, if tagged
-            if len(tags) > 0:
-                self.collection['sources'].append({'data': data, 'tags': tags})
+            # to collection, tagged, or not
+            self.collection['sources'].append({'data': data, 'tags': tags})
 
     def assemble_twitter_content(self, collection_type, inp_data):
         """Assembles data and tags for all included twitter authors
 
         """
-        # Initialize measurements describing included twitter authors
+        # Initialize pickle file name for and measurements describing
+        # included twitter authors
+        pickle_file_name = []
         volume = np.array([])
         frequency = np.array([])
         age = np.array([])
@@ -358,8 +375,9 @@ class CrisisCollection(object):
             days_fr_tweet.sort()
             days_fr_tweet = np.array(days_fr_tweet)
 
-            # Accumulate measurements describing included twitter
-            # author
+            # Accumulate pickle file name for and measurements
+            # describing included twitter author
+            pickle_file_name.append(twitter_author.pickle_file_name)
             volume = np.append(volume, author['statuses'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_tweet[0 : min(self.max_dates, len(days_fr_tweet))])))
             age = np.append(age, np.mean(days_fr_tweet[0 : min(self.max_dates, len(days_fr_tweet))]))
@@ -385,7 +403,8 @@ class CrisisCollection(object):
             data['service'] = "twitter"
             data['type'] = collection_type
             data['name'] = author['screen_name']
-            data['pickle'] = twitter_author.pickle_file_name
+            json_file_name = pickle_file_name[i_author].split('/twitter/')[1].replace('.pkl', '.json')
+            data['json'] = os.path.join(self.document_root, 'twitter', json_file_name)
             data['volume'] = volume[i_author]
             data['frequency'] = frequency[i_author]
             data['age'] = age[i_author]
@@ -411,15 +430,14 @@ class CrisisCollection(object):
 
             # Write assembled sample content for included twitter
             # author
-            out_file_path = twitter_author.pickle_file_name.replace('.pkl', '.json')
+            out_file_path = pickle_file_name[i_author].replace('.pkl', '.json')
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
             out_file.close()
 
             # Add assembled data and tags for included twitter author
-            # to collection, if tagged
-            if len(tags) > 0:
-                self.collection['sources'].append({'data': data, 'tags': tags})
+            # to collection, tagged, or not
+            self.collection['sources'].append({'data': data, 'tags': tags})
 
     def assemble_content(self):
         """Assembles data and tags for all included author and groups.
@@ -488,7 +506,7 @@ class CrisisCollection(object):
 
         # Identify top sources for each service by score, and append
         # data from all sources for export
-        n_included = 3
+        n_included = 5
         included = {}
         for collection_type in self.collection_types:
             included[collection_type] = {}

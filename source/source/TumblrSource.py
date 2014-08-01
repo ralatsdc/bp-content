@@ -104,7 +104,7 @@ class TumblrSource(object):
                 n_host_names = len(self.host_names)
                 self.logger.info(u"{0}: found {1} unique blog host names using {2}".format(
                     self.source_log, n_host_names, self.source_type + self.source_word))
-        
+
             # Get information, total number of posts, and text posts
             # for each blog
             for host_name in self.host_names:
@@ -115,7 +115,7 @@ class TumblrSource(object):
             self.dump()
 
         else:
-            
+
             # Load attributes pickle
             self.load()
 

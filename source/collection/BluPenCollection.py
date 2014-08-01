@@ -41,7 +41,7 @@ class BluPenCollection(object):
         self.author_config_file = author_config_file
         self.blu_pen_author = BluPenAuthor(self.author_config_file)
 
-        self.requests_dir = self.config.get("collection", "requests_dir")
+        self.collection_requests_dir = self.config.get("collection", "requests_dir")
         self.content_dir = self.config.get("collection", "content_dir")
 
         self.author_requests_dir = self.config.get("author", "requests_dir")
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     # Read the input request JSON document from collection/queue
     qu = QueueUtility()
     bpc = BluPenCollection(args.config_file, args.author_config_file)
-    inp_file_name, inp_req_data = qu.read_queue(bpc.requests_dir)
+    inp_file_name, inp_req_data = qu.read_queue(bpc.collection_requests_dir)
     out_file_name = os.path.basename(inp_file_name); out_req_data = inp_req_data
     if inp_file_name == "" or inp_req_data == {}:
         bpc.logger.info(u"Nothing to do, exiting")
@@ -124,4 +124,4 @@ if __name__ == "__main__":
         bpc.assemble_crisis_collection(inp_req_data['country'])
 
     # Write the input request JSON document to collection/did-pop
-    qu.write_queue(bpc.requests_dir, out_file_name, inp_req_data)
+    qu.write_queue(bpc.collection_requests_dir, out_file_name, inp_req_data)

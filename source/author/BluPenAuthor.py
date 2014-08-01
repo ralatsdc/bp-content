@@ -244,4 +244,4 @@ if __name__ == "__main__":
     qu.write_queue(bpa.author_requests_dir, out_file_name, inp_req_data)
 
     # Write the output request JSON document to collection/do-push
-    # qu.write_queue(bpa.collection_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")
+    qu.write_queue(bpa.collection_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")

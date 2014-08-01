@@ -111,8 +111,8 @@ class BluPenSource(object):
                 topic_count.extend(fs.topic_count)
                 description.extend(fs.description)
 
-        # Compute z-scores based on number of photos, number of members,
-        # and the members to photos ratio
+        # Assign number of photos, number of members, and compute the
+        # members to photos ratio
         n_photos = np.array(pool_count)
         n_members = np.array(members)
         n_trusting = np.divide(n_members, n_photos)
@@ -197,7 +197,7 @@ class BluPenSource(object):
                      source_word) = ts.author_utility.process_source_words(source_word_str)
 
                     # Count the appearances of the current source word in
-                    # the curren post of the current blog
+                    # the current post of the current blog
                     n_tags += len(re.findall(source_word, "".join(post['tags']), re.I))
 
             # Note the total number of tag appearances for the current
@@ -210,7 +210,7 @@ class BluPenSource(object):
         index_blog, = np.nonzero(np_total_tags > min_total_tags)
         while np.size(index_blog) < self.tumblr_min_total_blogs and min_total_tags > 0:
             min_total_tags -= 1
-            index_blog, = np.nonzero(np_total_tags > min_total_tags)
+            index_blog, = np.nonzero(np_total_tags >= min_total_tags)
 
         # Select the blogs with the highest number of tag appearances
         blogs_info = []
@@ -228,8 +228,8 @@ class BluPenSource(object):
             else:
                 likes.append(0)
 
-        # Compute scores based on number of posts, number of likes,
-        # and the likes to posts ratio
+        # Assign number of posts, number of likes, and compute the
+        # likes to posts ratio
         np_n_posts = np.array(posts)
         np_n_likes = np.array(likes)
         np_n_trusting = np.divide(np_n_likes, np_n_posts)
@@ -305,8 +305,8 @@ class BluPenSource(object):
                 statuses_count.extend(ts.statuses_count)
                 followers_count.extend(ts.followers_count)
 
-        # Compute scores based on number of statuses, number of
-        # followers, and the followers to statuses ratio
+        # Assign number of statuses, number of followers, and compute
+        # the followers to statuses ratio
         n_statuses = np.array(statuses_count)
         n_followers = np.array(followers_count)
         n_trusting = np.divide(n_followers, n_statuses)
