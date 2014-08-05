@@ -15,6 +15,8 @@ import flickrapi
 
 # Local imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from author.BluPenAuthor import BluPenAuthor
+from author.FlickrGroup import FlickrGroup
 from utility.AuthorUtility import AuthorUtility
 
 class FlickrSource(object):
@@ -22,7 +24,7 @@ class FlickrSource(object):
     for groups using a query term.
 
     """
-    def __init__(self, source_word_str, content_dir,
+    def __init__(self, blu_pen_source, source_word_str, content_dir,
                  api_key='8ffebf639a0d2fd4c13b5fb71cb5ab1b', api_secret='1d23d55f573d5c58',
                  number_of_api_attempts=8, seconds_between_api_attempts=0.1):
         # api_key='71ae5bd2b331d44649161f6d3ff7e6b6', api_secret='45f1be4bd59f9155',
@@ -32,6 +34,8 @@ class FlickrSource(object):
         """
         # Process the source word string to create log and path
         # strings, and assign input argument attributes
+        self.blu_pen_source = blu_pen_source
+        self.blu_pen_author = BluPenAuthor(self.blu_pen_source.author_config_file)
         self.author_utility = AuthorUtility()
         (self.source_log,
          self.source_path,
@@ -56,6 +60,8 @@ class FlickrSource(object):
         self.members = []
         self.pool_count = []
         self.topic_count = []
+        self.comment_count = []
+        self.favorite_count = []
         self.description = []
 
         # Create an API
@@ -101,6 +107,19 @@ class FlickrSource(object):
                 info = self.get_group_info_by_id(grp['nsid'])
                 grp.update(info)
 
+                fg = FlickrGroup(self.blu_pen_author, u'@' + grp['name'], grp['nsid'],
+                                 self.blu_pen_author.flickr_content_dir)
+                fg.set_photos(do_purge=self.blu_pen_source.author_do_purge)
+                info = {}
+                info['comment_count'] = 0
+                info['favorite_count'] = 0
+                for photo in fg.photos:
+                    if 'count_comments' in photo:
+                        info['comment_count'] += int(photo['count_comments'])
+                    if 'count_faves' in photo:
+                        info['favorite_count'] += int(photo['count_faves'])
+                grp.update(info)
+
             # Assign arrays of values for selecting groups
             for group in self.groups:
                 self.nsid.append(group['nsid'])
@@ -109,6 +128,8 @@ class FlickrSource(object):
                 self.members.append(group['members'])
                 self.pool_count.append(group['pool_count'])
                 self.topic_count.append(group['topic_count'])
+                self.comment_count.append(group['comment_count'])
+                self.favorite_count.append(group['favorite_count'])
                 self.description.append(group['description'])
 
             # Dumps attributes pickle
@@ -258,6 +279,8 @@ class FlickrSource(object):
         p['members'] = self.members
         p['pool_count'] = self.pool_count
         p['topic_count'] = self.topic_count
+        p['comment_count'] = self.comment_count
+        p['favorite_count'] = self.favorite_count
         p['description'] = self.description
 
         pickle.dump(p, pickle_file)
@@ -297,6 +320,8 @@ class FlickrSource(object):
         self.members = p['members']
         self.pool_count = p['pool_count']
         self.topic_count = p['topic_count']
+        self.comment_count = p['comment_count']
+        self.favorite_count = p['favorite_count']
         self.description = p['description']
 
         self.logger.info(u"{0} loaded {1} groups from {2}".format(

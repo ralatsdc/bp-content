@@ -24,13 +24,14 @@ class TwitterSource(object):
     query term.
 
     """
-    def __init__(self, source_word_str, content_dir,
-                 number_of_api_attempts=8, seconds_between_api_attempts=0.1):
+    def __init__(self, blu_pen_source, source_word_str, content_dir,
+                 number_of_api_attempts=8, seconds_between_api_attempts=0.5):
         """Constructs a TwitterSource instance given a source word.
 
         """
         # Process the source word string to create log and path
         # strings, and assign input argument attributes
+        self.blu_pen_source = blu_pen_source
         self.author_utility = AuthorUtility()
         (self.source_log,
          self.source_path,
@@ -85,7 +86,7 @@ class TwitterSource(object):
             # (about 100 users)
             for page in range(1, max_n_pages):
                 self.users.extend(self.get_users_by_source(self.source_type, self.source_word, page=page))
-            
+
             # Assign arrays of values for selecting users
             for u in self.users:
                 self.name.append(u.name)
@@ -154,10 +155,10 @@ class TwitterSource(object):
 
                     elif max_id > 0 and since_id == 0:
                         tweets = api.GetSearch(term=term, count=count, max_id=max_id)
-                                               
+
                     elif max_id == 0 and since_id > 0:
                         tweets = api.GetSearch(term=term, count=count, since_id=since_id)
-                                               
+
                     else:
                         raise Exception("A search for tweets cannot contain both a max_id and since_id parameter.")
 
@@ -288,7 +289,7 @@ class TwitterSource(object):
 
     def get_names_from_tweets(self, tweets):
         """Creates a list of screen names given an array of tweets.
-        
+
         """
         screen_names = []
 
