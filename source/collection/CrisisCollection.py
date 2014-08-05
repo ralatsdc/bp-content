@@ -101,12 +101,18 @@ class CrisisCollection(object):
                 if content == None:
                     continue
                 if len(sample) < self.max_sample:
-                    sample.append({'type': 'text', 'value': content['value']})
+                    sample.append({'type': 'text',
+                                   'value': content['value']})
+                iIFN = -1
                 for image_file_name in content['image_file_names']:
+                    iIFN += 1
                     if len(sample) < self.max_sample:
+                        photo_url = content['image_urls'][iIFN]
                         photo_file_name = os.path.join(self.document_root, 'feed',
                                                        image_file_name.split('/feed/')[1])
-                        sample.append({'type': 'photo', 'value': photo_file_name})
+                        sample.append({'type': 'photo',
+                                       'url': photo_url,
+                                       'file_name': photo_file_name})
 
                 # Assemble tags
                 if not 'tags' in content:
@@ -208,9 +214,12 @@ class CrisisCollection(object):
 
                 # Assemble sample content
                 if len(sample) < self.max_sample:
+                    photo_url = photo['url_m']
                     photo_file_name = os.path.join(self.document_root, 'flickr',
                                                    photo['file_name'].split('/flickr/')[1])
-                    sample.append({'type': 'photo', 'value': photo_file_name})
+                    sample.append({'type': 'photo',
+                                   'url': photo_url,
+                                   'file_name': photo_file_name})
 
                 # Assemble tags
                 if not 'tags' in photo:
@@ -274,7 +283,7 @@ class CrisisCollection(object):
             volume = np.append(volume, author['posts'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_post[0 : min(self.max_dates, len(days_fr_post))])))
             age = np.append(age, np.mean(days_fr_post[0 : min(self.max_dates, len(days_fr_post))]))
-            engagement = np.append(engagement, author['likes'] / author['posts'])
+            engagement = np.append(engagement, author['notes'] / author['posts'])
 
         # Digitize measurements describing included tumblr author
         if len(volume) == 0:
@@ -312,12 +321,17 @@ class CrisisCollection(object):
                 # Assemble sample content
                 if len(sample) < self.max_sample:
                     if post['type'] == 'text':
-                        sample.append({'type': 'text', 'value': post['body']})
+                        sample.append({'type': 'text',
+                                       'value': post['body']})
 
                     elif post['type'] == 'photo':
+                        iAS = post['photos'][0]['alt_sizes_idx']
+                        photo_url = post['photos'][0]['alt_sizes'][iAS]['url']
                         photo_file_name = os.path.join(self.document_root, 'tumblr',
                                                        post['photos'][0]['photo_file_name'].split('/tumblr/')[1])
-                        sample.append({'type': 'photo', 'value': photo_file_name})
+                        sample.append({'type': 'photo',
+                                       'url': photo_url,
+                                       'file_name': photo_file_name})
 
                 # Assemble tags
                 if not 'tags' in post:
@@ -418,7 +432,8 @@ class CrisisCollection(object):
 
                 # Assemble sample content
                 if len(sample) < self.max_sample:
-                    sample.append({'type': 'text', 'value': text})
+                    sample.append({'type': 'text',
+                                   'value': text})
 
                 # Assemble tags
                 for tag in [token[1:] for token in text.split() if token.startswith('#')]:
