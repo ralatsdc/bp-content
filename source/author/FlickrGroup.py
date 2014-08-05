@@ -120,6 +120,8 @@ class FlickrGroup(object):
                 self.photos[-1]['longitude'] = photo.get("longitude")
                 self.photos[-1]['tags'] = photo.get("tags")
                 self.photos[-1]['url_m'] = photo.get("url_m")
+                self.photos[-1]['count_comments'] = photo.get("count_comments")
+                self.photos[-1]['count_faves'] = photo.get("count_faves")
 
             self.content_set = True
 
@@ -170,9 +172,9 @@ class FlickrGroup(object):
 
         URL formats:
         ... http://farm{farm-id}.static.flickr.com/{server-id}/{id}_{secret}.jpg
-	...... or
+        ...... or
         ... http://farm{farm-id}.static.flickr.com/{server-id}/{id}_{secret}_[mstzb].jpg
-	...... or
+        ...... or
         ... http://farm{farm-id}.static.flickr.com/{server-id}/{id}_{o-secret}_o.(jpg|gif|png)
 
         Size suffixes:
@@ -217,7 +219,7 @@ class FlickrGroup(object):
             try:
                 photos = self.api.groups_pools_getPhotos(
                     group_id=group_id,
-                    extras='date_upload, date_taken, geo, tags, url_m').find('photos').findall('photo')
+                    extras='date_upload, date_taken, geo, tags, url_m, count_comments, count_faves').find('photos').findall('photo')
                 self.logger.info(u"{0} collected {1} photos for {2}".format(
                     self.source_log, len(photos), group_id))
             except Exception as exc:
@@ -227,6 +229,29 @@ class FlickrGroup(object):
 
         return photos
 
+    # TODO: Finish
+    def get_photos_favorites(self):
+        """
+        https://www.flickr.com/services/api/flickr.photos.getFavorites.html
+        """
+        return 0
+    
+    # TODO: Finish
+    def get_photos_comments(self):
+        """https://www.flickr.com/services/api/flickr.photos.comments.getList.html
+        """
+        return 0
+    
+    # TODO: Finish
+    def get_photosets_comments(self):
+        """
+        https://www.flickr.com/services/api/flickr.photosets.comments.getList.html
+        https://www.flickr.com/groups/api/discuss/72157636063789543/
+        count_faves
+        count_comments
+        """    
+        return 0
+    
     def download_photos(self):
         """Download all photos by this group from Flickr.
 
