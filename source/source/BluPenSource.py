@@ -36,7 +36,7 @@ class BluPenSource(object):
         self.config = ConfigParser.SafeConfigParser()
         self.config.read(self.config_file)
 
-        self.do_purge = self.config.getboolean("source", "do_purge")
+        self.source_do_purge = self.config.getboolean("source", "do_purge")
         self.source_requests_dir = self.config.get("source", "requests_dir")
 
         self.add_console_handler = self.config.getboolean("source", "add_console_handler")
@@ -54,6 +54,8 @@ class BluPenSource(object):
         elif log_level == 'CRITICAL':
             self.log_level = logging.CRITICAL
 
+        self.author_config_file = self.config.get("author", "config_file")
+        self.author_do_purge = self.config.getboolean("author", "do_purge")
         self.author_requests_dir = self.config.get("author", "requests_dir")
 
         self.flickr_content_dir = self.config.get("flickr", "content_dir")
@@ -94,32 +96,37 @@ class BluPenSource(object):
         members = []
         pool_count = []
         topic_count = []
+        comment_count = []
+        favorite_count = []
         description = []
         for source_word_str in source_word_strs:
 
             # Create and dump, or load, the FlickrSource pickle
-            fs = FlickrSource(source_word_str, content_dir)
-            fs.set_source(do_purge=self.do_purge)
+            fs = FlickrSource(self, source_word_str, content_dir)
+            fs.set_source(do_purge=self.source_do_purge)
 
             # Accumulate arrays of values for selecting groups
-            if not fs.nsid in nsid:
-                nsid.extend(fs.nsid)
-                name.extend(fs.name)
-                eighteenplus.extend(fs.eighteenplus)
-                members.extend(fs.members)
-                pool_count.extend(fs.pool_count)
-                topic_count.extend(fs.topic_count)
-                description.extend(fs.description)
+            for i_src in range(len(fs.nsid)):
+                if not fs.nsid[i_src] in nsid:
+                    nsid.append(fs.nsid[i_src])
+                    name.append(fs.name[i_src])
+                    eighteenplus.append(fs.eighteenplus[i_src])
+                    members.append(fs.members[i_src])
+                    pool_count.append(fs.pool_count[i_src])
+                    topic_count.append(fs.topic_count[i_src])
+                    comment_count.append(fs.comment_count[i_src])
+                    favorite_count.append(fs.favorite_count[i_src])
+                    description.append(fs.description[i_src])
 
         # Assign number of photos, number of members, and compute the
         # members to photos ratio
         n_photos = np.array(pool_count)
-        n_members = np.array(members)
-        n_trusting = np.divide(n_members, n_photos)
+        n_memcomfav = np.array(members) + np.array(comment_count) + np.array(favorite_count)
+        n_trusting = np.divide(n_memcomfav, n_photos)
 
         # Convert the numeric scores to string scores
         s_photos = fs.n_to_s(n_photos)
-        s_members = fs.n_to_s(n_members)
+        s_memcomfav = fs.n_to_s(n_memcomfav)
         s_trusting = fs.n_to_s(n_trusting)
 
         # Create a dictionary of groups in order to print a JSON document
@@ -134,10 +141,12 @@ class BluPenSource(object):
             group['members'] = members[i_grp]
             group['pool_count'] = pool_count[i_grp]
             group['topic_count'] = topic_count[i_grp]
+            group['comment_count'] = comment_count[i_grp]
+            group['favorite_count'] = favorite_count[i_grp]
             group['photos'] = n_photos[i_grp]
-            group['members'] = n_members[i_grp]
+            group['memcomfav'] = n_memcomfav[i_grp]
             group['trusting'] = n_trusting[i_grp]
-            group['score'] = s_photos[i_grp] + s_members[i_grp] + s_trusting[i_grp]
+            group['score'] = s_photos[i_grp] + s_memcomfav[i_grp] + s_trusting[i_grp]
             if group['score'] == "+++":
                 group['include'] = True
             else:
@@ -156,8 +165,8 @@ class BluPenSource(object):
         for source_word_str in source_word_strs:
 
             # Create and dump, or load, the TumblrSource pickle.
-            ts = TumblrSource(source_word_str, content_dir)
-            ts.set_source(do_purge=self.do_purge)
+            ts = TumblrSource(self, source_word_str, content_dir)
+            ts.set_source(do_purge=self.source_do_purge)
 
             # Accumulate blog info, and posts
             for b_p in ts.blog_posts:
@@ -216,7 +225,9 @@ class BluPenSource(object):
         blogs_info = []
         posts = []
         likes = []
+        notes = []
         for i_blg in index_blog:
+
             info = blog_posts[i_blg]['blog']
             blogs_info.append(info)
             if 'posts' in info:
@@ -228,15 +239,21 @@ class BluPenSource(object):
             else:
                 likes.append(0)
 
-        # Assign number of posts, number of likes, and compute the
-        # likes to posts ratio
+            note_count = 0
+            for post in blog_posts[i_blg]['posts']:
+                if 'note_count' in post:
+                    note_count += post['note_count']
+            notes.append(note_count)
+
+        # Assign number of posts, number of notes, and compute the
+        # notes to posts ratio
         np_n_posts = np.array(posts)
-        np_n_likes = np.array(likes)
-        np_n_trusting = np.divide(np_n_likes, np_n_posts)
+        np_n_notes = np.array(notes)
+        np_n_trusting = np.divide(np_n_notes, np_n_posts)
 
         # Convert the numeric scores to string scores
         np_s_posts = ts.n_to_s(np_n_posts)
-        np_s_likes = ts.n_to_s(np_n_likes)
+        np_s_notes = ts.n_to_s(np_n_notes)
         np_s_trusting = ts.n_to_s(np_n_trusting)
 
         # Create a dictionary of blogs in order to print a JSON document
@@ -265,9 +282,9 @@ class BluPenSource(object):
                 blog['url'] = ""
 
             blog['posts'] = np_n_posts[i_blg]
-            blog['likes'] = np_n_likes[i_blg]
+            blog['notes'] = np_n_notes[i_blg]
             blog['trusting'] = np_n_trusting[i_blg]
-            blog['score'] = np_s_posts[i_blg] + np_s_likes[i_blg] + np_s_trusting[i_blg]
+            blog['score'] = np_s_posts[i_blg] + np_s_notes[i_blg] + np_s_trusting[i_blg]
 
             if blog['score'] == "+++":
                 blog['include'] = True
@@ -293,17 +310,18 @@ class BluPenSource(object):
         for source_word_str in source_word_strs:
 
             # Create and dump, or load, the TwitterSource pickle
-            ts = TwitterSource(source_word_str, content_dir)
-            ts.set_source(do_purge=self.do_purge)
+            ts = TwitterSource(self, source_word_str, content_dir)
+            ts.set_source(do_purge=self.source_do_purge)
 
             # Accumulate created atributes
-            if not ts.screen_name in screen_name:
-                name.extend(ts.name)
-                description.extend(ts.description)
-                screen_name.extend(ts.screen_name)
-                created_at.extend(ts.created_at)
-                statuses_count.extend(ts.statuses_count)
-                followers_count.extend(ts.followers_count)
+            for i_src in range(len(ts.screen_name)):
+                if not ts.screen_name[i_src] in screen_name:
+                    name.append(ts.name[i_src])
+                    description.append(ts.description[i_src])
+                    screen_name.append(ts.screen_name[i_src])
+                    created_at.append(ts.created_at[i_src])
+                    statuses_count.append(ts.statuses_count[i_src])
+                    followers_count.append(ts.followers_count[i_src])
 
         # Assign number of statuses, number of followers, and compute
         # the followers to statuses ratio
@@ -350,15 +368,19 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config-file",
                         default="BluPenSource.cfg",
                         help="the configuration file")
-    parser.add_argument("-p", "--do-purge",
+    parser.add_argument("-p", "--do-purge-src",
                         action="store_true",
                         help="purge existing source")
+    parser.add_argument("-P", "--do-purge-all",
+                        action="store_true",
+                        help="purge existing source and author")
     args = parser.parse_args()
     
     # Read the input request JSON document from source/queue
     qu = QueueUtility()
     bps = BluPenSource(args.config_file)
-    bps.do_purge = args.do_purge
+    bps.source_do_purge = args.do_purge_src or args.do_purge_all
+    bps.author_do_purge = args.do_purge_all
     inp_file_name, inp_req_data = qu.read_queue(bps.source_requests_dir)
     out_file_name = os.path.basename(inp_file_name); out_req_data = {}
     if inp_file_name == "" or inp_req_data == {}:
