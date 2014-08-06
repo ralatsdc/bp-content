@@ -83,6 +83,7 @@ class CrisisCollection(object):
             data['service'] = "feed"
             data['type'] = collection_type
             data['name'] = author['title']
+            data['url'] = author['url']
             json_file_name = feed_author.pickle_file_name.split('/feed/')[1].replace('.pkl', '.json')
             data['json'] = os.path.join(self.document_root, 'feed', json_file_name)
             data['volume'] = 0
@@ -194,11 +195,24 @@ class CrisisCollection(object):
                 continue
             i_group += 1
 
+            # Load included flickr group content
+            try:
+                flickr_group = FlickrGroup(
+                    self.blu_pen_collection.blu_pen_author,
+                    u"@" + group['name'],
+                    group['nsid'],
+                    self.blu_pen_collection.flickr_content_dir)
+                flickr_group.load()
+            except Exception as exc:
+                self.logger.error(exc)
+                continue
+
             # Assemble data describing included flickr group
             data = {}
             data['service'] = "flickr"
             data['type'] = collection_type
-            data['name'] = group['nsid']
+            data['name'] = group['name']
+            data['url'] = "https://www.flickr.com/groups/" + group['nsid']
             json_file_name = pickle_file_name[i_group].split('/flickr/')[1].replace('.pkl', '.json')
             data['json'] = os.path.join(self.document_root, 'flickr', json_file_name)
             data['volume'] = volume[i_group]
@@ -300,11 +314,23 @@ class CrisisCollection(object):
                 continue
             i_author += 1
 
+            # Load included tumblr author content
+            try:
+                tumblr_author = TumblrAuthor(
+                    self.blu_pen_collection.blu_pen_author,
+                    urlparse.urlparse(author['url']).netloc,
+                    self.blu_pen_collection.tumblr_content_dir)
+                tumblr_author.load()
+            except Exception as exc:
+                self.logger.error(exc)
+                continue
+
             # Assemble data describing included tumblr author
             data = {}
             data['service'] = "tumblr"
             data['type'] = collection_type
-            data['name'] = author['url']
+            data['name'] = author['name']
+            data['url'] = author['url']
             json_file_name = pickle_file_name[i_author].split('/tumblr/')[1].replace('.pkl', '.json')
             data['json'] = os.path.join(self.document_root, 'tumblr', json_file_name)
             data['volume'] = volume[i_author]
@@ -412,11 +438,23 @@ class CrisisCollection(object):
                 continue
             i_author += 1
 
+            # Load included twitter author content
+            try:
+                twitter_author = TwitterAuthor(
+                    self.blu_pen_collection.blu_pen_author,
+                    u"@" + author['screen_name'],
+                    self.blu_pen_collection.twitter_content_dir)
+                twitter_author.load()
+            except Exception as exc:
+                self.logger.error(exc)
+                continue
+
             # Assemble data describing included twitter author
             data = {}
             data['service'] = "twitter"
             data['type'] = collection_type
-            data['name'] = author['screen_name']
+            data['name'] = author['name']
+            data['url'] = "https://twitter.com/" + author['screen_name']
             json_file_name = pickle_file_name[i_author].split('/twitter/')[1].replace('.pkl', '.json')
             data['json'] = os.path.join(self.document_root, 'twitter', json_file_name)
             data['volume'] = volume[i_author]
