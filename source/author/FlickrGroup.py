@@ -6,12 +6,14 @@ import logging
 import math
 import os
 import pickle
+import sys
 import time
 
 # Third-party imports
 import flickrapi
 
 # Local imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from utility.AuthorUtility import AuthorUtility
 
 class FlickrGroup(object):

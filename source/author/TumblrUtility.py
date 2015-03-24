@@ -5,12 +5,14 @@
 import logging
 import os
 import re
+import sys
 import urllib
 
 # Third-party imports
 from BeautifulSoup import BeautifulSoup
 
 # Local imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from author.BluPenAuthor import BluPenAuthor
 from author.TumblrAuthor import TumblrAuthor
 from utility.AuthorUtility import AuthorUtility

@@ -7,12 +7,14 @@ from datetime import datetime
 import logging
 import json
 import os
+import sys
 import urlparse
 
 # Third-party imports
 import numpy as np
 
 # Local imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from author.FeedAuthor import FeedAuthor
 from author.FeedUtility import FeedUtility
 from author.FlickrGroup import FlickrGroup

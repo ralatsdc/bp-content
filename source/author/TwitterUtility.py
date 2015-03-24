@@ -5,12 +5,14 @@ import json
 import logging
 import random
 import re
+import sys
 import zipfile
 
 # Third-party imports
 import twitter
 
 # Local imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from utility.ServiceError import ServiceError
 
 class TwitterUtility(object):

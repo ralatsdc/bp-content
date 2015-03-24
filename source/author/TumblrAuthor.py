@@ -9,6 +9,7 @@ import math
 import os
 import pickle
 import shutil
+import sys
 import time
 import urlparse
 
@@ -17,6 +18,7 @@ from lxml.html import soupparser
 import pytumblr
 
 # Local imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from utility.AuthorUtility import AuthorUtility
 
 class TumblrAuthor(object):
