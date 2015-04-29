@@ -97,7 +97,7 @@ class BluPenAuthor(object):
         if not os.path.exists(feed_author.pickle_file_name) or self.do_purge:
             feed_author.set_content(do_purge=self.do_purge)
             feed_author.set_image_urls()
-            feed_author.download_images()
+            # feed_author.download_images()
             feed_author.dump()
         else:
             feed_author.load()
@@ -111,7 +111,7 @@ class BluPenAuthor(object):
         flickr_group = FlickrGroup(self, source_word_str, group_id, self.flickr_content_dir)
         if not os.path.exists(flickr_group.pickle_file_name) or self.do_purge:
             flickr_group.set_photos(do_purge=self.do_purge)
-            flickr_group.download_photos()
+            # flickr_group.download_photos()
             flickr_group.dump()
         else:
             flickr_group.load()
@@ -125,7 +125,7 @@ class BluPenAuthor(object):
         instagram_author = InstagramAuthor(self, source_word_str, self.instagram_content_dir)
         if not os.path.exists(instagram_author.pickle_file_name) or self.do_purge:
             instagram_author.set_media(do_purge=self.do_purge)
-            instagram_author.download_images()
+            # instagram_author.download_images()
             instagram_author.dump()
         else:
             instagram_author.load()
@@ -139,7 +139,7 @@ class BluPenAuthor(object):
         tumblr_author = TumblrAuthor(self, subdomain, self.tumblr_content_dir)
         if not os.path.exists(tumblr_author.pickle_file_name) or self.do_purge:
             tumblr_author.set_posts(do_purge=self.do_purge)
-            tumblr_author.download_photos()
+            # tumblr_author.download_photos()
             tumblr_author.dump()
         else:
             tumblr_author.load()

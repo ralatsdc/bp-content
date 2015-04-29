@@ -106,16 +106,17 @@ class CrisisCollection(object):
                 if len(sample) < self.max_sample:
                     sample.append({'type': 'text',
                                    'value': content['value']})
-                iIFN = -1
-                for image_file_name in content['image_file_names']:
-                    iIFN += 1
-                    if len(sample) < self.max_sample:
-                        photo_url = content['image_urls'][iIFN]
-                        photo_file_name = os.path.join(self.document_root, 'feed',
-                                                       image_file_name.split('/feed/')[1])
-                        sample.append({'type': 'photo',
-                                       'url': photo_url,
-                                       'file_name': photo_file_name})
+                if 'image_file_names' in content.keys():
+                    iIFN = -1
+                    for image_file_name in content['image_file_names']:
+                        iIFN += 1
+                        if len(sample) < self.max_sample:
+                            photo_url = content['image_urls'][iIFN]
+                            photo_file_name = os.path.join(self.document_root, 'feed',
+                                                           image_file_name.split('/feed/')[1])
+                            sample.append({'type': 'photo',
+                                           'url': photo_url,
+                                           'file_name': photo_file_name})
 
                 # Assemble tags
                 if not 'tags' in content:
@@ -180,7 +181,10 @@ class CrisisCollection(object):
             volume = np.append(volume, group['photos'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_upload[0 : min(self.max_dates, len(days_fr_upload))])))
             age = np.append(age, np.mean(days_fr_upload[0 : min(self.max_dates, len(days_fr_upload))]))
-            engagement = np.append(engagement, group['members'] / group['photos'])
+            if group['photos'] != 0:
+                engagement = np.append(engagement, 1.0 * group['members'] / group['photos'])
+            else:
+                engagement = np.append(engagement, 0.0);
 
         # Digitize measurements describing included flickr group
         if len(volume) == 0:
@@ -231,8 +235,11 @@ class CrisisCollection(object):
                 # Assemble sample content
                 if len(sample) < self.max_sample:
                     photo_url = photo['url_m']
-                    photo_file_name = os.path.join(self.document_root, 'flickr',
-                                                   photo['file_name'].split('/flickr/')[1])
+                    if 'file_name' in photo.keys():
+                        photo_file_name = os.path.join(self.document_root, 'flickr',
+                                                       photo['file_name'].split('/flickr/')[1])
+                    else:
+                        photo_file_name = ''
                     sample.append({'type': 'photo',
                                    'url': photo_url,
                                    'file_name': photo_file_name})
@@ -258,7 +265,7 @@ class CrisisCollection(object):
             self.collection['sources'].append({'data': data, 'tags': tags})
 
     def assemble_tumblr_content(self, collection_type, inp_data):
-        """Assembles data and tags for all included tumblr author
+        """Assembles data and tags for all included tumblr authors.
 
         """
         # Initialize pickle file name for and measurements describing
@@ -299,7 +306,10 @@ class CrisisCollection(object):
             volume = np.append(volume, author['posts'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_post[0 : min(self.max_dates, len(days_fr_post))])))
             age = np.append(age, np.mean(days_fr_post[0 : min(self.max_dates, len(days_fr_post))]))
-            engagement = np.append(engagement, author['notes'] / author['posts'])
+            if author['posts'] != 0:
+                engagement = np.append(engagement, 1.0 * author['notes'] / author['posts'])
+            else:
+                engagement = np.append(engagement, 0.0);
 
         # Digitize measurements describing included tumblr author
         if len(volume) == 0:
@@ -353,10 +363,16 @@ class CrisisCollection(object):
                                        'value': post['body']})
 
                     elif post['type'] == 'photo':
-                        iAS = post['photos'][0]['alt_sizes_idx']
+                        if 'alt_sizes_idx' in post['photos'][0]:
+                            iAS = post['photos'][0]['alt_sizes_idx']
+                        else:
+                            iAS = 0
                         photo_url = post['photos'][0]['alt_sizes'][iAS]['url']
-                        photo_file_name = os.path.join(self.document_root, 'tumblr',
-                                                       post['photos'][0]['photo_file_name'].split('/tumblr/')[1])
+                        if 'photo_file_name' in post['photos'][0]:
+                            photo_file_name = os.path.join(self.document_root, 'tumblr',
+                                                           post['photos'][0]['photo_file_name'].split('/tumblr/')[1])
+                        else:
+                            photo_file_name = ''
                         sample.append({'type': 'photo',
                                        'url': photo_url,
                                        'file_name': photo_file_name})
@@ -383,7 +399,7 @@ class CrisisCollection(object):
             self.collection['sources'].append({'data': data, 'tags': tags})
 
     def assemble_twitter_content(self, collection_type, inp_data):
-        """Assembles data and tags for all included twitter authors
+        """Assembles data and tags for all included twitter authors.
 
         """
         # Initialize pickle file name for and measurements describing
@@ -423,7 +439,10 @@ class CrisisCollection(object):
             volume = np.append(volume, author['statuses'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_tweet[0 : min(self.max_dates, len(days_fr_tweet))])))
             age = np.append(age, np.mean(days_fr_tweet[0 : min(self.max_dates, len(days_fr_tweet))]))
-            engagement = np.append(engagement, author['followers'] / author['statuses'])
+            if author['statuses'] != 0:
+                engagement = np.append(engagement, 1.0 * author['followers'] / author['statuses'])
+            else:
+                engagement = np.append(engagement, 0.0)
 
         # Digitize measurements describing included twitter author
         if len(volume) == 0:

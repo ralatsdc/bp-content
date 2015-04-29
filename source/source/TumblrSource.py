@@ -156,7 +156,7 @@ class TumblrSource(object):
                 else:
                     posts = self.client.tagged(tag=unicode(source_word).encode('utf-8'), limit=limit, before=before)
 
-                # Collect uniaue blog names from posts
+                # Collect unique blog names from posts
                 host_names = set()
                 time_stamp = [float('inf')]
                 for post in posts:

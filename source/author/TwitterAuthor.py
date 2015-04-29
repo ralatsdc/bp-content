@@ -30,7 +30,7 @@ class TwitterAuthor(object):
     def __init__(self, blu_pen_author, source_words_str, content_dir,
                  start_date=datetime.date(2006, 07, 15) - datetime.timedelta(2),
                  stop_date=datetime.date.today() + datetime.timedelta(2),
-                 max_length=100, number_of_api_attempts=4, seconds_between_api_attempts=1):
+                 max_length=100, number_of_api_attempts=1, seconds_between_api_attempts=8):
         """Constructs a TwitterAuthor instance given source words.
 
         """
