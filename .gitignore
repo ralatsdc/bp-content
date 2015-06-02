@@ -17,3 +17,4 @@ packages/*/build
 packages/*/dist
 packages/*/doc
 packages/*/*.egg-info
+source/scratch/IndexFiles.index
