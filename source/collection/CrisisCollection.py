@@ -7,6 +7,7 @@ from datetime import datetime
 import logging
 import json
 import os
+import shutil
 import sys
 import urlparse
 
@@ -45,6 +46,11 @@ class CrisisCollection(object):
 
         # Initialize created attributes
         self.content_dir = os.path.join(self.blu_pen_collection.content_dir, u"crisis")
+        self.feed_index_dir = os.path.join(self.content_dir, u"feed")
+        self.flickr_index_dir = os.path.join(self.content_dir, u"flickr")
+        self.instagram_index_dir = os.path.join(self.content_dir, u"instagram")
+        self.tumblr_index_dir = os.path.join(self.content_dir, u"tumblr")
+        self.twitter_index_dir = os.path.join(self.content_dir, u"twitter")
         self.document_root = os.path.join(u"json", u"source")
         # TODO: Make these parameters
         self.max_dates = 20
@@ -64,6 +70,11 @@ class CrisisCollection(object):
         """Assembles data and tags for all included feed authors.
 
         """
+        # Make or remove files in feed index directory
+        if os.path.exists(self.feed_index_dir):
+            shutil.rmtree(self.feed_index_dir)
+        os.makedirs(self.feed_index_dir)
+
         # Consider each included feed author
         for author in author_request_data['authors']:
             if not author['include']:
@@ -105,7 +116,7 @@ class CrisisCollection(object):
                     continue
                 if len(sample) < self.max_sample:
                     sample.append({'type': 'text',
-                                   'value': content['value']})
+                                   'value': content['value']}) # Append text (key 'value' expected in collection JavaScript)
                 if 'image_file_names' in content.keys():
                     iIFN = -1
                     for image_file_name in content['image_file_names']:
@@ -116,7 +127,7 @@ class CrisisCollection(object):
                                                            image_file_name.split('/feed/')[1])
                             sample.append({'type': 'photo',
                                            'url': photo_url,
-                                           'file_name': photo_file_name})
+                                           'file_name': photo_file_name}) # And append photos (key 'url' expected in collection JavaScript)
 
                 # Assemble tags
                 if not 'tags' in content:
@@ -128,23 +139,33 @@ class CrisisCollection(object):
                     else:
                         tags[key] += 1
 
-            # Write assembled sample content for included feed author
+            # Write assembled sample text document for included feed
+            # author
+            out_file_path = os.path.join(self.feed_index_dir, feed_author.source_path + ".txt")
+            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+            for doc in sample:
+                if doc['type'] == "text":
+                    out_file.write(doc['text'] + "\n")
+            for key in tags.keys():
+                out_file.write(key + " ")
+            out_file.close()
+
+            # Write assembled sample JSON document for included feed
+            # author
             out_file_path = feed_author.pickle_file_name.replace('.pkl', '.json')
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
             out_file.close()
 
-            # Add assembled data and tags for included feed author to
-            # collection, tagged, or not
+            # Append assembled data and tags for included feed author
+            # to collection, tagged, or not
             self.collection['sources'].append({'data': data, 'tags': tags})
 
     def assemble_flickr_content(self, collection_type, author_request_data, source_request_data):
         """Assembles data and tags for all included flickr groups.
 
         """
-        # Initialize pickle file name for and measurements describing
-        # included flickr groups
-        pickle_file_name = []
+        # Initialize measurements describing included flickr groups
         volume = np.array([])
         frequency = np.array([])
         age = np.array([])
@@ -177,7 +198,6 @@ class CrisisCollection(object):
 
             # Accumulate pickle file name for and measurements
             # describing included flickr group
-            pickle_file_name.append(flickr_group.pickle_file_name)
             volume = np.append(volume, group['photos'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_upload[0 : min(self.max_dates, len(days_fr_upload))])))
             age = np.append(age, np.mean(days_fr_upload[0 : min(self.max_dates, len(days_fr_upload))]))
@@ -193,6 +213,11 @@ class CrisisCollection(object):
         frequency = np.digitize(frequency, sorted(np.percentile(frequency, self.percentiles))) - 50
         age = np.digitize(age, sorted(np.percentile(age, self.percentiles))) - 50
         engagement = np.digitize(engagement, sorted(np.percentile(engagement, self.terciles))) - 1
+
+        # Make or remove files in flickr index directory
+        if os.path.exists(self.flickr_index_dir):
+            shutil.rmtree(self.flickr_index_dir)
+        os.makedirs(self.flickr_index_dir)
 
         # Consider each included flickr group
         i_group = -1
@@ -219,7 +244,7 @@ class CrisisCollection(object):
             data['type'] = collection_type
             data['name'] = group['name']
             data['url'] = "https://www.flickr.com/groups/" + group['nsid']
-            json_file_name = pickle_file_name[i_group].split('/flickr/')[1].replace('.pkl', '.json')
+            json_file_name = flickr_group.pickle_file_name.split('/flickr/')[1].replace('.pkl', '.json')
             data['json'] = os.path.join(self.document_root, 'flickr', json_file_name)
             data['volume'] = volume[i_group]
             data['frequency'] = frequency[i_group]
@@ -234,15 +259,15 @@ class CrisisCollection(object):
 
                 # Assemble sample content
                 if len(sample) < self.max_sample:
-                    photo_url = photo['url_m']
                     if 'file_name' in photo.keys():
                         photo_file_name = os.path.join(self.document_root, 'flickr',
                                                        photo['file_name'].split('/flickr/')[1])
                     else:
                         photo_file_name = ''
                     sample.append({'type': 'photo',
-                                   'url': photo_url,
-                                   'file_name': photo_file_name})
+                                   'url': photo['url_m'],
+                                   'file_name': photo_file_name,
+                                   'title': photo['title']}) # Append photos (key 'url' expected in collection JavaScript)
 
                 # Assemble tags
                 if not 'tags' in photo:
@@ -254,23 +279,33 @@ class CrisisCollection(object):
                     else:
                         tags[key] += 1
 
-            # Write assembled sample content for included flickr group
-            out_file_path = pickle_file_name[i_group].replace('.pkl', '.json')
+            # Write assembled sample text document for included flickr
+            # group
+            out_file_path = os.path.join(self.flickr_index_dir, flickr_group.source_path + ".txt")
+            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+            for doc in sample:
+                out_file.write(doc['title'] + "\n")
+            for key in tags.keys():
+                out_file.write(key + " ")
+            out_file.close()
+
+            # Write assembled sample JSON document for included flickr
+            # group
+            out_file_path = flickr_group.pickle_file_name.replace('.pkl', '.json')
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
             out_file.close()
 
-            # Add assembled data and tags for included flickr group to
-            # collection, tagged, or not
+            # Append assembled data and tags for included flickr group
+            # to collection, tagged, or not
+            
             self.collection['sources'].append({'data': data, 'tags': tags})
 
     def assemble_tumblr_content(self, collection_type, author_request_data, source_request_data):
         """Assembles data and tags for all included tumblr authors.
 
         """
-        # Initialize pickle file name for and measurements describing
-        # included tumblr author
-        pickle_file_name = []
+        # Initialize measurements describing included tumblr author
         volume = np.array([])
         frequency = np.array([])
         age = np.array([])
@@ -302,7 +337,6 @@ class CrisisCollection(object):
 
             # Accumulate pickle file name for and measurements
             # describing included tumblr author
-            pickle_file_name.append(tumblr_author.pickle_file_name)
             volume = np.append(volume, author['posts'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_post[0 : min(self.max_dates, len(days_fr_post))])))
             age = np.append(age, np.mean(days_fr_post[0 : min(self.max_dates, len(days_fr_post))]))
@@ -318,6 +352,11 @@ class CrisisCollection(object):
         frequency = np.digitize(frequency, sorted(np.percentile(frequency, self.percentiles))) - 50
         age = np.digitize(age, sorted(np.percentile(age, self.percentiles))) - 50
         engagement = np.digitize(engagement, sorted(np.percentile(engagement, self.terciles))) - 1
+
+        # Make or remove files in tumblr index directory
+        if os.path.exists(self.tumblr_index_dir):
+            shutil.rmtree(self.tumblr_index_dir)
+        os.makedirs(self.tumblr_index_dir)
 
         # Consider each included tumblr author
         i_author = -1
@@ -343,7 +382,7 @@ class CrisisCollection(object):
             data['type'] = collection_type
             data['name'] = author['name']
             data['url'] = author['url']
-            json_file_name = pickle_file_name[i_author].split('/tumblr/')[1].replace('.pkl', '.json')
+            json_file_name = tumblr_author.pickle_file_name.split('/tumblr/')[1].replace('.pkl', '.json')
             data['json'] = os.path.join(self.document_root, 'tumblr', json_file_name)
             data['volume'] = volume[i_author]
             data['frequency'] = frequency[i_author]
@@ -360,7 +399,7 @@ class CrisisCollection(object):
                 if len(sample) < self.max_sample:
                     if post['type'] == 'text':
                         sample.append({'type': 'text',
-                                       'value': post['body']})
+                                       'value': post['body']}) # Append text (key 'value' expected in collection JavaScript)
 
                     elif post['type'] == 'photo':
                         if 'alt_sizes_idx' in post['photos'][0]:
@@ -375,8 +414,9 @@ class CrisisCollection(object):
                             photo_file_name = ''
                         sample.append({'type': 'photo',
                                        'url': photo_url,
-                                       'file_name': photo_file_name})
-
+                                       'file_name': photo_file_name}) # Or append photo (key 'url' expected in collection JavaScript)
+                                       # TODO: Add photo caption
+                                       
                 # Assemble tags
                 if not 'tags' in post:
                     continue
@@ -387,24 +427,34 @@ class CrisisCollection(object):
                     else:
                         tags[key] += 1
 
-            # Write assembled sample content for included tumblr
+            # Write assembled sample text document for included tumblr
             # author
-            out_file_path = pickle_file_name[i_author].replace('.pkl', '.json')
+            out_file_path = os.path.join(self.tumblr_index_dir, tumblr_author.subdomain + ".txt")
+            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+            for doc in sample:
+                if doc['type'] == "text":
+                    out_file.write(doc['value'] + "\n")
+                # TODO: Add photo caption
+            for key in tags.keys():
+                out_file.write(key + " ")
+            out_file.close()
+
+            # Write assembled sample JSON document for included tumblr
+            # author
+            out_file_path = tumblr_author.pickle_file_name.replace('.pkl', '.json')
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
             out_file.close()
 
-            # Add assembled data and tags for included tumblr author
-            # to collection, tagged, or not
+            # Append assembled data and tags for included tumblr
+            # author to collection, tagged, or not
             self.collection['sources'].append({'data': data, 'tags': tags})
 
     def assemble_twitter_content(self, collection_type, author_request_data, source_request_data):
         """Assembles data and tags for all included twitter authors.
 
         """
-        # Initialize pickle file name for and measurements describing
-        # included twitter authors
-        pickle_file_name = []
+        # Initialize measurements describing included twitter authors
         volume = np.array([])
         frequency = np.array([])
         age = np.array([])
@@ -435,7 +485,6 @@ class CrisisCollection(object):
 
             # Accumulate pickle file name for and measurements
             # describing included twitter author
-            pickle_file_name.append(twitter_author.pickle_file_name)
             volume = np.append(volume, author['statuses'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_tweet[0 : min(self.max_dates, len(days_fr_tweet))])))
             age = np.append(age, np.mean(days_fr_tweet[0 : min(self.max_dates, len(days_fr_tweet))]))
@@ -451,6 +500,11 @@ class CrisisCollection(object):
         frequency = np.digitize(frequency, sorted(np.percentile(frequency, self.percentiles))) - 50
         age = np.digitize(age, sorted(np.percentile(age, self.percentiles))) - 50
         engagement = np.digitize(engagement, sorted(np.percentile(engagement, self.terciles))) - 1
+
+        # Make or remove files in twitter index directory
+        if os.path.exists(self.twitter_index_dir):
+            shutil.rmtree(self.twitter_index_dir)
+        os.makedirs(self.twitter_index_dir)
 
         # Consider each included twitter author
         i_author = -1
@@ -476,7 +530,7 @@ class CrisisCollection(object):
             data['type'] = collection_type
             data['name'] = author['name']
             data['url'] = "https://twitter.com/" + author['screen_name']
-            json_file_name = pickle_file_name[i_author].split('/twitter/')[1].replace('.pkl', '.json')
+            json_file_name = twitter_author.pickle_file_name.split('/twitter/')[1].replace('.pkl', '.json')
             data['json'] = os.path.join(self.document_root, 'twitter', json_file_name)
             data['volume'] = volume[i_author]
             data['frequency'] = frequency[i_author]
@@ -492,7 +546,7 @@ class CrisisCollection(object):
                 # Assemble sample content
                 if len(sample) < self.max_sample:
                     sample.append({'type': 'text',
-                                   'value': text})
+                                   'value': text}) # Append text (key 'value' expected in collection JavaScript)
 
                 # Assemble tags
                 for tag in [token[1:] for token in text.split() if token.startswith('#')]:
@@ -502,15 +556,26 @@ class CrisisCollection(object):
                     else:
                         tags[key] += 1
 
-            # Write assembled sample content for included twitter
-            # author
-            out_file_path = pickle_file_name[i_author].replace('.pkl', '.json')
+            # Write assembled sample text document for included
+            # twitter author
+            out_file_path = os.path.join(self.twitter_index_dir, twitter_author.source_path + ".txt")
+            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+            for doc in sample:
+                if doc['type'] == "text":
+                    out_file.write(doc['value'] + "\n")
+            for key in tags.keys():
+                out_file.write(key + " ")
+            out_file.close()
+
+            # Write assembled sample JSON document for included
+            # twitter author
+            out_file_path = twitter_author.pickle_file_name.replace('.pkl', '.json')
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
             out_file.close()
 
-            # Add assembled data and tags for included twitter author
-            # to collection, tagged, or not
+            # Append assembled data and tags for included twitter
+            # author collection, tagged, or not
             self.collection['sources'].append({'data': data, 'tags': tags})
 
     def assemble_content(self):
