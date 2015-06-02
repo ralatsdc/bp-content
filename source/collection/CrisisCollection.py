@@ -48,7 +48,7 @@ class CrisisCollection(object):
         self.document_root = os.path.join(u"json", u"source")
         # TODO: Make these parameters
         self.max_dates = 20
-        self.max_sample = 9
+        self.max_sample = 100
         self.percentiles = range(1, 100, 1)
         self.terciles = [25, 75]
         self.collection = {}
@@ -60,12 +60,12 @@ class CrisisCollection(object):
         # Create a logger
         self.logger = logging.getLogger("CrisisCollection")
 
-    def assemble_feed_content(self, collection_type, inp_data):
+    def assemble_feed_content(self, collection_type, author_request_data, source_request_data):
         """Assembles data and tags for all included feed authors.
 
         """
         # Consider each included feed author
-        for author in inp_data['authors']:
+        for author in author_request_data['authors']:
             if not author['include']:
                 continue
 
@@ -138,7 +138,7 @@ class CrisisCollection(object):
             # collection, tagged, or not
             self.collection['sources'].append({'data': data, 'tags': tags})
 
-    def assemble_flickr_content(self, collection_type, inp_data):
+    def assemble_flickr_content(self, collection_type, author_request_data, source_request_data):
         """Assembles data and tags for all included flickr groups.
 
         """
@@ -151,7 +151,7 @@ class CrisisCollection(object):
         engagement = np.array([])
 
         # Consider each included flickr group
-        for group in inp_data['groups']:
+        for group in author_request_data['groups']:
             if not group['include']:
                 continue
 
@@ -196,7 +196,7 @@ class CrisisCollection(object):
 
         # Consider each included flickr group
         i_group = -1
-        for group in inp_data['groups']:
+        for group in author_request_data['groups']:
             if not group['include']:
                 continue
             i_group += 1
@@ -264,7 +264,7 @@ class CrisisCollection(object):
             # collection, tagged, or not
             self.collection['sources'].append({'data': data, 'tags': tags})
 
-    def assemble_tumblr_content(self, collection_type, inp_data):
+    def assemble_tumblr_content(self, collection_type, author_request_data, source_request_data):
         """Assembles data and tags for all included tumblr authors.
 
         """
@@ -277,7 +277,7 @@ class CrisisCollection(object):
         engagement = np.array([])
 
         # Consider each included tumblr author
-        for author in inp_data['authors']:
+        for author in author_request_data['authors']:
             if not author['include']:
                 continue
 
@@ -321,7 +321,7 @@ class CrisisCollection(object):
 
         # Consider each included tumblr author
         i_author = -1
-        for author in inp_data['authors']:
+        for author in author_request_data['authors']:
             if not author['include']:
                 continue
             i_author += 1
@@ -398,7 +398,7 @@ class CrisisCollection(object):
             # to collection, tagged, or not
             self.collection['sources'].append({'data': data, 'tags': tags})
 
-    def assemble_twitter_content(self, collection_type, inp_data):
+    def assemble_twitter_content(self, collection_type, author_request_data, source_request_data):
         """Assembles data and tags for all included twitter authors.
 
         """
@@ -411,7 +411,7 @@ class CrisisCollection(object):
         engagement = np.array([])
 
         # Consider each included twitter author
-        for author in inp_data['authors']:
+        for author in author_request_data['authors']:
             if not author['include']:
                 continue
 
@@ -454,7 +454,7 @@ class CrisisCollection(object):
 
         # Consider each included twitter author
         i_author = -1
-        for author in inp_data['authors']:
+        for author in author_request_data['authors']:
             if not author['include']:
                 continue
             i_author += 1
@@ -523,39 +523,68 @@ class CrisisCollection(object):
             # Consider each collection type
             for collection_type in self.collection_types:
 
-                # Assign name and path of input file containing author
-                # content
-                inp_file_name = "{0}-{1}-{2}.json".format(
+                # Assign name and path of input file containing source
+                # request
+                source_request_file_name = "{0}-{1}-{2}.json".format(
                     collection_service, self.collection_country, collection_type)
-                inp_file_path = os.path.join(
-                    self.blu_pen_collection.author_requests_dir, 'did-pop',
-                    inp_file_name)
-                if not os.path.exists(inp_file_path):
+                source_request_file_path = os.path.join(
+                    self.blu_pen_collection.source_requests_dir, 'did-pop',
+                    source_request_file_name)
+                if not os.path.exists(source_request_file_path):
                     continue
 
-                # Load input file containing author content
-                inp_file = codecs.open(inp_file_path, encoding='utf-8', mode='r')
-                inp_data = json.loads(inp_file.read())
-                inp_file.close()
+                # Load input file containing source request
+                source_request_file = codecs.open(source_request_file_path, encoding='utf-8', mode='r')
+                source_request_data = json.loads(source_request_file.read())
+                source_request_file.close()
 
-                # Assemble author content data
-                if inp_data['service'] == "feed":
-                    self.assemble_feed_content(collection_type, inp_data)
+                # Assign name and path of input file containing author
+                # request
+                author_request_file_name = "{0}-{1}-{2}.json".format(
+                    collection_service, self.collection_country, collection_type)
+                author_request_file_path = os.path.join(
+                    self.blu_pen_collection.author_requests_dir, 'did-pop',
+                    author_request_file_name)
+                if not os.path.exists(author_request_file_path):
+                    continue
 
-                if inp_data['service'] == "flickr":
-                    self.assemble_flickr_content(collection_type, inp_data)
+                # Load input file containing author request
+                author_request_file = codecs.open(author_request_file_path, encoding='utf-8', mode='r')
+                author_request_data = json.loads(author_request_file.read())
+                author_request_file.close()
 
-                elif inp_data['service'] == "tumblr":
-                    self.assemble_tumblr_content(collection_type, inp_data)
+                # Assemble author content
+                if author_request_data['service'] == "feed":
+                    self.assemble_feed_content(collection_type, author_request_data, source_request_data)
 
-                elif inp_data['service'] == "twitter":
-                    self.assemble_twitter_content(collection_type, inp_data)
+                if author_request_data['service'] == "flickr":
+                    self.assemble_flickr_content(collection_type, author_request_data, source_request_data)
+
+                elif author_request_data['service'] == "tumblr":
+                    self.assemble_tumblr_content(collection_type, author_request_data, source_request_data)
+
+                elif author_request_data['service'] == "twitter":
+                    self.assemble_twitter_content(collection_type, author_request_data, source_request_data)
 
         # Initialize assembled collection sources and tags for export
         export = {}
         export['country'] = self.collection_country
         export['sources'] = []
         export['tags'] = []
+
+
+
+        # source['data']['include'] = True
+        # export['sources'].append(source['data'])
+
+        # tag = {'tag': collection_tag, 'type': collection_type, 'count': collection_tags[collection_tag]}
+        # export['tags'].append(tag)
+        
+        # for source in self.collection['sources']:
+        #     source_tags = source['tags']
+        #     source_data = source['data']
+
+
 
         # Sort source tags by collection type, and count occurrence of
         # each tag in the collection

@@ -44,6 +44,7 @@ class BluPenCollection(object):
         self.collection_requests_dir = self.config.get("collection", "requests_dir")
         self.content_dir = self.config.get("collection", "content_dir")
 
+        self.source_requests_dir = self.config.get("source", "requests_dir")
         self.author_requests_dir = self.config.get("author", "requests_dir")
 
         self.feed_content_dir = self.config.get("feed", "content_dir")
