@@ -71,7 +71,7 @@ class TumblrSource(object):
             self.logger.error(err_msg)
             raise Exception(err_msg.encode('utf-8'))
 
-    def set_source(self, max_n_host_names=100, do_purge=False):
+    def set_source(self, max_n_host_names=1000, do_purge=False):
         """Create and dump, or load, the TumblrSource pickle.
 
         """

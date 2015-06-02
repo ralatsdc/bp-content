@@ -161,7 +161,7 @@ class BluPenSource(object):
 
             # Accumulate blog info, and posts
             for b_p in ts.blog_posts:
-                if not 'blog' in b_p:
+                if b_p is None or not 'blog' in b_p:
                     continue
                 h_n = b_p['blog']['name']
                 if not h_n in host_names:
@@ -200,9 +200,11 @@ class BluPenSource(object):
                 posts = blog['posts']
                 for post in posts:
 
-                    # Count the appearances of the current source word in
-                    # the current post of the current blog
-                    n_tags += len(re.findall(source_word, "".join(post['tags']), re.I))
+                    # Count the appearances of the word in the current
+                    # source word (possibly phrase) in current post of
+                    # the current blog
+                    for word in source_word.split():
+                        n_tags += len(re.findall(word, "".join(post['tags']), re.I))
 
             # Note the total number of tag appearances for the current
             # blog
@@ -221,6 +223,7 @@ class BluPenSource(object):
         posts = []
         likes = []
         notes = []
+        words = []
         for i_blg in index_blog:
 
             info = blog_posts[i_blg]['blog']
@@ -240,12 +243,16 @@ class BluPenSource(object):
                     note_count += post['note_count']
             notes.append(note_count)
 
+            words.append(np_total_tags[i_blg])
+
         # Assign number of posts, number of notes, and compute the
         # notes to posts ratio
+        # TODO: Understand why likes not used?
         n_posts = np.array(posts)
         n_notes = np.array(notes)
         n_trusting = np.divide(n_notes, n_posts)
-
+        n_words = np.array(words)
+        
         # Create a dictionary of blogs in order to print a JSON document
         # to a file
         blogs = []
@@ -271,6 +278,7 @@ class BluPenSource(object):
             blog['posts'] = n_posts[i_blg]
             blog['notes'] = n_notes[i_blg]
             blog['trusting'] = n_trusting[i_blg]
+            blog['words'] = n_words[i_blg]
             blog['include'] = True
             blogs.append(blog)
 
