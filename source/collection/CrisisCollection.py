@@ -13,6 +13,14 @@ import urlparse
 
 # Third-party imports
 import numpy as np
+import lucene
+from java.io import File
+from org.apache.lucene.analysis.miscellaneous import LimitTokenCountAnalyzer
+from org.apache.lucene.analysis.standard import StandardAnalyzer
+from org.apache.lucene.document import Document, Field, FieldType
+from org.apache.lucene.index import FieldInfo, IndexWriter, IndexWriterConfig
+from org.apache.lucene.store import SimpleFSDirectory
+from org.apache.lucene.util import Version
 
 # Local imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -46,11 +54,8 @@ class CrisisCollection(object):
 
         # Initialize created attributes
         self.content_dir = os.path.join(self.blu_pen_collection.content_dir, u"crisis")
-        self.feed_index_dir = os.path.join(self.content_dir, u"feed")
-        self.flickr_index_dir = os.path.join(self.content_dir, u"flickr")
-        self.instagram_index_dir = os.path.join(self.content_dir, u"instagram")
-        self.tumblr_index_dir = os.path.join(self.content_dir, u"tumblr")
-        self.twitter_index_dir = os.path.join(self.content_dir, u"twitter")
+        self.documents_dir = os.path.join(self.content_dir, u"documents")
+        self.index_dir = os.path.join(self.content_dir, u"index")
         self.document_root = os.path.join(u"json", u"source")
         # TODO: Make these parameters
         self.max_dates = 20
@@ -70,11 +75,6 @@ class CrisisCollection(object):
         """Assembles data and tags for all included feed authors.
 
         """
-        # Make or remove files in feed index directory
-        if os.path.exists(self.feed_index_dir):
-            shutil.rmtree(self.feed_index_dir)
-        os.makedirs(self.feed_index_dir)
-
         # Consider each included feed author
         for author in author_request_data['authors']:
             if not author['include']:
@@ -115,19 +115,23 @@ class CrisisCollection(object):
                 if content == None:
                     continue
                 if len(sample) < self.max_sample:
+                    # Append text (key 'value' expected in collection
+                    # JavaScript)
                     sample.append({'type': 'text',
-                                   'value': content['value']}) # Append text (key 'value' expected in collection JavaScript)
+                                   'value': content['value']})
                 if 'image_file_names' in content.keys():
                     iIFN = -1
                     for image_file_name in content['image_file_names']:
                         iIFN += 1
                         if len(sample) < self.max_sample:
-                            photo_url = content['image_urls'][iIFN]
-                            photo_file_name = os.path.join(self.document_root, 'feed',
+                            image_url = content['image_urls'][iIFN]
+                            image_file_name = os.path.join(self.document_root, 'feed',
                                                            image_file_name.split('/feed/')[1])
+                            # And append photos (key 'url' expected in
+                            # collection JavaScript)
                             sample.append({'type': 'photo',
-                                           'url': photo_url,
-                                           'file_name': photo_file_name}) # And append photos (key 'url' expected in collection JavaScript)
+                                           'url': image_url,
+                                           'file_name': image_file_name})
 
                 # Assemble tags
                 if not 'tags' in content:
@@ -141,7 +145,7 @@ class CrisisCollection(object):
 
             # Write assembled sample text document for included feed
             # author
-            out_file_path = os.path.join(self.feed_index_dir, feed_author.source_path + ".txt")
+            out_file_path = os.path.join(self.documents_dir, "feed", feed_author.source_path + ".txt")
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             for doc in sample:
                 if doc['type'] == "text":
@@ -214,11 +218,6 @@ class CrisisCollection(object):
         age = np.digitize(age, sorted(np.percentile(age, self.percentiles))) - 50
         engagement = np.digitize(engagement, sorted(np.percentile(engagement, self.terciles))) - 1
 
-        # Make or remove files in flickr index directory
-        if os.path.exists(self.flickr_index_dir):
-            shutil.rmtree(self.flickr_index_dir)
-        os.makedirs(self.flickr_index_dir)
-
         # Consider each included flickr group
         i_group = -1
         for group in author_request_data['groups']:
@@ -255,6 +254,7 @@ class CrisisCollection(object):
             # included flickr group, counting occurrence of each tag
             sample = []
             tags = {}
+            # TODO: Sort reverse chronologically
             for photo in flickr_group.photos:
 
                 # Assemble sample content
@@ -264,10 +264,12 @@ class CrisisCollection(object):
                                                        photo['file_name'].split('/flickr/')[1])
                     else:
                         photo_file_name = ''
+                    # Append photos (key 'url' expected in collection
+                    # JavaScript)
                     sample.append({'type': 'photo',
                                    'url': photo['url_m'],
                                    'file_name': photo_file_name,
-                                   'title': photo['title']}) # Append photos (key 'url' expected in collection JavaScript)
+                                   'title': photo['title']})
 
                 # Assemble tags
                 if not 'tags' in photo:
@@ -281,7 +283,7 @@ class CrisisCollection(object):
 
             # Write assembled sample text document for included flickr
             # group
-            out_file_path = os.path.join(self.flickr_index_dir, flickr_group.source_path + ".txt")
+            out_file_path = os.path.join(self.documents_dir, "flickr", flickr_group.source_path + ".txt")
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             for doc in sample:
                 out_file.write(doc['title'] + "\n")
@@ -298,7 +300,6 @@ class CrisisCollection(object):
 
             # Append assembled data and tags for included flickr group
             # to collection, tagged, or not
-            
             self.collection['sources'].append({'data': data, 'tags': tags})
 
     def assemble_tumblr_content(self, collection_type, author_request_data, source_request_data):
@@ -353,11 +354,6 @@ class CrisisCollection(object):
         age = np.digitize(age, sorted(np.percentile(age, self.percentiles))) - 50
         engagement = np.digitize(engagement, sorted(np.percentile(engagement, self.terciles))) - 1
 
-        # Make or remove files in tumblr index directory
-        if os.path.exists(self.tumblr_index_dir):
-            shutil.rmtree(self.tumblr_index_dir)
-        os.makedirs(self.tumblr_index_dir)
-
         # Consider each included tumblr author
         i_author = -1
         for author in author_request_data['authors']:
@@ -393,13 +389,16 @@ class CrisisCollection(object):
             # included tumblr author, counting occurrence of each tag
             sample = []
             tags = {}
+            # TODO: Sort reverse chronologically
             for post in tumblr_author.posts:
 
                 # Assemble sample content
                 if len(sample) < self.max_sample:
                     if post['type'] == 'text':
+                        # Append text (key 'value' expected in
+                        # collection JavaScript)
                         sample.append({'type': 'text',
-                                       'value': post['body']}) # Append text (key 'value' expected in collection JavaScript)
+                                       'value': post['body']})
 
                     elif post['type'] == 'photo':
                         if 'alt_sizes_idx' in post['photos'][0]:
@@ -407,14 +406,17 @@ class CrisisCollection(object):
                         else:
                             iAS = 0
                         photo_url = post['photos'][0]['alt_sizes'][iAS]['url']
-                        if 'photo_file_name' in post['photos'][0]:
+                        if 'photo_file_name' in post['photos'][0] and not post['photos'][0]['photo_file_name'] == "":
                             photo_file_name = os.path.join(self.document_root, 'tumblr',
                                                            post['photos'][0]['photo_file_name'].split('/tumblr/')[1])
                         else:
                             photo_file_name = ''
+                            
+                        # Or append photo (key 'url' expected in
+                        # collection JavaScript)
                         sample.append({'type': 'photo',
                                        'url': photo_url,
-                                       'file_name': photo_file_name}) # Or append photo (key 'url' expected in collection JavaScript)
+                                       'file_name': photo_file_name})
                                        # TODO: Add photo caption
                                        
                 # Assemble tags
@@ -429,7 +431,7 @@ class CrisisCollection(object):
 
             # Write assembled sample text document for included tumblr
             # author
-            out_file_path = os.path.join(self.tumblr_index_dir, tumblr_author.subdomain + ".txt")
+            out_file_path = os.path.join(self.documents_dir, "tumblr", tumblr_author.subdomain + ".txt")
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             for doc in sample:
                 if doc['type'] == "text":
@@ -501,11 +503,6 @@ class CrisisCollection(object):
         age = np.digitize(age, sorted(np.percentile(age, self.percentiles))) - 50
         engagement = np.digitize(engagement, sorted(np.percentile(engagement, self.terciles))) - 1
 
-        # Make or remove files in twitter index directory
-        if os.path.exists(self.twitter_index_dir):
-            shutil.rmtree(self.twitter_index_dir)
-        os.makedirs(self.twitter_index_dir)
-
         # Consider each included twitter author
         i_author = -1
         for author in author_request_data['authors']:
@@ -541,12 +538,15 @@ class CrisisCollection(object):
             # included twitter author, counting occurrence of each tag
             sample = []
             tags = {}
+            # TODO: Sort reverse chronologically
             for text in twitter_author.clean_text:
 
                 # Assemble sample content
                 if len(sample) < self.max_sample:
+                    # Append text (key 'value' expected in collection
+                    # JavaScript)
                     sample.append({'type': 'text',
-                                   'value': text}) # Append text (key 'value' expected in collection JavaScript)
+                                   'value': text})
 
                 # Assemble tags
                 for tag in [token[1:] for token in text.split() if token.startswith('#')]:
@@ -558,7 +558,7 @@ class CrisisCollection(object):
 
             # Write assembled sample text document for included
             # twitter author
-            out_file_path = os.path.join(self.twitter_index_dir, twitter_author.source_path + ".txt")
+            out_file_path = os.path.join(self.documents_dir, "twitter", twitter_author.source_path + ".txt")
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             for doc in sample:
                 if doc['type'] == "text":
@@ -582,8 +582,16 @@ class CrisisCollection(object):
         """Assembles data and tags for all included author and groups.
 
         """
+        # Make empty documents directory
+        if os.path.exists(self.documents_dir):
+            shutil.rmtree(self.documents_dir)
+        os.makedirs(self.documents_dir)
+
         # Consider each collection service
         for collection_service in self.collection_services:
+
+            # Make service documents directory
+            os.makedirs(os.path.join(self.documents_dir, collection_service))
 
             # Consider each collection type
             for collection_type in self.collection_types:
@@ -618,7 +626,7 @@ class CrisisCollection(object):
                 author_request_data = json.loads(author_request_file.read())
                 author_request_file.close()
 
-                # Assemble author content
+                # Assemble author content, writing sample text and JSON documents
                 if author_request_data['service'] == "feed":
                     self.assemble_feed_content(collection_type, author_request_data, source_request_data)
 
@@ -637,8 +645,6 @@ class CrisisCollection(object):
         export['sources'] = []
         export['tags'] = []
 
-
-
         # source['data']['include'] = True
         # export['sources'].append(source['data'])
 
@@ -648,8 +654,6 @@ class CrisisCollection(object):
         # for source in self.collection['sources']:
         #     source_tags = source['tags']
         #     source_data = source['data']
-
-
 
         # Sort source tags by collection type, and count occurrence of
         # each tag in the collection
@@ -662,6 +666,7 @@ class CrisisCollection(object):
                 else:
                     self.collection['tags'][collection_type][source_tag] += 1
 
+        # TODO: Update
         # Compute source score as the product of the occurrence of the
         # tag in the source and the occurrence of the tag in the
         # collection
@@ -671,6 +676,61 @@ class CrisisCollection(object):
             source['data']['score'] = 0
             for source_tag in source_tags:
                 source['data']['score'] += source_tags[source_tag] * self.collection['tags'][collection_type][source_tag]
+
+        # Make an empty index directory
+        if os.path.exists(self.index_dir):
+            shutil.rmtree(self.index_dir)
+        os.makedirs(self.index_dir)
+
+        # Initialize an index writer
+        lucene.initVM(vmargs=['-Djava.awt.headless=true'])
+        store = SimpleFSDirectory(File(self.index_dir))
+        analyzer = StandardAnalyzer(Version.LUCENE_CURRENT)
+        analyzer = LimitTokenCountAnalyzer(analyzer, 1048576)
+        config = IndexWriterConfig(Version.LUCENE_CURRENT, analyzer)
+        config.setOpenMode(IndexWriterConfig.OpenMode.CREATE)
+        writer = IndexWriter(store, config)
+
+        # Define a secondary, decriptive field
+        t1 = FieldType()
+        t1.setIndexed(True)
+        t1.setStored(True)
+        t1.setTokenized(False)
+        t1.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS)
+        
+        # Define a primary, contents field
+        t2 = FieldType()
+        t2.setIndexed(True)
+        t2.setStored(False)
+        t2.setTokenized(True)
+        t2.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS_AND_POSITIONS)
+
+        # Index the documents directory
+        for root, dirnames, filenames in os.walk(self.documents_dir):
+            for filename in filenames:
+                if not filename.endswith('.txt'):
+                    continue
+                self.logger.info(u"adding {0}".format(filename))
+                try:
+                    path = os.path.join(root, filename)
+                    file = open(path)
+                    contents = unicode(file.read(), 'iso-8859-1')
+                    file.close()
+                    doc = Document()
+                    doc.add(Field("name", filename, t1))
+                    doc.add(Field("path", root, t1))
+                    if len(contents) > 0:
+                        doc.add(Field("contents", contents, t2))
+                    else:
+                        self.logger.warning(u"no content in {0}".format(filename))
+                    writer.addDocument(doc)
+                except Exception as exc:
+                    self.logger.error(u"could not index {0}".format(filename))
+                    self.logger.error(exc)
+
+        # Commit the index and close the index writer
+        writer.commit()
+        writer.close()
 
         # Identify top sources for each service by score, and append
         # data from all sources for export
@@ -698,7 +758,6 @@ class CrisisCollection(object):
         i_tags = {}
         for collection_type in self.collection_types:
             i_tags[collection_type] = 0
-        for collection_type in self.collection_types:
             collection_tags = self.collection['tags'][collection_type]
             for collection_tag in sorted(collection_tags, key=collection_tags.get, reverse=True):
                 tag = {'tag': collection_tag, 'type': collection_type, 'count': collection_tags[collection_tag]}
