@@ -87,12 +87,12 @@ class BluPenCollection(object):
             root.addHandler(file_handler)
         self.logger = logging.getLogger("BluPenCollection")
 
-    def assemble_crisis_collection(self, country):
+    def assemble_crisis_collection(self, country, query):
         """Assemble the crisis collection for the specified country.
 
         """
         self.logger.info(u"assembling content for {0}".format(country))
-        crisis_collection = CrisisCollection(self, country)
+        crisis_collection = CrisisCollection(self, country, query)
         crisis_collection.assemble_content()
         self.logger.info(u"content assembled for {0}".format(country))
 
@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
     # Assemble content for the specified collection
     if inp_req_data['collection'] == 'crisis':
-        bpc.assemble_crisis_collection(inp_req_data['country'])
+        bpc.assemble_crisis_collection(inp_req_data['country'], inp_req_data['query'])
 
     # Write the input request JSON document to collection/did-pop
     qu.write_queue(bpc.collection_requests_dir, out_file_name, inp_req_data)

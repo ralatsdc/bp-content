@@ -18,7 +18,9 @@ from java.io import File
 from org.apache.lucene.analysis.miscellaneous import LimitTokenCountAnalyzer
 from org.apache.lucene.analysis.standard import StandardAnalyzer
 from org.apache.lucene.document import Document, Field, FieldType
-from org.apache.lucene.index import FieldInfo, IndexWriter, IndexWriterConfig
+from org.apache.lucene.index import DirectoryReader, FieldInfo, IndexWriter, IndexWriterConfig
+from org.apache.lucene.queryparser.classic import QueryParser
+from org.apache.lucene.search import IndexSearcher
 from org.apache.lucene.store import SimpleFSDirectory
 from org.apache.lucene.util import Version
 
@@ -34,7 +36,7 @@ class CrisisCollection(object):
     """Represents an individual crisis collection.
 
     """
-    def __init__(self, blu_pen_collection, collection_country,
+    def __init__(self, blu_pen_collection, collection_country, collection_query,
                  collection_services=None, collection_types=None):
         """Constructs a CrisisCollection instance.
 
@@ -43,6 +45,7 @@ class CrisisCollection(object):
         self.blu_pen_collection = blu_pen_collection
         self.feed_utility = FeedUtility()
         self.collection_country = collection_country
+        self.collection_query = collection_query
         if collection_services is None:
             self.collection_services = ["feed", "flickr", "tumblr", "twitter"]
         else:
@@ -59,7 +62,8 @@ class CrisisCollection(object):
         self.document_root = os.path.join(u"json", u"source")
         # TODO: Make these parameters
         self.max_dates = 20
-        self.max_sample = 100
+        self.max_sample = 100 # Maximum number of content samples per author
+        self.max_documents = 100 # Maximum number of author documents to score
         self.percentiles = range(1, 100, 1)
         self.terciles = [25, 75]
         self.collection = {}
@@ -71,7 +75,7 @@ class CrisisCollection(object):
         # Create a logger
         self.logger = logging.getLogger("CrisisCollection")
 
-    def assemble_feed_content(self, collection_type, author_request_data, source_request_data):
+    def assemble_feed_content(self, collection_type, author_request_data):
         """Assembles data and tags for all included feed authors.
 
         """
@@ -97,8 +101,8 @@ class CrisisCollection(object):
             data['type'] = collection_type
             data['name'] = author['title']
             data['url'] = author['url']
-            json_file_name = feed_author.pickle_file_name.split('/feed/')[1].replace('.pkl', '.json')
-            data['json'] = os.path.join(self.document_root, 'feed', json_file_name)
+            json_file_name = feed_author.pickle_file_name.split('/feed/')[1].replace(".pkl", ".json")
+            data['json'] = os.path.join(self.document_root, u"feed", json_file_name)
             data['volume'] = 0
             data['frequency'] = 0
             data['age'] = 0
@@ -117,7 +121,7 @@ class CrisisCollection(object):
                 if len(sample) < self.max_sample:
                     # Append text (key 'value' expected in collection
                     # JavaScript)
-                    sample.append({'type': 'text',
+                    sample.append({'type': "text",
                                    'value': content['value']})
                 if 'image_file_names' in content.keys():
                     iIFN = -1
@@ -125,11 +129,11 @@ class CrisisCollection(object):
                         iIFN += 1
                         if len(sample) < self.max_sample:
                             image_url = content['image_urls'][iIFN]
-                            image_file_name = os.path.join(self.document_root, 'feed',
+                            image_file_name = os.path.join(self.document_root, u"feed",
                                                            image_file_name.split('/feed/')[1])
                             # And append photos (key 'url' expected in
                             # collection JavaScript)
-                            sample.append({'type': 'photo',
+                            sample.append({'type': "photo",
                                            'url': image_url,
                                            'file_name': image_file_name})
 
@@ -143,29 +147,32 @@ class CrisisCollection(object):
                     else:
                         tags[key] += 1
 
-            # Write assembled sample text document for included feed
-            # author
-            out_file_path = os.path.join(self.documents_dir, "feed", feed_author.source_path + ".txt")
-            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
-            for doc in sample:
-                if doc['type'] == "text":
-                    out_file.write(doc['text'] + "\n")
-            for key in tags.keys():
-                out_file.write(key + " ")
-            out_file.close()
-
             # Write assembled sample JSON document for included feed
             # author
-            out_file_path = feed_author.pickle_file_name.replace('.pkl', '.json')
+            out_file_path = feed_author.pickle_file_name.replace(".pkl", ".json")
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
             out_file.close()
 
-            # Append assembled data and tags for included feed author
-            # to collection, tagged, or not
-            self.collection['sources'].append({'data': data, 'tags': tags})
+            # Write assembled sample text document for included feed
+            # author
+            out_file_path = os.path.join(self.documents_dir, u"feed", collection_type, feed_author.source_path + u".txt")
+            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+            for doc in sample:
+                try:
+                    if doc['type'] == "text":
+                        out_file.write(doc['value'] + "\n")
+                except Exception as exc:
+                    pass
+            for key in tags.keys():
+                out_file.write(key + " ")
+            out_file.close()
 
-    def assemble_flickr_content(self, collection_type, author_request_data, source_request_data):
+            # Assign assembled data and tags for included feed author
+            # to collection, tagged, or not
+            self.collection[out_file_path] = {'data': data, 'tags': tags}
+
+    def assemble_flickr_content(self, collection_type, author_request_data):
         """Assembles data and tags for all included flickr groups.
 
         """
@@ -242,9 +249,9 @@ class CrisisCollection(object):
             data['service'] = "flickr"
             data['type'] = collection_type
             data['name'] = group['name']
-            data['url'] = "https://www.flickr.com/groups/" + group['nsid']
-            json_file_name = flickr_group.pickle_file_name.split('/flickr/')[1].replace('.pkl', '.json')
-            data['json'] = os.path.join(self.document_root, 'flickr', json_file_name)
+            data['url'] = u"https://www.flickr.com/groups/" + group['nsid']
+            json_file_name = flickr_group.pickle_file_name.split('/flickr/')[1].replace(".pkl", ".json")
+            data['json'] = os.path.join(self.document_root, u"flickr", json_file_name)
             data['volume'] = volume[i_group]
             data['frequency'] = frequency[i_group]
             data['age'] = age[i_group]
@@ -260,13 +267,13 @@ class CrisisCollection(object):
                 # Assemble sample content
                 if len(sample) < self.max_sample:
                     if 'file_name' in photo.keys():
-                        photo_file_name = os.path.join(self.document_root, 'flickr',
+                        photo_file_name = os.path.join(self.document_root, u"flickr",
                                                        photo['file_name'].split('/flickr/')[1])
                     else:
-                        photo_file_name = ''
+                        photo_file_name = ""
                     # Append photos (key 'url' expected in collection
                     # JavaScript)
-                    sample.append({'type': 'photo',
+                    sample.append({'type': "photo",
                                    'url': photo['url_m'],
                                    'file_name': photo_file_name,
                                    'title': photo['title']})
@@ -281,9 +288,16 @@ class CrisisCollection(object):
                     else:
                         tags[key] += 1
 
+            # Write assembled sample JSON document for included flickr
+            # group
+            out_file_path = flickr_group.pickle_file_name.replace(".pkl", ".json")
+            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+            out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
+            out_file.close()
+
             # Write assembled sample text document for included flickr
             # group
-            out_file_path = os.path.join(self.documents_dir, "flickr", flickr_group.source_path + ".txt")
+            out_file_path = os.path.join(self.documents_dir, u"flickr", collection_type, flickr_group.source_path + u".txt")
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             for doc in sample:
                 out_file.write(doc['title'] + "\n")
@@ -291,18 +305,11 @@ class CrisisCollection(object):
                 out_file.write(key + " ")
             out_file.close()
 
-            # Write assembled sample JSON document for included flickr
-            # group
-            out_file_path = flickr_group.pickle_file_name.replace('.pkl', '.json')
-            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
-            out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
-            out_file.close()
-
-            # Append assembled data and tags for included flickr group
+            # Assign assembled data and tags for included flickr group
             # to collection, tagged, or not
-            self.collection['sources'].append({'data': data, 'tags': tags})
+            self.collection[out_file_path] = {'data': data, 'tags': tags}
 
-    def assemble_tumblr_content(self, collection_type, author_request_data, source_request_data):
+    def assemble_tumblr_content(self, collection_type, author_request_data):
         """Assembles data and tags for all included tumblr authors.
 
         """
@@ -378,8 +385,8 @@ class CrisisCollection(object):
             data['type'] = collection_type
             data['name'] = author['name']
             data['url'] = author['url']
-            json_file_name = tumblr_author.pickle_file_name.split('/tumblr/')[1].replace('.pkl', '.json')
-            data['json'] = os.path.join(self.document_root, 'tumblr', json_file_name)
+            json_file_name = tumblr_author.pickle_file_name.split('/tumblr/')[1].replace(".pkl", ".json")
+            data['json'] = os.path.join(self.document_root, u"tumblr", json_file_name)
             data['volume'] = volume[i_author]
             data['frequency'] = frequency[i_author]
             data['age'] = age[i_author]
@@ -394,10 +401,10 @@ class CrisisCollection(object):
 
                 # Assemble sample content
                 if len(sample) < self.max_sample:
-                    if post['type'] == 'text':
+                    if post['type'] == "text":
                         # Append text (key 'value' expected in
                         # collection JavaScript)
-                        sample.append({'type': 'text',
+                        sample.append({'type': "text",
                                        'value': post['body']})
 
                     elif post['type'] == 'photo':
@@ -407,14 +414,14 @@ class CrisisCollection(object):
                             iAS = 0
                         photo_url = post['photos'][0]['alt_sizes'][iAS]['url']
                         if 'photo_file_name' in post['photos'][0] and not post['photos'][0]['photo_file_name'] == "":
-                            photo_file_name = os.path.join(self.document_root, 'tumblr',
+                            photo_file_name = os.path.join(self.document_root, u"tumblr",
                                                            post['photos'][0]['photo_file_name'].split('/tumblr/')[1])
                         else:
-                            photo_file_name = ''
+                            photo_file_name = ""
                             
                         # Or append photo (key 'url' expected in
                         # collection JavaScript)
-                        sample.append({'type': 'photo',
+                        sample.append({'type': "photo",
                                        'url': photo_url,
                                        'file_name': photo_file_name})
                                        # TODO: Add photo caption
@@ -429,9 +436,16 @@ class CrisisCollection(object):
                     else:
                         tags[key] += 1
 
+            # Write assembled sample JSON document for included tumblr
+            # author
+            out_file_path = tumblr_author.pickle_file_name.replace(".pkl", ".json")
+            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+            out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
+            out_file.close()
+
             # Write assembled sample text document for included tumblr
             # author
-            out_file_path = os.path.join(self.documents_dir, "tumblr", tumblr_author.subdomain + ".txt")
+            out_file_path = os.path.join(self.documents_dir, u"tumblr", collection_type, tumblr_author.subdomain + u".txt")
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             for doc in sample:
                 if doc['type'] == "text":
@@ -441,18 +455,11 @@ class CrisisCollection(object):
                 out_file.write(key + " ")
             out_file.close()
 
-            # Write assembled sample JSON document for included tumblr
-            # author
-            out_file_path = tumblr_author.pickle_file_name.replace('.pkl', '.json')
-            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
-            out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
-            out_file.close()
-
-            # Append assembled data and tags for included tumblr
+            # Assign assembled data and tags for included tumblr
             # author to collection, tagged, or not
-            self.collection['sources'].append({'data': data, 'tags': tags})
+            self.collection[out_file_path] = {'data': data, 'tags': tags}
 
-    def assemble_twitter_content(self, collection_type, author_request_data, source_request_data):
+    def assemble_twitter_content(self, collection_type, author_request_data):
         """Assembles data and tags for all included twitter authors.
 
         """
@@ -526,9 +533,9 @@ class CrisisCollection(object):
             data['service'] = "twitter"
             data['type'] = collection_type
             data['name'] = author['name']
-            data['url'] = "https://twitter.com/" + author['screen_name']
-            json_file_name = twitter_author.pickle_file_name.split('/twitter/')[1].replace('.pkl', '.json')
-            data['json'] = os.path.join(self.document_root, 'twitter', json_file_name)
+            data['url'] = u"https://twitter.com/" + author['screen_name']
+            json_file_name = twitter_author.pickle_file_name.split('/twitter/')[1].replace(".pkl", ".json")
+            data['json'] = os.path.join(self.document_root, u"twitter", json_file_name)
             data['volume'] = volume[i_author]
             data['frequency'] = frequency[i_author]
             data['age'] = age[i_author]
@@ -545,7 +552,7 @@ class CrisisCollection(object):
                 if len(sample) < self.max_sample:
                     # Append text (key 'value' expected in collection
                     # JavaScript)
-                    sample.append({'type': 'text',
+                    sample.append({'type': "text",
                                    'value': text})
 
                 # Assemble tags
@@ -556,9 +563,16 @@ class CrisisCollection(object):
                     else:
                         tags[key] += 1
 
+            # Write assembled sample JSON document for included
+            # twitter author
+            out_file_path = twitter_author.pickle_file_name.replace(".pkl", ".json")
+            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+            out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
+            out_file.close()
+
             # Write assembled sample text document for included
             # twitter author
-            out_file_path = os.path.join(self.documents_dir, "twitter", twitter_author.source_path + ".txt")
+            out_file_path = os.path.join(self.documents_dir, u"twitter", collection_type, twitter_author.source_path + u".txt")
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             for doc in sample:
                 if doc['type'] == "text":
@@ -567,21 +581,16 @@ class CrisisCollection(object):
                 out_file.write(key + " ")
             out_file.close()
 
-            # Write assembled sample JSON document for included
-            # twitter author
-            out_file_path = twitter_author.pickle_file_name.replace('.pkl', '.json')
-            out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
-            out_file.write(json.dumps(sample, ensure_ascii=False, indent=4, separators=(',', ': ')))
-            out_file.close()
-
-            # Append assembled data and tags for included twitter
+            # Assign assembled data and tags for included twitter
             # author collection, tagged, or not
-            self.collection['sources'].append({'data': data, 'tags': tags})
+            self.collection[out_file_path] = {'data': data, 'tags': tags}
 
     def assemble_content(self):
         """Assembles data and tags for all included author and groups.
 
         """
+        # == Assemble content
+
         # Make empty documents directory
         if os.path.exists(self.documents_dir):
             shutil.rmtree(self.documents_dir)
@@ -596,27 +605,15 @@ class CrisisCollection(object):
             # Consider each collection type
             for collection_type in self.collection_types:
 
-                # Assign name and path of input file containing source
-                # request
-                source_request_file_name = "{0}-{1}-{2}.json".format(
-                    collection_service, self.collection_country, collection_type)
-                source_request_file_path = os.path.join(
-                    self.blu_pen_collection.source_requests_dir, 'did-pop',
-                    source_request_file_name)
-                if not os.path.exists(source_request_file_path):
-                    continue
-
-                # Load input file containing source request
-                source_request_file = codecs.open(source_request_file_path, encoding='utf-8', mode='r')
-                source_request_data = json.loads(source_request_file.read())
-                source_request_file.close()
+                # Make service documents directory
+                os.makedirs(os.path.join(self.documents_dir, collection_service, collection_type))
 
                 # Assign name and path of input file containing author
                 # request
                 author_request_file_name = "{0}-{1}-{2}.json".format(
                     collection_service, self.collection_country, collection_type)
                 author_request_file_path = os.path.join(
-                    self.blu_pen_collection.author_requests_dir, 'did-pop',
+                    self.blu_pen_collection.author_requests_dir, u"did-pop",
                     author_request_file_name)
                 if not os.path.exists(author_request_file_path):
                     continue
@@ -628,16 +625,111 @@ class CrisisCollection(object):
 
                 # Assemble author content, writing sample text and JSON documents
                 if author_request_data['service'] == "feed":
-                    self.assemble_feed_content(collection_type, author_request_data, source_request_data)
+                    self.assemble_feed_content(collection_type, author_request_data)
 
                 if author_request_data['service'] == "flickr":
-                    self.assemble_flickr_content(collection_type, author_request_data, source_request_data)
+                    self.assemble_flickr_content(collection_type, author_request_data)
 
                 elif author_request_data['service'] == "tumblr":
-                    self.assemble_tumblr_content(collection_type, author_request_data, source_request_data)
+                    self.assemble_tumblr_content(collection_type, author_request_data)
 
                 elif author_request_data['service'] == "twitter":
-                    self.assemble_twitter_content(collection_type, author_request_data, source_request_data)
+                    self.assemble_twitter_content(collection_type, author_request_data)
+
+        # == Index content
+        
+        # Make an empty index directory
+        if os.path.exists(self.index_dir):
+            shutil.rmtree(self.index_dir)
+        os.makedirs(self.index_dir)
+
+        # Initialize an index writer
+        lucene.initVM(vmargs=["-Djava.awt.headless=true"])
+        store = SimpleFSDirectory(File(self.index_dir))
+        analyzer = StandardAnalyzer(Version.LUCENE_CURRENT)
+        analyzer = LimitTokenCountAnalyzer(analyzer, 1048576)
+        config = IndexWriterConfig(Version.LUCENE_CURRENT, analyzer)
+        config.setOpenMode(IndexWriterConfig.OpenMode.CREATE)
+        writer = IndexWriter(store, config)
+
+        # Define a primary, content field type
+        pf = FieldType()
+        pf.setIndexed(True)
+        pf.setStored(False)
+        pf.setTokenized(True)
+        pf.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS_AND_POSITIONS)
+
+        # Define a secondary, decriptive field type
+        sf = FieldType()
+        sf.setIndexed(True)
+        sf.setStored(True)
+        sf.setTokenized(False)
+        sf.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS)
+        
+        # Index the documents directory
+        for root, dirnames, filenames in os.walk(self.documents_dir):
+            head, collection_type = os.path.split(root)
+            head, collection_service = os.path.split(head)
+            for filename in filenames:
+                if not filename.endswith('.txt'):
+                    continue
+                self.logger.info(u"adding {0}".format(filename))
+                try:
+                    doc_path = os.path.join(root, filename)
+                    doc_file = open(doc_path)
+                    contents = unicode(doc_file.read(), 'iso-8859-1')
+                    doc_file.close()
+                    doc = Document()
+                    print collection_service, collection_type, root, filename
+                    doc.add(Field("service", collection_service, sf))
+                    doc.add(Field("type", collection_type, sf))
+                    doc.add(Field("path", os.path.join(root, filename), sf))
+                    doc.add(Field("filename", filename, sf))
+                    if len(contents) > 0:
+                        doc.add(Field("contents", contents, pf))
+                    else:
+                        doc.add(Field("contents", "", pf))
+                        self.logger.warning(u"no content in {0}".format(filename))
+                    writer.addDocument(doc)
+                except Exception as exc:
+                    self.logger.error(u"could not index {0}".format(filename))
+                    self.logger.error(exc)
+
+        # Commit the index and close the index writer
+        writer.commit()
+        writer.close()
+
+        # == Score content
+
+        # Initialize an index searcher
+        analyzer = StandardAnalyzer(Version.LUCENE_CURRENT)
+        searcher = IndexSearcher(DirectoryReader.open(store))
+
+        # Consider each collection service
+        for collection_service in self.collection_services:
+
+            # Consider each collection type
+            for collection_type in self.collection_types:
+
+                # Create the query and parser
+                query = ("service:" + collection_service +
+                         " type:" + collection_type + 
+                         " " + self.collection_query[collection_type])
+                parser = QueryParser(Version.LUCENE_CURRENT, "contents", analyzer).parse(query)
+
+                # Score the documents
+                scoreDocs = searcher.search(parser, self.max_documents).scoreDocs
+                for scoreDoc in scoreDocs:
+                    doc = searcher.doc(scoreDoc.doc)
+                    print 'service: ', doc.get("service"),
+                    print 'type: ', doc.get("type"),
+                    print 'path: ', doc.get("path"),
+                    print 'filename: ', doc.get("filename"),
+                    print 'score: ', scoreDoc.score
+                    try:
+                        self.collection[doc.get('path')]['data']['score'] = scoreDoc.score
+                    except Exception as exc:
+                        pass
 
         # Initialize assembled collection sources and tags for export
         export = {}
@@ -655,6 +747,8 @@ class CrisisCollection(object):
         #     source_tags = source['tags']
         #     source_data = source['data']
 
+    def old_assemble_content(self):
+
         # Sort source tags by collection type, and count occurrence of
         # each tag in the collection
         for source in self.collection['sources']:
@@ -666,7 +760,6 @@ class CrisisCollection(object):
                 else:
                     self.collection['tags'][collection_type][source_tag] += 1
 
-        # TODO: Update
         # Compute source score as the product of the occurrence of the
         # tag in the source and the occurrence of the tag in the
         # collection
@@ -676,61 +769,6 @@ class CrisisCollection(object):
             source['data']['score'] = 0
             for source_tag in source_tags:
                 source['data']['score'] += source_tags[source_tag] * self.collection['tags'][collection_type][source_tag]
-
-        # Make an empty index directory
-        if os.path.exists(self.index_dir):
-            shutil.rmtree(self.index_dir)
-        os.makedirs(self.index_dir)
-
-        # Initialize an index writer
-        lucene.initVM(vmargs=['-Djava.awt.headless=true'])
-        store = SimpleFSDirectory(File(self.index_dir))
-        analyzer = StandardAnalyzer(Version.LUCENE_CURRENT)
-        analyzer = LimitTokenCountAnalyzer(analyzer, 1048576)
-        config = IndexWriterConfig(Version.LUCENE_CURRENT, analyzer)
-        config.setOpenMode(IndexWriterConfig.OpenMode.CREATE)
-        writer = IndexWriter(store, config)
-
-        # Define a secondary, decriptive field
-        t1 = FieldType()
-        t1.setIndexed(True)
-        t1.setStored(True)
-        t1.setTokenized(False)
-        t1.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS)
-        
-        # Define a primary, contents field
-        t2 = FieldType()
-        t2.setIndexed(True)
-        t2.setStored(False)
-        t2.setTokenized(True)
-        t2.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS_AND_POSITIONS)
-
-        # Index the documents directory
-        for root, dirnames, filenames in os.walk(self.documents_dir):
-            for filename in filenames:
-                if not filename.endswith('.txt'):
-                    continue
-                self.logger.info(u"adding {0}".format(filename))
-                try:
-                    path = os.path.join(root, filename)
-                    file = open(path)
-                    contents = unicode(file.read(), 'iso-8859-1')
-                    file.close()
-                    doc = Document()
-                    doc.add(Field("name", filename, t1))
-                    doc.add(Field("path", root, t1))
-                    if len(contents) > 0:
-                        doc.add(Field("contents", contents, t2))
-                    else:
-                        self.logger.warning(u"no content in {0}".format(filename))
-                    writer.addDocument(doc)
-                except Exception as exc:
-                    self.logger.error(u"could not index {0}".format(filename))
-                    self.logger.error(exc)
-
-        # Commit the index and close the index writer
-        writer.commit()
-        writer.close()
 
         # Identify top sources for each service by score, and append
         # data from all sources for export
