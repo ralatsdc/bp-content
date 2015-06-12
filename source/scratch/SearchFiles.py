@@ -31,15 +31,18 @@ def run(searcher, analyzer):
 
         print
         print "Searching for:", command
-        query = QueryParser(Version.LUCENE_CURRENT, "contents",
-                            analyzer).parse(command)
+        query = QueryParser(Version.LUCENE_CURRENT, "contents", analyzer).parse(command)
         scoreDocs = searcher.search(query, 50).scoreDocs
         print "%s total matching documents." % len(scoreDocs)
 
         for scoreDoc in scoreDocs:
             doc = searcher.doc(scoreDoc.doc)
-            print 'path:', doc.get("path"), 'name:', doc.get("name")
-
+            
+            print 'service: ', doc.get("service"),
+            print 'type: ', doc.get("type"),
+            print 'path: ', doc.get("path"),
+            print 'filename: ', doc.get("filename"),
+            print 'score: ', scoreDoc.score
 
 if __name__ == '__main__':
     lucene.initVM(vmargs=['-Djava.awt.headless=true'])

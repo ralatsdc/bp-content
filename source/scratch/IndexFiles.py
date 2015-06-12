@@ -47,11 +47,15 @@ class IndexFiles(object):
         config.setOpenMode(IndexWriterConfig.OpenMode.CREATE)
         writer = IndexWriter(store, config)
 
+        # print "=1= ", datetime.now() - start
         self.indexDocs(root, writer)
+        # print "=2= ", datetime.now() - start
         ticker = Ticker()
-        print 'commit index',
+        print 'commit index'
         threading.Thread(target=ticker.run).start()
+        # print "=3= ", datetime.now() - start
         writer.commit()
+        # print "=4= ", datetime.now() - start
         writer.close()
         ticker.tick = False
         print 'done'
@@ -73,6 +77,7 @@ class IndexFiles(object):
         for root, dirnames, filenames in os.walk(root):
             for filename in filenames:
                 if not filename.endswith('.txt'):
+                # if not filename.endswith('.java'):
                     continue
                 print "adding", filename
                 try:
