@@ -61,16 +61,23 @@ class CrisisCollection(object):
         self.index_dir = os.path.join(self.content_dir, u"index")
         self.document_root = os.path.join(u"json", u"source")
         # TODO: Make these parameters
-        self.max_dates = 20
+        self.max_dates = 20 # Maximum number of dates on which content is created used for measurements
         self.max_sample = 100 # Maximum number of content samples per author
         self.max_documents = 100 # Maximum number of author documents to score
+        self.max_sources = 10 # Maximum number of sources per service and type
+        self.max_tags = 10 # Maximum number of tags per service and type
         self.percentiles = range(1, 100, 1)
         self.terciles = [25, 75]
         self.collection = {}
-        self.collection['sources'] = []
-        self.collection['tags'] = {}
-        for collection_type in self.collection_types:
-            self.collection['tags'][collection_type] = {}
+        self.collection['col_data'] = []
+        self.collection['col_tags'] = {}
+        for collection_service in self.collection_services:
+            self.collection[collection_service] = {}
+            for collection_type in self.collection_types:
+                self.collection[collection_service][collection_type] = {}
+                self.collection[collection_service][collection_type]['src_data'] = []
+                self.collection[collection_service][collection_type]['src_tags'] = []
+                self.collection[collection_service][collection_type]['col_tags'] = {}
 
         # Create a logger
         self.logger = logging.getLogger("CrisisCollection")
@@ -177,6 +184,7 @@ class CrisisCollection(object):
 
         """
         # Initialize measurements describing included flickr groups
+        groups = [];
         volume = np.array([])
         frequency = np.array([])
         age = np.array([])
@@ -209,6 +217,7 @@ class CrisisCollection(object):
 
             # Accumulate pickle file name for and measurements
             # describing included flickr group
+            groups.append(group)
             volume = np.append(volume, group['photos'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_upload[0 : min(self.max_dates, len(days_fr_upload))])))
             age = np.append(age, np.mean(days_fr_upload[0 : min(self.max_dates, len(days_fr_upload))]))
@@ -227,22 +236,16 @@ class CrisisCollection(object):
 
         # Consider each included flickr group
         i_group = -1
-        for group in author_request_data['groups']:
-            if not group['include']:
-                continue
+        for group in groups:
             i_group += 1
 
             # Load included flickr group content
-            try:
-                flickr_group = FlickrGroup(
-                    self.blu_pen_collection.blu_pen_author,
-                    u"@" + group['name'],
-                    group['nsid'],
-                    self.blu_pen_collection.flickr_content_dir)
-                flickr_group.load()
-            except Exception as exc:
-                self.logger.error(exc)
-                continue
+            flickr_group = FlickrGroup(
+                self.blu_pen_collection.blu_pen_author,
+                u"@" + group['name'],
+                group['nsid'],
+                self.blu_pen_collection.flickr_content_dir)
+            flickr_group.load()
 
             # Assemble data describing included flickr group
             data = {}
@@ -314,6 +317,7 @@ class CrisisCollection(object):
 
         """
         # Initialize measurements describing included tumblr author
+        authors = []
         volume = np.array([])
         frequency = np.array([])
         age = np.array([])
@@ -345,6 +349,7 @@ class CrisisCollection(object):
 
             # Accumulate pickle file name for and measurements
             # describing included tumblr author
+            authors.append(author)
             volume = np.append(volume, author['posts'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_post[0 : min(self.max_dates, len(days_fr_post))])))
             age = np.append(age, np.mean(days_fr_post[0 : min(self.max_dates, len(days_fr_post))]))
@@ -363,21 +368,15 @@ class CrisisCollection(object):
 
         # Consider each included tumblr author
         i_author = -1
-        for author in author_request_data['authors']:
-            if not author['include']:
-                continue
+        for author in authors:
             i_author += 1
 
             # Load included tumblr author content
-            try:
-                tumblr_author = TumblrAuthor(
-                    self.blu_pen_collection.blu_pen_author,
-                    urlparse.urlparse(author['url']).netloc,
-                    self.blu_pen_collection.tumblr_content_dir)
-                tumblr_author.load()
-            except Exception as exc:
-                self.logger.error(exc)
-                continue
+            tumblr_author = TumblrAuthor(
+                self.blu_pen_collection.blu_pen_author,
+                urlparse.urlparse(author['url']).netloc,
+                self.blu_pen_collection.tumblr_content_dir)
+            tumblr_author.load()
 
             # Assemble data describing included tumblr author
             data = {}
@@ -464,6 +463,7 @@ class CrisisCollection(object):
 
         """
         # Initialize measurements describing included twitter authors
+        authors = [];
         volume = np.array([])
         frequency = np.array([])
         age = np.array([])
@@ -494,6 +494,7 @@ class CrisisCollection(object):
 
             # Accumulate pickle file name for and measurements
             # describing included twitter author
+            authors.append(author)
             volume = np.append(volume, author['statuses'])
             frequency = np.append(frequency, np.mean(np.diff(days_fr_tweet[0 : min(self.max_dates, len(days_fr_tweet))])))
             age = np.append(age, np.mean(days_fr_tweet[0 : min(self.max_dates, len(days_fr_tweet))]))
@@ -512,21 +513,15 @@ class CrisisCollection(object):
 
         # Consider each included twitter author
         i_author = -1
-        for author in author_request_data['authors']:
-            if not author['include']:
-                continue
+        for author in authors:
             i_author += 1
 
             # Load included twitter author content
-            try:
-                twitter_author = TwitterAuthor(
-                    self.blu_pen_collection.blu_pen_author,
-                    u"@" + author['screen_name'],
-                    self.blu_pen_collection.twitter_content_dir)
-                twitter_author.load()
-            except Exception as exc:
-                self.logger.error(exc)
-                continue
+            twitter_author = TwitterAuthor(
+                self.blu_pen_collection.blu_pen_author,
+                u"@" + author['screen_name'],
+                self.blu_pen_collection.twitter_content_dir)
+            twitter_author.load()
 
             # Assemble data describing included twitter author
             data = {}
@@ -572,7 +567,8 @@ class CrisisCollection(object):
 
             # Write assembled sample text document for included
             # twitter author
-            out_file_path = os.path.join(self.documents_dir, u"twitter", collection_type, twitter_author.source_path + u".txt")
+            out_file_path = os.path.join(
+                self.documents_dir, u"twitter", collection_type, twitter_author.source_path + u".txt")
             out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
             for doc in sample:
                 if doc['type'] == "text":
@@ -586,7 +582,7 @@ class CrisisCollection(object):
             self.collection[out_file_path] = {'data': data, 'tags': tags}
 
     def assemble_content(self):
-        """Assembles data and tags for all included author and groups.
+        """Assembles data and tags for all included authors and groups.
 
         """
         # == Assemble content
@@ -647,12 +643,13 @@ class CrisisCollection(object):
         lucene.initVM(vmargs=["-Djava.awt.headless=true"])
         store = SimpleFSDirectory(File(self.index_dir))
         analyzer = StandardAnalyzer(Version.LUCENE_CURRENT)
-        analyzer = LimitTokenCountAnalyzer(analyzer, 1048576)
+        # analyzer = LimitTokenCountAnalyzer(analyzer, 1048576)
         config = IndexWriterConfig(Version.LUCENE_CURRENT, analyzer)
         config.setOpenMode(IndexWriterConfig.OpenMode.CREATE)
         writer = IndexWriter(store, config)
 
         # Define a primary, content field type
+        # TODO: Understand these settings
         pf = FieldType()
         pf.setIndexed(True)
         pf.setStored(False)
@@ -660,6 +657,7 @@ class CrisisCollection(object):
         pf.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS_AND_POSITIONS)
 
         # Define a secondary, decriptive field type
+        # TODO: Understand these settings
         sf = FieldType()
         sf.setIndexed(True)
         sf.setStored(True)
@@ -680,7 +678,7 @@ class CrisisCollection(object):
                     contents = unicode(doc_file.read(), 'iso-8859-1')
                     doc_file.close()
                     doc = Document()
-                    print collection_service, collection_type, root, filename
+                    # print collection_service, collection_type, root, filename
                     doc.add(Field("service", collection_service, sf))
                     doc.add(Field("type", collection_type, sf))
                     doc.add(Field("path", os.path.join(root, filename), sf))
@@ -702,7 +700,7 @@ class CrisisCollection(object):
         # == Score content
 
         # Initialize an index searcher
-        analyzer = StandardAnalyzer(Version.LUCENE_CURRENT)
+        # analyzer = StandardAnalyzer(Version.LUCENE_CURRENT)
         searcher = IndexSearcher(DirectoryReader.open(store))
 
         # Consider each collection service
@@ -721,31 +719,102 @@ class CrisisCollection(object):
                 scoreDocs = searcher.search(parser, self.max_documents).scoreDocs
                 for scoreDoc in scoreDocs:
                     doc = searcher.doc(scoreDoc.doc)
-                    print 'service: ', doc.get("service"),
-                    print 'type: ', doc.get("type"),
-                    print 'path: ', doc.get("path"),
-                    print 'filename: ', doc.get("filename"),
-                    print 'score: ', scoreDoc.score
-                    try:
-                        self.collection[doc.get('path')]['data']['score'] = scoreDoc.score
-                    except Exception as exc:
-                        pass
+                    # print 'service: ', doc.get("service"),
+                    # print 'type: ', doc.get("type"),
+                    # print 'path: ', doc.get("path"),
+                    # print 'filename: ', doc.get("filename"),
+                    # print 'score: ', scoreDoc.score
+                    source = self.collection[doc.get('path')]
+                    source['data']['score'] = scoreDoc.score
+                    self.logger.info(u"scoring {0} with {1}".format(doc.get("filename"), source['data']['score']))
 
-        # Initialize assembled collection sources and tags for export
+                    # Collect source data and tags for the current collection service and type
+                    self.collection[collection_service][collection_type]['src_data'].append(source['data'])
+                    self.collection[collection_service][collection_type]['src_tags'].append(source['tags'])
+
+                    # Collect source data for the collection
+                    self.collection['col_data'].append(source['data'])
+
+        # == Count tags
+        
+        # Consider each collection service
+        for collection_service in self.collection_services:
+
+            # Consider each collection type
+            for collection_type in self.collection_types:
+                
+                # Consider each source tags object
+                for src_tags in self.collection[collection_service][collection_type]['src_tags']:
+                    
+                    # Consider each tag
+                    for tag in src_tags:
+
+                        # Count tag occurance for the current collection service and type
+                        if not tag in self.collection[collection_service][collection_type]['col_tags']:
+                            self.collection[collection_service][collection_type]['col_tags'][tag] = 1
+                        else:
+                            self.collection[collection_service][collection_type]['col_tags'][tag] += 1
+                        
+                        # Count tag occurance for the collection
+                        if not tag in self.collection['col_tags']:
+                            self.collection['col_tags'][tag] = 1
+                        else:
+                            self.collection['col_tags'][tag] += 1
+
+        # == Assemble collection sources and tags for export
+
+        # Initialize export object
         export = {}
         export['country'] = self.collection_country
         export['sources'] = []
         export['tags'] = []
 
-        # source['data']['include'] = True
-        # export['sources'].append(source['data'])
+        # Consider each collection service
+        for collection_service in self.collection_services:
 
-        # tag = {'tag': collection_tag, 'type': collection_type, 'count': collection_tags[collection_tag]}
-        # export['tags'].append(tag)
-        
-        # for source in self.collection['sources']:
-        #     source_tags = source['tags']
-        #     source_data = source['data']
+            # Consider each collection type
+            for collection_type in self.collection_types:
+                
+                # Consider each source data object
+                n_srcs = 0
+                for src_data in sorted(
+                        self.collection[collection_service][collection_type]['src_data'],
+                        key=lambda data: data['score'],
+                        reverse=True):
+                    if n_srcs < self.max_sources:
+                        n_srcs += 1
+                        export['sources'].append(src_data)
+                    else:
+                        break
+
+        # Consider each collection service
+        for collection_service in self.collection_services:
+
+            # Consider each collection type
+            for collection_type in self.collection_types:
+                
+                # Consider each tag object
+                n_tags = 0
+                for col_tag in sorted(
+                        self.collection[collection_service][collection_type]['col_tags'],
+                        key=self.collection[collection_service][collection_type]['col_tags'].get,
+                        reverse=True):
+                    if n_tags < self.max_tags:
+                        tag = {'service': collection_service,
+                               'type': collection_type,
+                               'tag': col_tag,
+                               'count': self.collection[collection_service][collection_type]['col_tags'][col_tag]}
+                        n_tags += 1
+                        export['tags'].append(tag)
+                    else:
+                        break
+
+        # Export assembled collection sources and tags
+        out_file_name = "{0}.json".format(self.collection_country)
+        out_file_path = os.path.join(self.content_dir, out_file_name)
+        out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
+        out_file.write(json.dumps(export, ensure_ascii=False, indent=4, separators=(',', ': ')))
+        out_file.close()
 
     def old_assemble_content(self):
 
