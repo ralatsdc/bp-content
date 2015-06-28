@@ -78,6 +78,9 @@ class CrisisCollection(object):
                 self.collection[collection_service][collection_type]['src_data'] = []
                 self.collection[collection_service][collection_type]['src_tags'] = []
                 self.collection[collection_service][collection_type]['col_tags'] = {}
+        for collection_type in self.collection_types:
+            self.collection[collection_type] = {}
+            self.collection[collection_type]['col_tags'] = {}
 
         # Create a logger
         self.logger = logging.getLogger("CrisisCollection")
@@ -678,7 +681,7 @@ class CrisisCollection(object):
                     contents = unicode(doc_file.read(), 'iso-8859-1')
                     doc_file.close()
                     doc = Document()
-                    # print collection_service, collection_type, root, filename
+                    print "=1=", collection_service, collection_type, root, filename
                     doc.add(Field("service", collection_service, sf))
                     doc.add(Field("type", collection_type, sf))
                     doc.add(Field("path", os.path.join(root, filename), sf))
@@ -710,20 +713,25 @@ class CrisisCollection(object):
             for collection_type in self.collection_types:
 
                 # Create the query and parser
-                query = ("service:" + collection_service +
-                         " type:" + collection_type + 
-                         " " + self.collection_query[collection_type])
+                if collection_service == "feed":
+                    query = ('service:' + collection_service +
+                             ' AND type:' + collection_type)
+                else:
+                    query = ('service:' + collection_service +
+                             ' AND type:' + collection_type + 
+                             ' AND contents:"' + self.collection_query[collection_type] + '"')
                 parser = QueryParser(Version.LUCENE_CURRENT, "contents", analyzer).parse(query)
 
                 # Score the documents
                 scoreDocs = searcher.search(parser, self.max_documents).scoreDocs
                 for scoreDoc in scoreDocs:
                     doc = searcher.doc(scoreDoc.doc)
-                    # print 'service: ', doc.get("service"),
-                    # print 'type: ', doc.get("type"),
-                    # print 'path: ', doc.get("path"),
-                    # print 'filename: ', doc.get("filename"),
-                    # print 'score: ', scoreDoc.score
+                    print "=2=",
+                    print 'service: ', doc.get("service"),
+                    print 'type: ', doc.get("type"),
+                    print 'path: ', doc.get("path"),
+                    print 'filename: ', doc.get("filename"),
+                    print 'score: ', scoreDoc.score
                     source = self.collection[doc.get('path')]
                     source['data']['score'] = scoreDoc.score
                     self.logger.info(u"scoring {0} with {1}".format(doc.get("filename"), source['data']['score']))
@@ -755,6 +763,12 @@ class CrisisCollection(object):
                         else:
                             self.collection[collection_service][collection_type]['col_tags'][tag] += 1
                         
+                        # Count tag occurance for the current collection type
+                        if not tag in self.collection[collection_type]['col_tags']:
+                            self.collection[collection_type]['col_tags'][tag] = 1
+                        else:
+                            self.collection[collection_type]['col_tags'][tag] += 1
+
                         # Count tag occurance for the collection
                         if not tag in self.collection['col_tags']:
                             self.collection['col_tags'][tag] = 1
@@ -766,10 +780,9 @@ class CrisisCollection(object):
         # Initialize export object
         export = {}
         export['country'] = self.collection_country
-        export['sources'] = []
-        export['tags'] = []
 
         # Consider each collection service
+        export['sources'] = []
         for collection_service in self.collection_services:
 
             # Consider each collection type
@@ -788,6 +801,7 @@ class CrisisCollection(object):
                         break
 
         # Consider each collection service
+        export['tags'] = []
         for collection_service in self.collection_services:
 
             # Consider each collection type
@@ -808,6 +822,26 @@ class CrisisCollection(object):
                         export['tags'].append(tag)
                     else:
                         break
+
+        # Consider each collection service
+        export['tags'] = []
+        # Consider each collection type
+        for collection_type in self.collection_types:
+            
+            # Consider each tag object
+            n_tags = 0
+            for col_tag in sorted(
+                    self.collection[collection_type]['col_tags'],
+                    key=self.collection[collection_type]['col_tags'].get,
+                    reverse=True):
+                if n_tags < self.max_tags:
+                    tag = {'type': collection_type,
+                           'tag': col_tag,
+                           'count': self.collection[collection_type]['col_tags'][col_tag]}
+                    n_tags += 1
+                    export['tags'].append(tag)
+                else:
+                    break
 
         # Export assembled collection sources and tags
         out_file_name = "{0}.json".format(self.collection_country)
