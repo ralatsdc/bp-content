@@ -1,0 +1,6 @@
+#summary Discussion and a nice chart showing all the CLD2 languages
+
+CLD2 detects 175 language-script combinations in Unicode text. I wanted to make a nice chart showing all the languages, showing something about how statistically-close the various language are -- the detector has an easy time with languages that are quite distinct and a hard time distinguishing languages that are quite close.
+
+See the full writeup at
+https://docs.google.com/document/d/1NtErs467Ub4yklEfK0C9AYef06G_1_9NHL5dPuKIH7k/edit

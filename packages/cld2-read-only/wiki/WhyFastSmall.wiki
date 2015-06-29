@@ -1,0 +1,9 @@
+#summary Why is CLD2 Fast and Small?
+
+CLD2 detects languages in Unicode UTF-8 text by alternating between extracting runs of text from the input document and scoring that text. The first step is done by getonescriptspan() and the second by scoreonescriptspan(). Each is designed for speed and small size.
+
+*Extracting Text*<br>
+Starting at the beginning of the input text, the job of getonescriptspan() is to extract the next single run of letters that are all in the same Unicode script, matching the script of the first letter found. This involves a lookup on each Unicode character of 1 to 4 bytes to determine its script. ...
+
+Six more pages at
+https://docs.google.com/document/d/1aDAVnCiFxUg5YNZM3vCckWdIdtO0WzSMmVDGzOA1GmQ/edit?pli=1

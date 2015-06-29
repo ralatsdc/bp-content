@@ -1,0 +1,10 @@
+#summary How is language usage distributed across websites?
+
+How is language usage distributed across websites? Which sites have the most text? Which sites have pages nearly all in a single language? Which sites have pages containing mixtures of multiple languages? Which sites have single-language pages but in many different languages? What is the distribution of languages on pages from the Netherlands? Where can I find some Klingon text? How has language use on the web changed over the past 10 years?
+
+This note describes some charts containing answers to all of the above questions.
+
+Methodology<br>
+Scrape 500M web pages, extracting all the text but ignoring tags, punctuation, and digits. Run a language detector program for 150+ languages across the text, extracting for each web page the top three languages and number of bytes of text in each language. 
+
+See https://docs.google.com/document/d/14jBa2KmFMCqHGLnUR8k7Lj7K2s1vE6_yIG-3aXLdhUM/edit for all seven pages

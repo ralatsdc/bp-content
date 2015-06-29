@@ -23,7 +23,7 @@ class BluPenCollection(object):
     """Represents Blue Peninsula collection content.
 
     """
-    def __init__(self, config_file, author_config_file,
+    def __init__(self, config_file, author_config_file, do_update=False,
                  uuid=uuid4(), requested_dt=datetime.datetime.now()):
         """Constructs a BluPenCollection instance.
 
@@ -40,6 +40,8 @@ class BluPenCollection(object):
         # Assign attributes
         self.author_config_file = author_config_file
         self.blu_pen_author = BluPenAuthor(self.author_config_file)
+
+        self.do_update = do_update
 
         self.collection_requests_dir = self.config.get("collection", "requests_dir")
         self.content_dir = self.config.get("collection", "content_dir")
@@ -93,7 +95,7 @@ class BluPenCollection(object):
         """
         self.logger.info(u"assembling content for {0}".format(country))
         crisis_collection = CrisisCollection(self, country, query)
-        crisis_collection.assemble_content()
+        crisis_collection.assemble_content(do_update=self.do_update)
         self.logger.info(u"content assembled for {0}".format(country))
 
 if __name__ == "__main__":
@@ -109,11 +111,14 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--author-config-file",
                         default="../author/BluPenAuthor.cfg",
                         help="the configuration file")
+    parser.add_argument("-u", "--do-update",
+                        action="store_true",
+                        help="update country content")
     args = parser.parse_args()
 
     # Read the input request JSON document from collection/queue
     qu = QueueUtility()
-    bpc = BluPenCollection(args.config_file, args.author_config_file)
+    bpc = BluPenCollection(args.config_file, args.author_config_file, do_update=args.do_update)
     inp_file_name, inp_req_data = qu.read_queue(bpc.collection_requests_dir)
     out_file_name = os.path.basename(inp_file_name); out_req_data = inp_req_data
     if inp_file_name == "" or inp_req_data == {}:

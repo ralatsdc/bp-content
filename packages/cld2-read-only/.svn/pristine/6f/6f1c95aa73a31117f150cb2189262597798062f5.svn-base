@@ -1,0 +1,72 @@
+#summary Full-size tables for 161+ languages added
+
+Larger tables are now available for recognizing 161+ languages in CLD2.
+
+There are four additional tables, but they use the same executable code as the smaller version of CLD2. There is a new unit test covering all the languages, and a new compile_full.sh build script. The build differs only in linking in the larger tables and in using the full-size unit test. Here are the table files and their compiled sizes in bytes.
+<pre>
+Subset version                                  Full version
+----------------------                          ----------------------
+nil-grams
+  utf8prop_lettermarkscriptnum.h(32K)           utf8prop_lettermarkscriptnum.h(32K)
+uni-grams
+  cld_generated_cjk_uni_prop_80.cc(74K)         cld_generated_cjk_uni_prop_80.cc(74K)
+  cld2_generated_cjk_compatible.cc(4K)          cld2_generated_cjk_compatible.cc(4K)
+  cld_generated_cjk_delta_bi_4.cc(16K)          cld_generated_cjk_delta_bi_32.cc(128K)
+  generated_distinct_bi_0.cc(0K)                generated_distinct_bi_0.cc(0K)
+quad-grams
+  cld2_generated_quadchrome0715.cc(1230K)       cld2_generated_quad0720.cc(4650K)
+  cld2_generated_deltaoctachrome0614.cc(68K)    cld2_generated_deltaocta0527.cc(135K)
+  cld2_generated_distinctoctachrome0604.cc(32K) cld2_generated_distinctocta0527.cc(65K)
+Total = 1.4MB                                   Total = 5.0MB
+</pre>
+
+*Languages supported* <br>
+161 languages (175 language-script combinations)<br>
+Abkhazian Afar Afrikaans Akan Albanian Amharic Arabic Armenian Assamese
+Aymara Azerbaijani Bashkir Basque Belarusian Bengali Bihari Bislama Breton
+Bulgarian Burmese Catalan Cebuano Cherokee Chinese Chinese`_`T Corsican Croatian
+Czech Danish Dhivehi Dutch Dzongkha English Esperanto Estonian Faroese
+Fijian Finnish French Frisian Galician Ganda Georgian German Greek
+Greenlandic Guarani Gujarati Haitian`_`Creole Hausa Hawaiian Hebrew Hindi
+Hmong Hungarian Icelandic Igbo Indonesian Interlingua Interlingue
+Inuktitut Inupiak Irish Italian Japanese Javanese Kannada Kashmiri Kazakh
+Khasi Khmer Kinyarwanda Klingon Korean Kurdish Kyrgyz Laothian Latin
+Latvian Limbu Lingala Lithuanian Luxembourgish Macedonian Malagasy Malay
+Malayalam Maltese Manx Maori Marathi Mauritian`_`Creole Mongolian Nauru
+Nepali Norwegian Norwegian`_`N Nyanja Occitan Oriya Oromo Pashto Pedi
+Persian Pig`_`Latin Polish Portuguese Punjabi Quechua Rhaeto`_`Romance
+Romanian Rundi Russian Samoan Sango Sanskrit Scots Scots`_`Gaelic Serbian
+Seselwa Sesotho Shona Sindhi Sinhalese Siswant Slovak Slovenian Somali
+Spanish Sundanese Swahili Swedish Syriac Tagalog Tajik Tamil Tatar Telugu
+Thai Tibetan Tigrinya Tonga Tsonga Tswana Turkish Turkmen Uighur Ukrainian
+Urdu Uzbek Venda Vietnamese Volapuk Waray`_`Philippines Welsh Wolof Xhosa
+Yiddish Yoruba Zhuang Zulu
+
+Plus text in these additional 65 Unicode-6.2 scripts <br>
+Avestan Balinese Bamum Batak Bopomofo Brahmi Braille Buginese Buhid Carian
+Chakma Cham Coptic Cuneiform Cypriot Deseret Egyptian`_`Hieroglyphs
+Glagolitic Gothic Hanunoo Imperial`_`Aramaic Inscriptional`_`Pahlavi
+Inscriptional`_`Parthian Javanese Kaithi Kayah`_`Li Kharoshthi Lepcha Linear`_`B
+Lisu Lycian Lydian Mandaic Meetei`_`Mayek Meroitic`_`Cursive
+Meroitic`_`Hieroglyphs Miao New`_`Tai`_`Lue Nko Ogham Ol`_`Chiki Old`_`Italic
+Old`_`Persian Old`_`South`_`Arabian Old`_`Turkic Osmanya Phags`_`Pa Phoenician
+Rejang Runic Samaritan Saurashtra Sharada Shavian Sora`_`Sompeng
+Syloti`_`Nagri Tagbanwa Tai`_`Le Tai`_`Tham Tai`_`Viet Takri Tifinagh Ugaritic Vai Yi
+
+240 total language-script combinations
+
+*Caveats* <br>
+There are nine sets of statistically-close languages; CLD2 may interconfuse them.
+<pre>
+  {INDONESIAN MALAY}
+  {DZONGKHA TIBETAN}
+  {CZECH SLOVAK}
+  {XHOSA ZULU}
+  {CROATIAN SERBIAN}
+  {BIHARI HINDI MARATHI NEPALI}
+  {DANISH NORWEGIAN NORWEGIAN_N}
+  {GALICIAN PORTUGUESE SPANISH}
+  {KINYARWANDA RUNDI}
+</pre>
+
+In addition, these ten languages are relatively recent additions and have not be well-shaken-down: Akan, Cebuano, Hmong, Igbo, Mauritian`_`Creole, Nyanja, Pedi, Seselwa, Venda, Waray`_`Philippines.
