@@ -104,6 +104,8 @@ class CrisisCollection(object):
                     author['url'],
                     self.blu_pen_collection.feed_content_dir)
                 feed_author.load()
+                if len(feed_author.entries) == 0:
+                    continue
             except Exception as exc:
                 self.logger.error(exc)
                 continue
@@ -125,7 +127,13 @@ class CrisisCollection(object):
             # included feed author, counting occurrence of each tag
             sample = []
             tags = {}
-            for entry in feed_author.entries:
+            # 'published_parsed'
+            # 'updated_parsed'
+            # 'created_parsed'
+            for entry in sorted(
+                    feed_author.entries,
+                    key=lambda entry: entry['published_parsed'],
+                    reverse=True):
                 content = self.feed_utility.get_content(entry)
 
                 # Assemble sample content
@@ -211,6 +219,8 @@ class CrisisCollection(object):
                     group['nsid'],
                     self.blu_pen_collection.flickr_content_dir)
                 flickr_group.load()
+                if len(flickr_group.photos) == 0:
+                    continue
             except Exception as exc:
                 self.logger.error(exc)
                 continue
@@ -272,9 +282,13 @@ class CrisisCollection(object):
             # included flickr group, counting occurrence of each tag
             sample = []
             tags = {}
-            # TODO: Sort reverse chronologically
-            for photo in flickr_group.photos:
-
+            def create_flickr_datetime(photo):
+                try:
+                    photo_dt = datetime.strptime(photo['datetaken'], "%Y-%m-%d %H:%M:%S")
+                except Exception as exc:
+                    photo_dt = datetime.fromtimestamp(float(photo['dateupload']))
+                return photo_dt
+            for photo in sorted(flickr_group.photos, key=create_flickr_datetime, reverse=True):
                 # Assemble sample content
                 if len(sample) < self.max_sample:
                     if 'file_name' in photo.keys():
@@ -344,6 +358,8 @@ class CrisisCollection(object):
                     urlparse.urlparse(author['url']).netloc,
                     self.blu_pen_collection.tumblr_content_dir)
                 tumblr_author.load()
+                if len(tumblr_author.posts) == 0:
+                    continue
             except Exception as exc:
                 self.logger.error(exc)
                 continue
@@ -404,9 +420,10 @@ class CrisisCollection(object):
             # included tumblr author, counting occurrence of each tag
             sample = []
             tags = {}
-            # TODO: Sort reverse chronologically
-            for post in tumblr_author.posts:
-
+            for post in sorted(
+                    tumblr_author.posts,
+                    key=lambda post: datetime.strptime(post['date'].replace(" GMT", ""), "%Y-%m-%d %H:%M:%S"),
+                    reverse=True):
                 # Assemble sample content
                 if len(sample) < self.max_sample:
                     if post['type'] == "text":
@@ -491,6 +508,8 @@ class CrisisCollection(object):
                     u"@" + author['screen_name'],
                     self.blu_pen_collection.twitter_content_dir)
                 twitter_author.load()
+                if len(twitter_author.clean_text) == 0:
+                    continue
             except Exception as exc:
                 self.logger.error(exc)
                 continue
@@ -536,7 +555,7 @@ class CrisisCollection(object):
             # Assemble data describing included twitter author
             data = {}
             data['service'] = "twitter"
-            data['type'] = collection_type
+            data['type'] = collection_type 
             data['name'] = author['name']
             data['url'] = u"https://twitter.com/" + author['screen_name']
             json_file_name = twitter_author.pickle_file_name.split('/twitter/')[1].replace(".pkl", ".json")
@@ -550,8 +569,9 @@ class CrisisCollection(object):
             # included twitter author, counting occurrence of each tag
             sample = []
             tags = {}
-            # TODO: Sort reverse chronologically
-            for text in twitter_author.clean_text:
+            created_dt, clean_text = zip(*sorted(zip(
+                twitter_author.created_dt, twitter_author.clean_text), reverse=True))
+            for text in clean_text:
 
                 # Assemble sample content
                 if len(sample) < self.max_sample:
