@@ -49,7 +49,6 @@ class FlickrGroup(object):
 
         # Initialize created attributes
         self.photos = []
-        self.created_dt = []
         self.content_set = False
 
         # Create an API
@@ -303,7 +302,6 @@ class FlickrGroup(object):
         p['seconds_between_api_attempts'] = self.seconds_between_api_attempts
 
         p['photos'] = self.photos
-        p['created_dt'] = self.created_dt
         p['content_set'] = self.content_set
 
         pickle.dump(p, pickle_file)
@@ -340,7 +338,6 @@ class FlickrGroup(object):
         self.seconds_between_api_attempts = p['seconds_between_api_attempts']
 
         self.photos = p['photos']
-        self.created_dt = p['created_dt']
         self.content_set = p['content_set']
 
         self.logger.info(u"{0} loaded {1} photos from {2}".format(
