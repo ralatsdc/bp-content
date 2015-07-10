@@ -8,6 +8,7 @@ content/author/flickr/*
 content/author/instagram/*
 content/author/tumblr/*
 content/author/twitter/*
+content/collection/crisis/*
 content/source/feed/*
 content/source/flickr/*
 content/source/instagram/*
@@ -17,3 +18,4 @@ packages/*/build
 packages/*/dist
 packages/*/doc
 packages/*/*.egg-info
+source/scratch/IndexFiles.index

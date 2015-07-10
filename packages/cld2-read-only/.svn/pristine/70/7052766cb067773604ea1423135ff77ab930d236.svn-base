@@ -1,0 +1,151 @@
+#summary New release with bug fixes, small tables with 12 added language, 5 removed. New mini-corpus of testing text.
+
+= Introduction =
+CLD2 Release notes 2014.10.15 version
+Dick Sites
+
+The October, 2014 update to CLD2 has a set of code changes, a set of table changes, and a new test-data file. The changes go through svn revision 186. 
+
+= Details =
+First, the code changes.
+<pre>
+- FIXED: A possible crash in lowercasing the input text when there are no
+  letters at all.
+- FIXED: A possible crash in handling illegal HTML entities (&foo)
+- FIXED: The ResultChunk output now covers all the bytes of the input
+  buffer, with the byte length field now increased to 32 bits and the
+  endpoints explicitly covered.
+- A BestEffort flag is added to allow low-quality results for short text,
+  rather than forcing the result to UNKNOWN_LANGUAGE. This may be of use for
+  those desiring approximate results on short input text, but there is no claim
+  that these results ave very good.
+- Two DetectLanguageCheckUTF8 routines are added, which explicitly scan
+  the input buffer for valid UTF-8, and then fall into the regular code. Use
+  these unless you can prove that the input text is valid UTF-8. User-supplied
+  bytes are not guaranteed-valid UTF-8 and may crash within CLD2. The scan is
+  fast, at about 1GB/sec on a desktop PC.
+</pre>
+
+For languages, the full-size tables are unchanged, but the small tables have
+been updated (leaving the previous January 2014 files available also).
+
+<pre>
+Added
+  +Burmese   my-Mymr
+  +Kazakh    kk-Cyrl
+  +Kurdish   ku-Latn  (aka Kumanji, kmr-Latn)
+  +Kyrgyz    ky-Cyrl
+  +Malagasy  mg-Latn
+  +Malayalam ml-Mlym
+  +Nyanja    ny-Latn
+  +Sesotho   st-Latn
+  +Sinhala   si-Sinh
+  +Sundanese su-Latn
+  +Tajik     tg-Cyrl
+  +Uzbek     uz-Latn
+  +Uzbek     uz-Cyrl
+Removed
+  -Hausa     ha-Latn
+  -Igbo      ig-Latn
+  -Somali    so-Latn
+  -Yoruba    yo-Latn
+  -Zulu      zu-Latn
+</pre>
+
+The tables reflect Unicode release 6.2 characters, but do not reflect the few
+characters added in release 6.3, nor the 23 ancient scripts added in Unicode 7.0.
+
+The addition of ku-Latn required updating the ku-Latn test data in
+unittest_data.h. The addition of ku-Latn and the addition of UTF-8 checking
+and the new build date for the lookup tables required a slightly-newer version
+of the unit test, cld2_unittest_20141015.cc. The version-test string now
+detects as TURKISH, reflecting that quadgram table build date of 20141016.
+
+All the new tables and new code are built via the new script compile20141015.sh.
+
+
+Finally, the new test-data file. This is supplied for other language
+experimenters, or for the purpose of soliciting corrections and additions.
+
+A new 120MB file test_shuffle_1000_48_666.utf8 is posted as revision 186
+(ignore the bogus 178 and 179).  It contains UTF-8 test text of varying quality
+for 192 languages, derived from a larger not-public collection of test
+text.  The large collection includes much text scraped mechanically from
+the Web, and so may well contain text that is copyrighted, libelous,
+pornographic, etc.
+
+The posted file is about 1/10 the size of the large collection and was
+produced from it by these steps:
+<pre>
+- Split each original line at word boundaries into about 48-character lines
+  (about six to eight words).
+- Take a subset (about 10%) of those lines that will total about 1000
+  final lines per language-script combination, throwing away all the others
+  (about 90%).
+- Sort the subset randomly within each language-script combination.
+- Recombine into lines of about 666 characters, with tilde between pieces.
+- Reevaluate precision and recall, getting similar statistics to the full
+  test set.
+</pre>
+
+The net effect is that up to 90% of the chunks of ~6 words are removed
+from each web page and the remaining text is rearranged to no longer make
+much sense, while still preserving 5/6 of all word pairs.
+
+Each line of the file can be up to 5KB long and contains four fields
+<pre>
+1) Identification "Samp"
+2) Language-script, using largely ISO standard codes "nl-Latn"
+   (iw-Hebr is Hebrew, jw-Latn is Javanese, nn-Latn is Norwegian Nynorsk,
+   no-Latn is Norwegian Bokmal, sr-ME-Latn is Montenegrin, tlh-Latn is
+   Klingon, zh-Hani is Simplified Chinese, zhT-Hani is Traditional Chinese,
+   zzb/zze/zzh are unsupported BorkBorkBork/ElmerFudd/Hacker, and zzp-Latn is 
+   Pig Latin).
+3) Source URL host name last 2-3 words, or other indication of source.
+4) UTF-8 text that likely to be in the given language-script.
+</pre>
+
+Example line (wrapped in these notes, but all one line in the file):
+<pre>
+Samp nl-Latn /dbnl.org/ nadruk gedemonstreerd, dat ze soms toch weer ~
+  nieuwsbrief Snelnavigatie Nederlandse beschikbare ~ of de Heer van belden
+  anders niet geantwoord had: ~ oostelijke expansie ( VD 1988 :241).  Voor
+  deze ~ op.?  Nu heette geen der zusters of halfzusters ~ plaats te vinden
+  in relatie met een zo mogelijke ~ staan??  - ?Wel, Jantje, dat zal ik u
+  zeggen, die ~ stookmachine laten overbrengen.  Aan dit vorstelijk ~
+  tautologische syllabe, dat niet noodzakelijk ~ te schrijven.  En in alles
+  wat zij doet, bedrijft ~ tekst dbnl i.s.m.  65 Jos Tysmans 80 Hier volgt ~
+  tijdschriftenladder .nl de langste dag overzichten ~ vader en grootvader,
+  die zij echter nimmer gekend ~ verminkt.  ( Voortgang , jaarboek voor de ~
+</pre>
+
+This sample text is nl-Latn, Dutch in the Latin script.
+
+The host name /dbnl.org/ is included to give the user some feeling for
+sources of text in the various languages, and to give an indication of the
+variety of such sources.  Some text is hand-scraped, and some comes from
+various non-public language identification efforts.  The
+split/subset/sort/recombine process described above often produces text
+fragments that don't recombine into a full line of text from a single
+source.  In this case, the recombined text is marked /Mixed/. The chunks
+that constitute recombined text are separated by tilde for the convenience
+of some users.
+
+This sample text line has been recombined from 14 short chunks, separated by the tilde characters.
+
+Caveats:
+<pre>
+- Text is of varying quality, so some of it will be in the wrong language.
+  Bihari, Bosnian, Croatian, and Serbian remain problematic.
+- In spite of substantial efforts to strip it out, there is still some
+  intrusive English in the text for many languages.
+- There is very little text for some languages (URLs invited):
+  Afar, Abkhazian, Aymara, Burmese, Inupiak, Inuktitut, Kazakh (Arab
+  script), Kashmiri, Khasi, Kyrgyz (Arab script), Limbu, Mauritian Creole,
+  Mongolian (Mong script), Montenegrin (Latn and Cyrl scripts), Ndebele, 
+  Pedi, Romanian (Cyrl script; Moldovan), Sango, Syriac, Tonga, Uzbek (Arab 
+  script), Volapuk.  
+- There is some mistaken text in odd combinations that should be ignored:
+  Arabic Latn, Croatian Cyrl, Korean Latn, Persian Latn.
+</pre>
+Enjoy.

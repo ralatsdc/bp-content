@@ -116,8 +116,8 @@ class TumblrUtility(object):
                 print "{0:^30s} {1:^10d} {2:^10d} {3:^10d} {4:^10d} {5:^20.3f} {6:^20.3f} {7:^20.3f}".format(
                     subdomain, count['regular'], count['word'], count['photo'], count['total'],
                     1.0 * count['regular'] / count['photo'],
-                    count['word'] / count['photo'],
-                    count['word'] / words_per_page / count['photo'])
+                    1.0 * count['word'] / count['photo'],
+                    1.0 * count['word'] / words_per_page / count['photo'])
             else:
                 print "{0:^30s} {1:^10d} {2:^10d} {3:^10d} {4:^10d} {5:^20s} {6:^20s} {7:^20s}".format(
                     subdomain, count['regular'], count['word'], count['photo'], count['total'],

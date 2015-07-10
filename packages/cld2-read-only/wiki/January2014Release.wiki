@@ -1,0 +1,48 @@
+February 5, 2014
+
+I'm pleased to announce a new release of CLD2, with additional languages, improved accuracy, and some possible space savings. The increased accuracy comes from scraping about 1B web pages that include <meta lang`=`"..."> tags. About half of all active web pages now have such tags, and they appear to be about 85% accurate, so they have become useful for gathering training text. After extensive cross-checking and dropping about 1/3 of the pages as low-confidence, 69GB of new, well-labelled text was left. 90% of this is used as training text for CLD2 and 10% is set aside for testing text.
+
+The July 2013 release of CLD2 had two sets of tables, a space-constrained set with a main four-letter (quadgram) lookup table of 256K entries covering 68 language-script combinations, and a full-size set with main table of 1024K entries covering 172 language-script combinations. This new release has similar tables covering 74 and 174 language-script combinations respectively. In addition, there are two alternate even-smaller quadgram tables holding 192K entries and 160K entries. They are intended for use in space-constrained environments.
+
+In the small tables, the six new languages are Bosnian (Latin script), Hausa, Igbo, Somali, Yoruba, and Zulu; and in the large tables the two new languages are Bosnian and Ndebele.
+
+The old and new tables are now properly evaluated against 1GB of test data, giving measured precision and recall values for each language. The evaluation results are text files evaluate`*` in the trunk/docs subdirectory. They are tab-delimited files suitable for importing as spreadsheets.
+
+In evaluating a language-detection system, the term "precision" means
+ * CLD2 says it is French; for what fraction of the tests is the input really French?
+while the term "recall" means
+ * CLD2 is given French text; for what fraction of the tests does it detect French?
+There is a third term "F-measure" which is the harmonic mean of precision and recall. Unlike the normal average, the harmonic mean emphasizes the lower-scoring of the two. It is the standard single-number value used in describing overall detection accuracy.
+
+The evaluation files have a row for each language-script combination and 11 columns. The first three and last column give the language name, its ISO language code, and its script (Serbian, for example, is recognized in two different scripts, Cyrillic and Latin). Columns 4-6 give the precision measurement, and 7-9 the recall measurement. Column 10 combines these into the F-value for each language.  There are five files, all testing over the same set of ~700,000 input strings:
+ * CLD1 small 2011.04.06 (a different, earlier project from which CLD2 is derived)
+ * CLD2 small 2013.07.15, last summer's release
+ * CLD2 small 2014.01.22, this new release
+ * CLD2 large 2013.07.20, last summer's release
+ * CLD2 large 2014.01.22, this new release
+The testing target is about 10,000 strings per language, but for many of the less-common languages not that much text is available.
+  
+The first precision column gives the distribution of actual input language text as percentages, the second column the number of ~640-character individual test strings used, and the third column the percent correctly identified. The 2014 small table (evaluate_cld2_small_20140122.txt) entry for French precision reads
+ * fr`_`99.98 ht`_`0.002   10029   99.98
+Meaning that 10029 input strings were identified as French, of which all but 2 really were French, and the other two really were Haitian_Creole.
+
+The first recall column gives the distribution of detection answers as percentages, the second column the number of ~640 character individual test strings used, and the third column the percent correctly identified. The 2014 small table entry for French recall reads
+ * fr`_`99.98 fr`*_`0.02 10029 99.98
+meaning that 10029 input strings really were French, of which all but two were correctly identified, and the other two were identified as French:unreliable (signified by the asterisk). The overall F-measure for French is 0.9998, which is excellent.
+
+With two exceptions, the later tables improve recognition accuracy for almost all languages that are less than 99% accurate, sometimes quite substantially, as more and better training text has become available. The two exceptions are a 2-5% decrease in Bihari recognition accuracy in this 2014 release, due to a large influx of more Hindi training text; and a 3% decrease in Kazakh-Arabic recognition accuracy, due to an influx of Kurdish training text. The difficult statistically-close sets of languages have improved in all cases, sometimes by as much as 10%.
+
+To my surprise, the 2014 even-smaller 192K-entry and 160K-entry tables have accuracy measures that are nearly the same as the 2014 256K-entry table.
+
+The compile`*`.sh scripts have been updated to use the new tables. I will delete the older tables at the end of February.
+
+To distinguish the various versions, run the detector against the synthetic text in 
+ * https://cld2.googlecode.com/svn/trunk/docs/test_version.txt
+and look for one of these results:
+ * cld1_small_20110406.txt  UNKNOWN
+ * cld2_small_20130715.txt  WELSH
+ * cld2_small_20140122.txt  AZERBAIJANI
+ * cld2_large_20130720.txt  SLOVENIAN 
+ * cld2_large_20140122.txt  ICELANDIC
+
+Enjoy. /dick

@@ -124,11 +124,6 @@ class BluPenSource(object):
         n_memcomfav = np.array(members) + np.array(comment_count) + np.array(favorite_count)
         n_trusting = np.divide(n_memcomfav, n_photos)
 
-        # Convert the numeric scores to string scores
-        s_photos = fs.n_to_s(n_photos)
-        s_memcomfav = fs.n_to_s(n_memcomfav)
-        s_trusting = fs.n_to_s(n_trusting)
-
         # Create a dictionary of groups in order to print a JSON document
         # to a file
         groups = []
@@ -146,11 +141,7 @@ class BluPenSource(object):
             group['photos'] = n_photos[i_grp]
             group['memcomfav'] = n_memcomfav[i_grp]
             group['trusting'] = n_trusting[i_grp]
-            group['score'] = s_photos[i_grp] + s_memcomfav[i_grp] + s_trusting[i_grp]
-            if group['score'] == "+++":
-                group['include'] = True
-            else:
-                group['include'] = False
+            group['include'] = True
             groups.append(group)
 
         return groups
@@ -170,7 +161,7 @@ class BluPenSource(object):
 
             # Accumulate blog info, and posts
             for b_p in ts.blog_posts:
-                if not 'blog' in b_p:
+                if b_p is None or not 'blog' in b_p:
                     continue
                 h_n = b_p['blog']['name']
                 if not h_n in host_names:
@@ -178,6 +169,10 @@ class BluPenSource(object):
                     blog_posts.append(b_p)
 
         # Consider sample posts from each blog
+        # Note that this is necessary since one can search Tumblr for
+        # _posts_ by tag, which does little to indicate how pertinent
+        # the _blog_ from which the post originated will be for this
+        # tag overall
         total_tags = []
         for blog in blog_posts:
 
@@ -189,25 +184,27 @@ class BluPenSource(object):
                 total_tags.append(n_tags)
                 continue
 
-            # Consider each post from the current blog
-            posts = blog['posts']
-            for post in posts:
+            # Consider each source word
+            for source_word_str in source_word_strs:
 
-                # Consider each source word
-                for source_word_str in source_word_strs:
+                # Process the source word string to create log and
+                # path strings, and assign input argument attributes
+                (source_log,
+                 source_path,
+                 source_header,
+                 source_label,
+                 source_type,
+                 source_word) = ts.author_utility.process_source_words(source_word_str)
 
-                    # Process the source word string to create log and
-                    # path strings, and assign input argument attributes
-                    (source_log,
-                     source_path,
-                     source_header,
-                     source_label,
-                     source_type,
-                     source_word) = ts.author_utility.process_source_words(source_word_str)
+                # Consider each post from the current blog
+                posts = blog['posts']
+                for post in posts:
 
-                    # Count the appearances of the current source word in
-                    # the current post of the current blog
-                    n_tags += len(re.findall(source_word, "".join(post['tags']), re.I))
+                    # Count the appearances of the word in the current
+                    # source word (possibly phrase) in current post of
+                    # the current blog
+                    for word in source_word.split():
+                        n_tags += len(re.findall(word, "".join(post['tags']), re.I))
 
             # Note the total number of tag appearances for the current
             # blog
@@ -226,6 +223,7 @@ class BluPenSource(object):
         posts = []
         likes = []
         notes = []
+        words = []
         for i_blg in index_blog:
 
             info = blog_posts[i_blg]['blog']
@@ -245,25 +243,22 @@ class BluPenSource(object):
                     note_count += post['note_count']
             notes.append(note_count)
 
+            words.append(np_total_tags[i_blg])
+
         # Assign number of posts, number of notes, and compute the
         # notes to posts ratio
-        np_n_posts = np.array(posts)
-        np_n_notes = np.array(notes)
-        np_n_trusting = np.divide(np_n_notes, np_n_posts)
-
-        # Convert the numeric scores to string scores
-        np_s_posts = ts.n_to_s(np_n_posts)
-        np_s_notes = ts.n_to_s(np_n_notes)
-        np_s_trusting = ts.n_to_s(np_n_trusting)
-
+        # TODO: Understand why likes not used?
+        n_posts = np.array(posts)
+        n_notes = np.array(notes)
+        n_trusting = np.divide(n_notes, n_posts)
+        n_words = np.array(words)
+        
         # Create a dictionary of blogs in order to print a JSON document
         # to a file
         blogs = []
         for i_blg in range(len(blogs_info)):
             blog = {}
-
             info = blogs_info[i_blg]
-
             if 'name' in info:
                 blog['name'] = info['name']
             else:
@@ -280,17 +275,11 @@ class BluPenSource(object):
                 blog['url'] = info['url']
             else:
                 blog['url'] = ""
-
-            blog['posts'] = np_n_posts[i_blg]
-            blog['notes'] = np_n_notes[i_blg]
-            blog['trusting'] = np_n_trusting[i_blg]
-            blog['score'] = np_s_posts[i_blg] + np_s_notes[i_blg] + np_s_trusting[i_blg]
-
-            if blog['score'] == "+++":
-                blog['include'] = True
-            else:
-                blog['include'] = False
-
+            blog['posts'] = n_posts[i_blg]
+            blog['notes'] = n_notes[i_blg]
+            blog['trusting'] = n_trusting[i_blg]
+            blog['words'] = n_words[i_blg]
+            blog['include'] = True
             blogs.append(blog)
 
         return blogs
@@ -329,11 +318,6 @@ class BluPenSource(object):
         n_followers = np.array(followers_count)
         n_trusting = np.divide(n_followers, n_statuses)
 
-        # Convert the numeric scores to string scores
-        s_statuses = ts.n_to_s(n_statuses)
-        s_followers = ts.n_to_s(n_followers)
-        s_trusting = ts.n_to_s(n_trusting)
-
         # Create a dictionary of users in order to print a JSON document
         # to a file
         users = []
@@ -349,11 +333,7 @@ class BluPenSource(object):
             user['statuses'] = n_statuses[i_usr]
             user['followers'] = n_followers[i_usr]
             user['trusting'] = n_trusting[i_usr]
-            user['score'] = s_statuses[i_usr] + s_followers[i_usr] + s_trusting[i_usr]
-            if user['score'] == "+++":
-                user['include'] = True
-            else:
-                user['include'] = False
+            user['include'] = True
             users.append(user)
 
         return users

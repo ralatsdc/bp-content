@@ -82,9 +82,9 @@ class QueueUtility(object):
         # Set status and write request data to output file in do-push
         req_data['status'] = status
         out_file_name = os.path.join(request_dir, queue, out_file_name)
-        out = codecs.open(out_file_name, encoding='utf-8', mode='w')
-        out.write(json.dumps(req_data, ensure_ascii=False, indent=4, separators=(',', ': ')))
-        out.close()
+        out_file = codecs.open(out_file_name, encoding='utf-8', mode='w')
+        out_file.write(json.dumps(req_data, ensure_ascii=False, indent=4, separators=(',', ': ')))
+        out_file.close()
 
     def lock(self, lck_file):
         """Lock the specified file without blocking.

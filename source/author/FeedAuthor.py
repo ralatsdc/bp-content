@@ -162,8 +162,13 @@ class FeedAuthor(object):
             # Make attempt to get content by URL
             try:
                 content = feedparser.parse(source_url)
-                self.logger.info(u"{0} collected content for {1}".format(
-                    self.source_log, source_url))
+                if content['bozo'] == 1:
+                    content = None
+                    self.logger.warning(u"{0} couldn't get content for {1}: {2}".format(
+                        self.source_log, source_url))
+                else:
+                    self.logger.info(u"{0} collected content for {1}".format(
+                        self.source_log, source_url))
             except Exception as exc:
                 content = None
                 self.logger.warning(u"{0} couldn't get content for {1}: {2}".format(
