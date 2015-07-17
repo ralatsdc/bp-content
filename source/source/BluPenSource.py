@@ -54,6 +54,8 @@ class BluPenSource(object):
         elif log_level == 'CRITICAL':
             self.log_level = logging.CRITICAL
 
+        self.pid_file_name = self.config.get("source", "pid_file_name")
+
         self.author_config_file = self.config.get("author", "config_file")
         self.author_do_purge = self.config.getboolean("author", "do_purge")
         self.author_requests_dir = self.config.get("author", "requests_dir")
@@ -356,32 +358,71 @@ if __name__ == "__main__":
                         help="purge existing source and author")
     args = parser.parse_args()
     
-    # Read the input request JSON document from source/queue
-    qu = QueueUtility()
-    bps = BluPenSource(args.config_file)
-    bps.source_do_purge = args.do_purge_src or args.do_purge_all
-    bps.author_do_purge = args.do_purge_all
-    inp_file_name, inp_req_data = qu.read_queue(bps.source_requests_dir)
-    out_file_name = os.path.basename(inp_file_name); out_req_data = {}
-    if inp_file_name == "" or inp_req_data == {}:
-        bps.logger.info("Nothing to do, exiting")
-        sys.exit()
+    # Process the queue, if all previous processes have completed
+    # without exception
+    try:
 
-    # Get source from the specified service
-    if inp_req_data['service'] == 'flickr':
-        out_req_data['service'] = 'flickr'
-        out_req_data['groups'] = bps.get_source_from_flickr(inp_req_data['words'], bps.flickr_content_dir)
+        # Assume processing is incomplete
+        do_rm_pid_file = False
 
-    elif inp_req_data['service'] == 'tumblr':
-        out_req_data['service'] = 'tumblr'
-        out_req_data['authors'] = bps.get_source_from_tumblr(inp_req_data['words'], bps.tumblr_content_dir)
+        # Configure a BluPenSource
+        bps = BluPenSource(args.config_file)
+        bps.source_do_purge = args.do_purge_src or args.do_purge_all
+        bps.author_do_purge = args.do_purge_all
 
-    elif inp_req_data['service'] == 'twitter':
-        out_req_data['service'] = 'twitter'
-        out_req_data['authors'] = bps.get_source_from_twitter(inp_req_data['words'], bps.twitter_content_dir)
+        # Write the PID file, or exit if a previous process is
+        # running, or exited with an exception
+        if not os.path.exists(bps.pid_file_name):
 
-    # Write the input request JSON document to source/did-pop
-    qu.write_queue(bps.source_requests_dir, out_file_name, inp_req_data)
+            # Write the PID file
+            pid_file = open(bps.pid_file_name, 'w')
+            pid_file.write(str(os.getpid()))
+            pid_file.close()
 
-    # Write the output request JSON document to author/do-push
-    qu.write_queue(bps.author_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")
+        else:
+
+            # Exit since a previous process is running, or exited with
+            # an exception
+            bps.logger.info("A previous process is running, or exited with an exception")
+            sys.exit()
+
+        # Read the input request JSON document from source/queue
+        qu = QueueUtility()
+        inp_file_name, inp_req_data = qu.read_queue(bps.source_requests_dir)
+        out_file_name = os.path.basename(inp_file_name); out_req_data = {}
+        if inp_file_name == "" or inp_req_data == {}:
+            bps.logger.info("Nothing to do, exiting")
+            sys.exit()
+
+        # Get source from the specified service
+        if inp_req_data['service'] == 'flickr':
+            out_req_data['service'] = 'flickr'
+            out_req_data['groups'] = bps.get_source_from_flickr(inp_req_data['words'], bps.flickr_content_dir)
+
+        elif inp_req_data['service'] == 'tumblr':
+            out_req_data['service'] = 'tumblr'
+            out_req_data['authors'] = bps.get_source_from_tumblr(inp_req_data['words'], bps.tumblr_content_dir)
+
+        elif inp_req_data['service'] == 'twitter':
+            out_req_data['service'] = 'twitter'
+            out_req_data['authors'] = bps.get_source_from_twitter(inp_req_data['words'], bps.twitter_content_dir)
+
+        # Write the input request JSON document to source/did-pop
+        qu.write_queue(bps.source_requests_dir, out_file_name, inp_req_data)
+
+        # Write the output request JSON document to author/do-push
+        qu.write_queue(bps.author_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")
+
+        # Assume processing is complete
+        do_rm_pid_file = True
+
+    except Exception as exc:
+
+        # Log exceptions
+        bps.logger.error(exc)
+    
+    finally:
+
+        # Remove the PID file, if processing is complete
+        if do_rm_pid_file:
+            os.remove(bps.pid_file_name)

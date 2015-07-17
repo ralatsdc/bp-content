@@ -62,6 +62,8 @@ class BluPenAuthor(object):
         elif log_level == 'CRITICAL':
             self.log_level = logging.CRITICAL
 
+        self.pid_file_name = self.config.get("author", "pid_file_name")
+
         self.collection_requests_dir = self.config.get("collection", "requests_dir")
 
         self.feed_content_dir = self.config.get("feed", "content_dir")
@@ -180,68 +182,107 @@ if __name__ == "__main__":
                         help="purge existing author")
     args = parser.parse_args()
 
-    # Read the input request JSON document from author/queue
-    qu = QueueUtility()
-    bpa = BluPenAuthor(args.config_file)
-    bpa.do_purge = args.do_purge
-    inp_file_name, inp_req_data = qu.read_queue(bpa.author_requests_dir)
-    out_file_name = os.path.basename(inp_file_name); out_req_data = {}
-    if inp_file_name == "" or inp_req_data == {}:
-        bpa.logger.info(u"Nothing to do, exiting")
-        sys.exit()
+    # Process the queue, if all previous processes have completed
+    # without exception
+    try:
 
-    # Get author content from the specified service
-    if inp_req_data['service'] == 'feed':
-        bpa.logger.info(u"Getting feed content")
-        out_req_data['service'] = 'feed'
-        authors = []
-        for author in inp_req_data['authors']:
-            if not author['include']:
-                continue
-            authors.append(author)
-            source_url = author['url']
-            bpa.collect_feed_author_content(source_url)
-        out_req_data['authors'] = authors
+        # Assume processing is incomplete
+        do_rm_pid_file = False
 
-    elif inp_req_data['service'] == 'flickr':
-        bpa.logger.info(u"Getting flickr content")
-        out_req_data['service'] = 'flickr'
-        groups = []
-        for group in inp_req_data['groups']:
-            if not group['include']:
-                continue
-            groups.append(group)
-            source_word_str = u'@' + group['name']
-            group_id = group["nsid"]
-            bpa.collect_flickr_group_content(source_word_str, group_id)
-        out_req_data['groups'] = groups
+        # Configure a BluPenAuthor
+        bpa = BluPenAuthor(args.config_file)
+        bpa.do_purge = args.do_purge
 
-    elif inp_req_data['service'] == 'tumblr':
-        bpa.logger.info(u"Getting tumblr content")
-        out_req_data['service'] = 'tumblr'
-        authors = []
-        for author in inp_req_data['authors']:
-            if not author['include']:
-                continue
-            authors.append(author)
-            subdomain = urlparse.urlparse(author['url']).netloc
-            bpa.collect_tumblr_author_content(subdomain)
-        out_req_data['authors'] = authors
+        # Write the PID file, or exit if a previous process is
+        # running, or exited with an exception
+        if not os.path.exists(bpa.pid_file_name):
 
-    elif inp_req_data['service'] == 'twitter':
-        bpa.logger.info(u"Getting twitter content")
-        out_req_data['service'] = 'twitter'
-        authors = []
-        for author in inp_req_data['authors']:
-            if not author['include']:
-                continue
-            authors.append(author)
-            source_words_str = u'@' + author['screen_name']
-            bpa.collect_twitter_author_content(source_words_str)
-        out_req_data['authors'] = authors
+            # Write the PID file
+            pid_file = open(bpa.pid_file_name, 'w')
+            pid_file.write(str(os.getpid()))
+            pid_file.close()
 
-    # Write the input request JSON document to author/did-pop
-    qu.write_queue(bpa.author_requests_dir, out_file_name, inp_req_data)
+        else:
 
-    # Write the output request JSON document to collection/do-push
-    qu.write_queue(bpa.collection_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")
+            # Exit since a previous process is running, or exited with
+            # an exception
+            bpa.logger.info("A previous process is running, or exited with an exception")
+            sys.exit()
+
+        # Read the input request JSON document from author/queue
+        qu = QueueUtility()
+        inp_file_name, inp_req_data = qu.read_queue(bpa.author_requests_dir)
+        out_file_name = os.path.basename(inp_file_name); out_req_data = {}
+        if inp_file_name == "" or inp_req_data == {}:
+            bpa.logger.info(u"Nothing to do, exiting")
+            sys.exit()
+
+        # Get author content from the specified service
+        if inp_req_data['service'] == 'feed':
+            bpa.logger.info(u"Getting feed content")
+            out_req_data['service'] = 'feed'
+            authors = []
+            for author in inp_req_data['authors']:
+                if not author['include']:
+                    continue
+                authors.append(author)
+                source_url = author['url']
+                bpa.collect_feed_author_content(source_url)
+            out_req_data['authors'] = authors
+
+        elif inp_req_data['service'] == 'flickr':
+            bpa.logger.info(u"Getting flickr content")
+            out_req_data['service'] = 'flickr'
+            groups = []
+            for group in inp_req_data['groups']:
+                if not group['include']:
+                    continue
+                groups.append(group)
+                source_word_str = u'@' + group['name']
+                group_id = group["nsid"]
+                bpa.collect_flickr_group_content(source_word_str, group_id)
+            out_req_data['groups'] = groups
+
+        elif inp_req_data['service'] == 'tumblr':
+            bpa.logger.info(u"Getting tumblr content")
+            out_req_data['service'] = 'tumblr'
+            authors = []
+            for author in inp_req_data['authors']:
+                if not author['include']:
+                    continue
+                authors.append(author)
+                subdomain = urlparse.urlparse(author['url']).netloc
+                bpa.collect_tumblr_author_content(subdomain)
+            out_req_data['authors'] = authors
+
+        elif inp_req_data['service'] == 'twitter':
+            bpa.logger.info(u"Getting twitter content")
+            out_req_data['service'] = 'twitter'
+            authors = []
+            for author in inp_req_data['authors']:
+                if not author['include']:
+                    continue
+                authors.append(author)
+                source_words_str = u'@' + author['screen_name']
+                bpa.collect_twitter_author_content(source_words_str)
+            out_req_data['authors'] = authors
+
+        # Write the input request JSON document to author/did-pop
+        qu.write_queue(bpa.author_requests_dir, out_file_name, inp_req_data)
+
+        # Write the output request JSON document to collection/do-push
+        qu.write_queue(bpa.collection_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")
+
+        # Assume processing is complete
+        do_rm_pid_file = True
+
+    except Exception as exc:
+
+        # Log exceptions
+        bpa.logger.error(exc)
+    
+    finally:
+
+        # Remove the PID file, if processing is complete
+        if do_rm_pid_file:
+            os.remove(bpa.pid_file_name)

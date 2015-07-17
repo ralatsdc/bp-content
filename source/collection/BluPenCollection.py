@@ -58,7 +58,6 @@ class BluPenCollection(object):
         self.add_console_handler = self.config.getboolean("collection", "add_console_handler")
         self.add_file_handler = self.config.getboolean("collection", "add_file_handler")
         self.log_file_name = self.config.get("collection", "log_file_name")
-
         log_level = self.config.get("collection", "log_level")
         if log_level == 'DEBUG':
             self.log_level = logging.DEBUG
@@ -70,6 +69,8 @@ class BluPenCollection(object):
             self.log_level = logging.ERROR
         elif log_level == 'CRITICAL':
             self.log_level = logging.CRITICAL
+
+        self.pid_file_name = self.config.get("collection", "pid_file_name")
 
         # Create a logger
         root = logging.getLogger()
@@ -116,18 +117,58 @@ if __name__ == "__main__":
                         help="update country content")
     args = parser.parse_args()
 
-    # Read the input request JSON document from collection/queue
-    qu = QueueUtility()
-    bpc = BluPenCollection(args.config_file, args.author_config_file, do_update=args.do_update)
-    inp_file_name, inp_req_data = qu.read_queue(bpc.collection_requests_dir)
-    out_file_name = os.path.basename(inp_file_name); out_req_data = inp_req_data
-    if inp_file_name == "" or inp_req_data == {}:
-        bpc.logger.info(u"Nothing to do, exiting")
-        sys.exit()
+    # Process the queue, if all previous processes have completed
+    # without exception
+    try:
 
-    # Assemble content for the specified collection
-    if inp_req_data['collection'] == 'crisis':
-        bpc.assemble_crisis_collection(inp_req_data['country'], inp_req_data['query'])
+        # Assume processing is incomplete
+        do_rm_pid_file = False
 
-    # Write the input request JSON document to collection/did-pop
-    qu.write_queue(bpc.collection_requests_dir, out_file_name, inp_req_data)
+        # Configure a BluPenCollection
+        bpc = BluPenCollection(args.config_file, args.author_config_file, do_update=args.do_update)
+
+        # Write the PID file, or exit if a previous process is
+        # running, or exited with an exception
+        if not os.path.exists(bpc.pid_file_name):
+
+            # Write the PID file
+            pid_file = open(bpc.pid_file_name, 'w')
+            pid_file.write(str(os.getpid()))
+            pid_file.close()
+
+        else:
+
+            # Exit since a previous process is running, or exited with
+            # an exception
+            bpc.logger.info("A previous process is running, or exited with an exception")
+            sys.exit()
+
+        # Read the input request JSON document from collection/queue
+        qu = QueueUtility()
+        inp_file_name, inp_req_data = qu.read_queue(bpc.collection_requests_dir)
+        out_file_name = os.path.basename(inp_file_name); out_req_data = inp_req_data
+        if inp_file_name == "" or inp_req_data == {}:
+            bpc.logger.info(u"Nothing to do, exiting")
+            sys.exit()
+
+        # Assemble content for the specified collection
+        if inp_req_data['collection'] == 'crisis':
+            bpc.assemble_crisis_collection(inp_req_data['country'], inp_req_data['query'])
+
+        # Write the input request JSON document to collection/did-pop
+        qu.write_queue(bpc.collection_requests_dir, out_file_name, inp_req_data)
+
+        # Assume processing is complete
+        do_rm_pid_file = True
+
+    except Exception as exc:
+
+        # Log exceptions
+        bpc.logger.error(exc)
+    
+    finally:
+
+        # Remove the PID file, if processing is complete
+        if do_rm_pid_file:
+            os.remove(bpc.pid_file_name)
+        

@@ -11,20 +11,24 @@ SYNOPSIS
      fill_queue author|collection|source
 
 DESCRIPTION
-     Copies author, collection, or source request files from 'do_push'
+     Copies author, collection, or source request files from 'do-push'
      to 'queue', without overwriting existing files. All relevant
      actions are logged. Note that the REQUESTS_HOME environment
      variable must be exported.
 
 OPTIONS
-     None
+     -o     Copy files from 'did-pop' rather than 'do-push';
 
 EOF
 }
 
 # Parse command line options
-while getopts ":h" opt; do
+USE_DID_POP=0
+while getopts ":oh" opt; do
     case $opt in
+        o)
+            USE_DID_POP=1
+            ;;
 	h)
 	    usage
 	    exit 0
@@ -67,18 +71,30 @@ if [ ! -d "$REQUESTS_HOME/$request_type" ]; then
     echo "$REQUESTS_HOME/$request_type is not a directory"
     exit 1
 fi
-if [ ! -d "$REQUESTS_HOME/$request_type/do-push" ]; then
-    echo "$REQUESTS_HOME/$request_type/do-push is not a directory"
-    exit 1
-fi
+if [ $USE_DID_POP == 0 ]; then
+    if [ ! -d "$REQUESTS_HOME/$request_type/do-push" ]; then
+        echo "$REQUESTS_HOME/$request_type/do-push is not a directory"
+        exit 1
+    fi
+else
+    if [ ! -d "$REQUESTS_HOME/$request_type/did-pop" ]; then
+        echo "$REQUESTS_HOME/$request_type/did-pop is not a directory"
+        exit 1
+    fi
+fi    
 if [ ! -d "$REQUESTS_HOME/$request_type/queue" ]; then
     echo "$REQUESTS_HOME/$request_type/queue is not a directory"
     exit 1
 fi
 
-# Copy, but do not overwrite, JSON files from 'do_push' to 'queue'
+# Copy, but do not overwrite, JSON files from 'do-push', or optionally
+# 'did-pop', to 'queue'
 pushd $REQUESTS_HOME &> /dev/null
-files=`ls $request_type/do-push/*.json`
+if [ $USE_DID_POP == 0 ]; then
+    files=`ls $request_type/do-push/*.json`
+else
+    files=`ls $request_type/did-pop/*.json`
+fi    
 for file in $files; do
     cmd="cp -n $file $request_type/queue"
     echo `date "+%Y-%m-%d-%H:%M:%S"`": $cmd"
