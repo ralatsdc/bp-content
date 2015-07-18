@@ -1,0 +1,14 @@
+2015-07-11
+==========
+
+Install JCC on Ubuntu:
+https://www.digitalocean.com/community/tutorials/how-to-install-java-on-ubuntu-with-apt-get
+$ sudo apt-get install default-jdk
+$ pushd jcc
+$ python setup.py build &> build.log
+$ python setup.py install --record=install.log
+$ popd
+$ sudo apt-get install ant
+$ make &> make.log
+$ make test &> test.log
+$ sudo make install &> install.log

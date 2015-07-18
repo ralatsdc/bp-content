@@ -1,6 +1,28 @@
 2014-04-10
-----------
+==========
+
+Install using the home scheme:
+https://docs.python.org/2/install/#alternate-installation-the-home-scheme
+$ python setup.py install --home=~/Projects/Blue-Peninsula/bp-content/local --record=.files
+
+2015-07-09
+==========
+
+Install lxml
+http://lxml.de/installation.html#requirements
+https://pip.pypa.io/en/latest/reference/pip_install.html#per-requirement-overrides
+https://docs.python.org/2/install/#alternate-installation-the-home-scheme
+$ sudo apt-get install libxml2-dev libxslt-dev python-dev
+$ sudo pip install lxml --install-option="--home=/home/ubuntu/bp-content/local"
+
+2015-07-11
+==========
+
 Install using the home scheme:
 https://docs.python.org/2/install/#alternate-installation-the-home-scheme
 
-python setup.py install --home=~/Projects/Blue-Peninsula/bp-content/local --record=.files
+On Mac OS X:
+$ python setup.py install --home=~/Projects/Blue-Peninsula/bp-content/local --record=.files
+
+On Ubuntu:
+$ python setup.py install --home=/home/ubuntu/bp-content/local --record=.files

@@ -214,7 +214,8 @@ if __name__ == "__main__":
         inp_file_name, inp_req_data = qu.read_queue(bpa.author_requests_dir)
         out_file_name = os.path.basename(inp_file_name); out_req_data = {}
         if inp_file_name == "" or inp_req_data == {}:
-            bpa.logger.info(u"Nothing to do, exiting")
+            bps.logger.info("Nothing to do, scheduling collection queue processing")
+            call(["../scripts/process_queue.sh", "collection"])
             sys.exit()
 
         # Get author content from the specified service
@@ -271,8 +272,8 @@ if __name__ == "__main__":
         qu.write_queue(bpa.author_requests_dir, out_file_name, inp_req_data)
 
         # Write the output request JSON document to collection/do-push
-        qu.write_queue(bpa.collection_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")
-
+        # Not required
+        
         # Assume processing is complete
         do_rm_pid_file = True
 

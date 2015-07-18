@@ -148,7 +148,8 @@ if __name__ == "__main__":
         inp_file_name, inp_req_data = qu.read_queue(bpc.collection_requests_dir)
         out_file_name = os.path.basename(inp_file_name); out_req_data = inp_req_data
         if inp_file_name == "" or inp_req_data == {}:
-            bpc.logger.info(u"Nothing to do, exiting")
+            bps.logger.info("Nothing to do, scheduling collections updating")
+            call(["../scripts/update_collections.sh"])
             sys.exit()
 
         # Assemble content for the specified collection
@@ -157,6 +158,9 @@ if __name__ == "__main__":
 
         # Write the input request JSON document to collection/did-pop
         qu.write_queue(bpc.collection_requests_dir, out_file_name, inp_req_data)
+
+        # Write the output request JSON document to source/do-push
+        # Not required
 
         # Assume processing is complete
         do_rm_pid_file = True

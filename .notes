@@ -4,3 +4,8 @@
 Needed to modify twitter.py in release 1.1 so that the page parameter
 would be used in GetUsersSearch.
 
+2015-07-09
+==========
+
+http://www.scipy.org/install.html
+sudo apt-get install python-numpy python-scipy python-matplotlib ipython ipython-notebook python-pandas python-sympy python-nose

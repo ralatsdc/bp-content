@@ -1,0 +1,21 @@
+import sys; sys.__plen = len(sys.path)
+./BeautifulSoup-3.2.1-py2.7.egg-info
+./PyTumblr-0.0.5-py2.7.egg
+./beautifulsoup4-4.3.2-py2.7.egg-info
+./feedparser-5.1.3-py2.7.egg
+./httplib2-0.8-py2.7.egg
+./httpretty-0.8.0-py2.7.egg
+./lxml-3.3.0-py2.7-macosx-10.9-intel.egg
+./oauth2-1.5.211-py2.7.egg
+./oauthlib-0.6.1-py2.7.egg
+./nose-1.3.0-py2.7.egg
+./python_instagram-0.8.0-py2.7.egg
+./python_twitter-1.1-py2.7.egg
+./urllib3-1.7.1-py2.7.egg
+./webcolors-1.4-py2.7.egg-info
+./requests_oauthlib-0.4.0-py2.7.egg
+/Library/Python/2.7/site-packages/distribute-0.6.30-py2.7.egg
+./pybing-0.1dev_r0-py2.7.egg
+./wikipedia-1.1-py2.7.egg
+./requests-1.2.3-py2.7.egg
+import sys; new=sys.path[sys.__plen:]; del sys.path[sys.__plen:]; p=getattr(sys,'__egginsert',0); sys.path[p:p]=new; sys.__egginsert = p+len(new)

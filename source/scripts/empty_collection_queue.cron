@@ -1,0 +1,23 @@
+# File: empty_collection_queue.cron
+#
+# See: https://help.ubuntu.com/community/CronHowto
+# 
+# This is how a cron job is laid out:
+# 
+# minute (0-59), hour (0-23, 0 = midnight), day (1-31), month (1-12), weekday (0-6, 0 = Sunday), command 
+# 
+# Cron also offers some special strings:
+# 
+#    string      meaning 
+#    ---------   -----------------------------
+#    @reboot     Run once, at startup
+#    @yearly     Run once a year, "0 0 1 1 *"
+#    @annually   (same as @yearly)
+#    @monthly    Run once a month, "0 0 1 * *"
+#    @weekly     Run once a week, "0 0 * * 0"
+#    @daily      Run once a day, "0 0 * * *"
+#    @midnight   (same as @daily)
+#    @hourly     Run once an hour, "0 * * * *"
+
+# Run source/collection/BluPenCollection.py to empty the queue
+# */10 * * * * $CONTENT_HOME/source/collection/BluPenCollection.py -u

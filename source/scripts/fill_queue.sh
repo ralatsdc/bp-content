@@ -13,7 +13,7 @@ SYNOPSIS
 DESCRIPTION
      Copies author, collection, or source request files from 'do-push'
      to 'queue', without overwriting existing files. All relevant
-     actions are logged. Note that the REQUESTS_HOME environment
+     actions are logged. Note that the CONTENT_HOME environment
      variable must be exported.
 
 OPTIONS
@@ -52,52 +52,56 @@ if [ $# -eq 0 ]; then
     echo "A request type must be provided"
     exit 1
 else
-    request_type="$1"
+    REQUEST_TYPE="$1"
 fi
 if [ $# -gt 1 ]; then
     echo "Additional command line arguments ignored"
 fi
 
 # Check command line arguments.
-if ! [[ "$request_type" =~ ^(author|collection|source)$ ]]; then
+if ! [[ "$REQUEST_TYPE" =~ ^(author|collection|source)$ ]]; then
     echo "Request type must be 'author', 'collection', or 'source'"
     exit 1
 fi
-if [ -z "$REQUESTS_HOME" ]; then
-    echo "REQUESTS_HOME environment variable is not exported"
+
+# Check environment variables.
+if [ -z "$CONTENT_HOME" ]; then
+    echo "CONTENT_HOME environment variable is not exported"
     exit 1
 fi
-if [ ! -d "$REQUESTS_HOME/$request_type" ]; then
-    echo "$REQUESTS_HOME/$request_type is not a directory"
+
+# Check requests home
+REQUESTS_HOME="$CONTENT_HOME/requests"
+if [ ! -d "$REQUESTS_HOME/$REQUEST_TYPE" ]; then
+    echo "$REQUESTS_HOME/$REQUEST_TYPE is not a directory"
     exit 1
 fi
 if [ $USE_DID_POP == 0 ]; then
-    if [ ! -d "$REQUESTS_HOME/$request_type/do-push" ]; then
-        echo "$REQUESTS_HOME/$request_type/do-push is not a directory"
+    if [ ! -d "$REQUESTS_HOME/$REQUEST_TYPE/do-push" ]; then
+        echo "$REQUESTS_HOME/$REQUEST_TYPE/do-push is not a directory"
         exit 1
     fi
 else
-    if [ ! -d "$REQUESTS_HOME/$request_type/did-pop" ]; then
-        echo "$REQUESTS_HOME/$request_type/did-pop is not a directory"
+    if [ ! -d "$REQUESTS_HOME/$REQUEST_TYPE/did-pop" ]; then
+        echo "$REQUESTS_HOME/$REQUEST_TYPE/did-pop is not a directory"
         exit 1
     fi
 fi    
-if [ ! -d "$REQUESTS_HOME/$request_type/queue" ]; then
-    echo "$REQUESTS_HOME/$request_type/queue is not a directory"
+if [ ! -d "$REQUESTS_HOME/$REQUEST_TYPE/queue" ]; then
+    echo "$REQUESTS_HOME/$REQUEST_TYPE/queue is not a directory"
     exit 1
 fi
 
 # Copy, but do not overwrite, JSON files from 'do-push', or optionally
 # 'did-pop', to 'queue'
-pushd $REQUESTS_HOME &> /dev/null
+pushd "$REQUESTS_HOME" &> /dev/null
 if [ $USE_DID_POP == 0 ]; then
-    files=`ls $request_type/do-push/*.json`
+    FILES=`ls $REQUEST_TYPE/do-push/*.json`
 else
-    files=`ls $request_type/did-pop/*.json`
+    FILES=`ls $REQUEST_TYPE/did-pop/*.json`
 fi    
-for file in $files; do
-    cmd="cp -n $file $request_type/queue"
-    echo `date "+%Y-%m-%d-%H:%M:%S"`": $cmd"
-    $cmd
+for FILE in $FILES; do
+    cmd="cp -n $FILE $REQUEST_TYPE/queue"
+    echo `date "+%Y-%m-%d-%H:%M:%S"`": $cmd"; $cmd
 done
 popd &> /dev/null

@@ -9,6 +9,7 @@ import logging
 import logging.handlers
 import os
 import re
+from subprocess import call
 import sys
 
 # Third-party imports
@@ -391,7 +392,8 @@ if __name__ == "__main__":
         inp_file_name, inp_req_data = qu.read_queue(bps.source_requests_dir)
         out_file_name = os.path.basename(inp_file_name); out_req_data = {}
         if inp_file_name == "" or inp_req_data == {}:
-            bps.logger.info("Nothing to do, exiting")
+            bps.logger.info("Nothing to do, scheduling author queue processing")
+            call(["../scripts/process_queue.sh", "author"])
             sys.exit()
 
         # Get source from the specified service
