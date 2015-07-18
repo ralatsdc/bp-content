@@ -1,0 +1,21 @@
+{
+    "status": "done",
+    "country": "zimbabwe",
+    "collection": "crisis",
+    "query": {
+        "crisis": "Flood",
+        "common": "Harare"
+    },
+    "query-1": {
+        "crisis": "'Zimbabwe Flash Floods' AND NOT (Zimbabwe Harare)",
+        "common": "Zimbabwe Harare AND NOT 'Zimbabwe Flash Floods'"
+    },
+    "query-2": {
+        "crisis": "'Zimbabwe Flash Floods'",
+        "common": "Zimbabwe Harare"
+    },
+    "query-3": {
+        "crisis": "'Flash Floods'",
+        "common": "Harare"
+    }
+}

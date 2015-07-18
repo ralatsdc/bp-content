@@ -1,0 +1,24 @@
+{
+    "status": "done",
+    "service": "feed",
+    "authors": [
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/blogs/msf-in-syria/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Syria.",
+            "title": "Doctors Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/charlotte/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Syria.",
+            "title": "Doctors Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/joanne-liu/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Syria.",
+            "title": "Doctors Without Borders"
+        }
+    ]
+}

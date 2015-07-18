@@ -1,0 +1,60 @@
+{
+    "status": "done",
+    "service": "feed",
+    "authors": [
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/emma-pedley/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Central African Republic.",
+            "title": "Doctors Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/jean-didier-longa-ikona/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Central African Republic.",
+            "title": "Doctors Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/moustapha-adjaro/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Central African Republic.",
+            "title": "Doctors Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/nelly-hortensia-mayah/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Central African Republic.",
+            "title": "Doctors Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/ashley-sharpe/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Central African Republic.",
+            "title": "Doctors Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/alison-criado-perez/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Central African Republic.",
+            "title": "Doctors Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/david-lauter/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Central African Republic.",
+            "title": "Doctors Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/blogs/on-verra-tchad/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Central African Republic.",
+            "title": "Doctors Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/blogs/life-in-gore/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Central African Republic.",
+            "title": "Doctors Without Borders"
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "status": "done",
+    "service": "feed",
+    "authors": [
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/sherri-grady/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Central African Republic.",
+            "title": "Doctors Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/wendy-lai/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Central African Republic.",
+            "title": "Doctors Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/louise-johnston/rss.xml",
+            "include": true,
+            "description": "First hand accounts of MSF's work in Central African Republic.",
+            "title": "Doctors Without Borders"
+        },
+        {
+            "url": "http://www.irinnews.org/rss/haiti.xml",
+            "include": true,
+            "description": "Humanitarian news and analysis from the UN Office for the Coordination of Humanitarian Affairs",
+            "title": "IRIN"
+        }
+    ]
+}

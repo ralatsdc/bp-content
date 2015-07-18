@@ -1,0 +1,13 @@
+{
+    "status": "done",
+    "country": "syria",
+    "query-1": {
+        "crisis": "'Save Aleppo' AND NOT (Syria Aleppo)",
+        "common": "Syria Aleppo AND NOT 'Save Aleppo'"
+    },
+    "collection": "crisis",
+    "query": {
+        "crisis": "'Save Aleppo'",
+        "common": "Syria"
+    }
+}

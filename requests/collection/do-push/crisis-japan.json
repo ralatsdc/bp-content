@@ -1,0 +1,13 @@
+{
+    "status": "done",
+    "country": "japan",
+    "query-1": {
+        "crisis": "Fukushima AND NOT (Japan Tokyo)",
+        "common": "Japan Tokyo AND NOT Fukushima"
+    },
+    "collection": "crisis",
+    "query": {
+        "crisis": "Fukushima",
+        "common": "Japan"
+    }
+}

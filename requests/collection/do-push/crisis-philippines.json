@@ -1,0 +1,13 @@
+{
+    "status": "done",
+    "country": "philippines",
+    "query-1": {
+        "crisis": "'Typhoon Haiyan' AND NOT (Philippines Manila)",
+        "common": "Philippines Manila AND NOT 'Typhoon Haiyan'"
+    },
+    "collection": "crisis",
+    "query": {
+        "crisis": "'Typhoon Haiyan'",
+        "common": "Philippines"
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "status": "done",
+    "country": "south-sudan",
+    "query-1": {
+        "crisis": "'Ethnic Violence' AND NOT ('South Sudan' bentiu)",
+        "common": "'South Sudan' bentiu AND NOT 'Ethnic Violence'"
+    },
+    "collection": "crisis",
+    "query": {
+        "crisis": "'Ethnic Violence'",
+        "common": "'South Sudan'"
+    }
+}

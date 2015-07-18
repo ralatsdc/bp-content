@@ -1,0 +1,13 @@
+{
+    "status": "done",
+    "country": "haiti",
+    "query-1": {
+        "crisis": "'Haiti Earthquake' AND NOT (Haiti 'Port-au-Prince')",
+        "common": "(Haiti 'Port-au-Prince') AND NOT 'Haiti Earthquake'"
+    },
+    "collection": "crisis",
+    "query": {
+        "crisis": "'Haiti Earthquake'",
+        "common": "Haiti"
+    }
+}

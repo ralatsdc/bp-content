@@ -1,0 +1,13 @@
+{
+    "status": "done",
+    "country": "car",
+    "query-1": {
+        "crisis": "CARcrisis AND NOT ('Central African Republic' Bangui)",
+        "common": "'Central African Republic' Bangui AND NOT CARcrisis"
+    },
+    "collection": "crisis",
+    "query": {
+        "crisis": "CARcrisis",
+        "common": "'Central African Republic'"
+    }
+}

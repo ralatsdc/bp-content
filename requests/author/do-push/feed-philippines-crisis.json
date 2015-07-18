@@ -1,0 +1,72 @@
+{
+    "status": "done",
+    "service": "feed",
+    "authors": [
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/steven-cohen/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of MSF's emergency response in the Philippines.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/martine-bouchard/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of MSF's emergency response in the Philippines.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/caroline-van-nespen/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of MSF's emergency response in the Philippines.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/yann-libessart/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of MSF's emergency response in the Philippines.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/claire-dorion/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of MSF's emergency response in the Philippines.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/quirijn-dees/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of MSF's emergency response in the Philippines.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/tankred-stoebe/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of MSF's emergency response in the Philippines.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/personnel/authors/natasha-reyes/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of MSF's emergency response in the Philippines.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/agus-morales/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of MSF's emergency response in the Philippines.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/esther-sterk/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of MSF's emergency response in the Philippines.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://www.oxfam.org/en/emergencies/34156/feed",
+            "include": true,
+            "description": "Emergency articles regarding Philippines Typhoon Haiyan.",
+            "title": "Oxfam International"
+        }
+    ]
+}

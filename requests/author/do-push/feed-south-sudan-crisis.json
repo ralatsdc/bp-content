@@ -1,0 +1,48 @@
+{
+    "status": "done",
+    "service": "feed",
+    "authors": [
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/veronica-ades/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of an MSF doctor in South Sudan.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/imran-ali/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of an MSF doctor in South Sudan.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/cormac-donnelly/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of an MSF doctor in South Sudan.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/lorna-admas/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of an MSF doctor in South Sudan.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/emmett-kearns/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of an MSF doctor in South Sudan.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/rupert-allan/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of an MSF doctor in South Sudan.",
+            "title": "Doctor's Without Borders"
+        },
+        {
+            "url": "http://blogs.msf.org/en/rss/staff/authors/james-maskalyk/rss.xml",
+            "include": true,
+            "description": "First-hand accounts of an MSF doctor in South Sudan.",
+            "title": "Doctor's Without Borders"
+        }
+    ]
+}

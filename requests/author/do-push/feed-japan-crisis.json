@@ -1,0 +1,30 @@
+{
+    "status": "done",
+    "service": "feed",
+    "authors": [
+        {
+            "url": "http://topics.nytimes.com/top/news/international/countriesandterritories/japan/index.html?rss=1",
+            "include": true,
+            "description": "News about Japan, including commentary and archival articles published in The New York Times.",
+            "title": "NYT > Japan"
+        },
+        {
+            "url": "http://world.einnews.com/rss/sco0YeLmx6vQ-dFQ",
+            "include": true,
+            "description": "EIN news feed on Japan Earthquake",
+            "title": "Japan Earthquake News"
+        },
+        {
+            "url": "http://www.noaawatch.gov/rss/tsunami.xml",
+            "include": true,
+            "description": "NOAA Information on Tsunamis",
+            "title": "NOAAWatch - Tsunami"
+        },
+        {
+            "url": "http://www.globalgiving.org/pr/6500/proj6443.rss",
+            "include": true,
+            "description": "Progress Reports for Project #6443: Japan Earthquake and Tsunami Relief Fund",
+            "title": "GlobalGiving.org: Japan Earthquake and Tsunami Relief Fund"
+        }
+    ]
+}
