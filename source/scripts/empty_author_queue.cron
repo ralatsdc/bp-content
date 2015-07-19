@@ -6,6 +6,14 @@
 # 
 # minute (0-59), hour (0-23, 0 = midnight), day (1-31), month (1-12), weekday (0-6, 0 = Sunday), command 
 # 
+# +---------------- minute (0 - 59)
+# |  +------------- hour (0 - 23)
+# |  |  +---------- day of month (1 - 31)
+# |  |  |  +------- month (1 - 12)
+# |  |  |  |  +---- day of week (0 - 6) (Sunday=0 or 7)
+# |  |  |  |  |
+# *  *  *  *  *  command to be executed
+#  
 # Cron also offers some special strings:
 # 
 #    string      meaning 
@@ -19,5 +27,10 @@
 #    @midnight   (same as @daily)
 #    @hourly     Run once an hour, "0 * * * *"
 
+# Set environment variables
+SHELL=/bin/bash
+PYTHONPATH=/home/ubuntu/bp-content/local/lib/python2.7
+CONTENT_HOME=/home/ubuntu/bp-content
+
 # Run source/author/BluPenAuthor.py to empty the queue
-# */10 * * * * $CONTENT_HOME/source/author/BluPenAuthor.py -p
+* * * * * cd $CONTENT_HOME/source/author; ./BluPenAuthor.py -p &>> /dev/null

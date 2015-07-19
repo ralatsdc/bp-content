@@ -132,15 +132,19 @@ if __name__ == "__main__":
         if not os.path.exists(bpc.pid_file_name):
 
             # Write the PID file
+            pid = str(os.getpid())
             pid_file = open(bpc.pid_file_name, 'w')
-            pid_file.write(str(os.getpid()))
+            pid_file.write(pid)
             pid_file.close()
+            print "{0}: Wrote PID file with PID: {1}".format(datetime.datetime.now(), pid)
+            sys.stdout.flush()
 
         else:
 
             # Exit since a previous process is running, or exited with
             # an exception
-            bpc.logger.info("A previous process is running, or exited with an exception")
+            print "{0}: Aleady running, or raised exception".format(datetime.datetime.now())
+            sys.stdout.flush()
             sys.exit()
 
         # Read the input request JSON document from collection/queue
@@ -169,10 +173,13 @@ if __name__ == "__main__":
 
         # Log exceptions
         bpc.logger.error(exc)
+        print "{0}: Raised exception: {1}".format(datetime.datetime.now(), exc)
+        sys.stdout.flush()
     
     finally:
 
         # Remove the PID file, if processing is complete
         if do_rm_pid_file:
             os.remove(bpc.pid_file_name)
-        
+            print "{0}: Removed PID file with PID: {1}".format(datetime.datetime.now(), pid)
+            sys.stdout.flush()
