@@ -23,9 +23,9 @@ class QueueUtility(object):
         self.logger = logging.getLogger("QueueUtility")
 
     def read_queue(self, request_dir):
-        """Read the first-in input file from queue in the specified
+        """Read the first-in input file from 'queue' in the specified
         directory, set status, then write the request data to output
-        file in did-pop.
+        file in 'did-pop'.
 
         """
         # Initialize return value
@@ -36,55 +36,124 @@ class QueueUtility(object):
         try:
 
             # Open and attempt to lock the lock file
-            lck_file_name = os.path.join(request_dir, "queue", "queue.lck")
+            lck_file_name = os.path.join(request_dir, 'queue', "queue.lck")
             lck_file = codecs.open(lck_file_name, encoding='utf-8', mode='w')
             is_locked = self.lock(lck_file)
             if not is_locked:
                 raise IOError()
 
-            # Find all input files from queue, and return if none
-            inp_file_names = glob.glob(os.path.join(request_dir, "queue", "*.json"))
+            # Find all input files from 'queue', and raise an
+            # exception if none
+            inp_file_names = glob.glob(os.path.join(request_dir, 'queue', "*.json"))
             if len(inp_file_names) == 0:
                 raise IOError()
 
-            # Find and read the first-in input file from queue
+            # Find and read the first-in input file from 'queue'
             inp_file_name = min(inp_file_names, key=os.path.getctime)
             inp_file = codecs.open(inp_file_name, encoding='utf-8', mode='r')
             req_data = json.loads(inp_file.read())
             inp_file.close()
 
-            # Set status and write request data to output file in did-pop
+            # Set status 'doing' and write request data to output file
+            # in 'did-pop'
             out_file_name = os.path.basename(inp_file_name)
-            self.write_queue(request_dir, out_file_name, req_data, status="doing", queue="did-pop")
+            self.write_queue(request_dir, out_file_name, req_data, status='doing', queue='did-pop')
 
-            # Remove the input file from queue
+            # Remove the input file from 'queue'
             os.remove(inp_file_name)
 
         except IOError as exc:
             pass
 
         except Exception as exc:
-            self.logger.info(u"Could not read queue: {0}".format(exc))
+            self.logger.info(u"Could not read: {0}: {1}".format(input_file_name, exc))
 
         finally:
 
-            # Unlock and close the lck file
+            # Unlock and close the lock file so that the queue can be
+            # read
             if is_locked:
                 self.unlock(lck_file)
             lck_file.close()
 
         return (inp_file_name, req_data)
 
-    def write_queue(self, request_dir, out_file_name, req_data, status="done", queue="did-pop"):
-        """Write the request data to the request directory in do-push.
+    def write_queue(self, request_dir, out_file_name, req_data, status='done', queue='did-pop'):
+        """Write the request data to the request directory in 'do-push'.
 
         """
-        # Set status and write request data to output file in do-push
-        req_data['status'] = status
-        out_file_name = os.path.join(request_dir, queue, out_file_name)
-        out_file = codecs.open(out_file_name, encoding='utf-8', mode='w')
-        out_file.write(json.dumps(req_data, ensure_ascii=False, indent=4, separators=(',', ': ')))
-        out_file.close()
+        # Handle exceptions
+        try:
+
+            # Set status and write request data to output file in 'do-push'
+            req_data['status'] = status
+            out_file_name = os.path.join(request_dir, queue, out_file_name)
+            out_file = codecs.open(out_file_name, encoding='utf-8', mode='w')
+            out_file.write(json.dumps(req_data, ensure_ascii=False, indent=4, separators=(',', ': ')))
+            out_file.close()
+        
+        except Exception as exc:
+            self.logger.info(u"Could not write: {0}: {1}".format(out_file_name, exc))
+
+    def retry_queue(self, request_dir, max_retries=1):
+        """Read all input files from 'did-pop' in the specified
+        directory, set status 'retry' if status is not 'done', then
+        write the request data to output file in 'queue'.
+
+        """
+        # Handle exceptions
+        try:
+
+            # Open and attempt to lock the lock file
+            lck_file_name = os.path.join(request_dir, 'did-pop', "queue.lck")
+            lck_file = codecs.open(lck_file_name, encoding='utf-8', mode='w')
+            is_locked = self.lock(lck_file)
+            if not is_locked:
+                raise IOError() # Another process has already locked
+                                # the lock file, so requests with
+                                # status other than 'done' may be in
+                                # progress
+
+            # Find all input files from 'did-pop', and raise exception if none
+            inp_file_names = glob.glob(os.path.join(request_dir, 'did-pop', "*.json"))
+            is_empty = len(inp_file_names) == 0
+            if is_empty:
+                raise IOError() # No requests to retry
+
+            # Read each input file from 'did-pop'
+            for inp_file_name in inp_file_names:
+                inp_file = codecs.open(inp_file_name, encoding='utf-8', mode='r')
+                req_data = json.loads(inp_file.read())
+                inp_file.close()
+
+                # Count retries
+                if not 'num_retries' in req_data.keys():
+                    req_data['num_retries'] = 1
+
+                else:
+                    req_data['num_retries'] += 1
+                    
+                # Set status 'retry' and write request data to output
+                # file in 'queue', if status other than 'done', and
+                # maximum number of retries has not be exceeded
+                if req_data['status'] != u'done' and req_data['num_retries'] <= max_retries:
+                    out_file_name = os.path.basename(inp_file_name)
+                    self.write_queue(request_dir, out_file_name, req_data, status='retry', queue='queue')
+                    self.logger.info("Retrying: {0}".format(inp_file_name))
+
+        except IOError as exc:
+            pass
+
+        except Exception as exc:
+            self.logger.info(u"Could not retry: {0}: {1}".format(request_dir, exc))
+
+        finally:
+            
+            # Do not unlock and close the lock file so that only one
+            # program instance retries the queue
+            pass
+        
+        return is_locked and not is_empty
 
     def lock(self, lck_file):
         """Lock the specified file without blocking.

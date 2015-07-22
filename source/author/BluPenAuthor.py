@@ -272,6 +272,9 @@ if __name__ == "__main__":
                 bpa.collect_twitter_author_content(source_words_str)
             out_req_data['authors'] = authors
 
+        else:
+            bpa.logger.warning("Unexpected service: {0}".format(inp_req_data['service']))
+            
         # Write the input request JSON document to author/did-pop
         qu.write_queue(bpa.author_requests_dir, out_file_name, inp_req_data)
 

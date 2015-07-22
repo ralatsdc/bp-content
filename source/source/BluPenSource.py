@@ -38,6 +38,8 @@ class BluPenSource(object):
         self.config = ConfigParser.SafeConfigParser()
         self.config.read(self.config_file)
 
+        self.lock_file_name = self.config.get("source", "lock_file_name")
+
         self.source_do_purge = self.config.getboolean("source", "do_purge")
         self.source_requests_dir = self.config.get("source", "requests_dir")
 
@@ -55,8 +57,6 @@ class BluPenSource(object):
             self.log_level = logging.ERROR
         elif log_level == 'CRITICAL':
             self.log_level = logging.CRITICAL
-
-        self.pid_file_name = self.config.get("source", "pid_file_name")
 
         self.author_config_file = self.config.get("author", "config_file")
         self.author_do_purge = self.config.getboolean("author", "do_purge")
@@ -360,46 +360,35 @@ if __name__ == "__main__":
                         help="purge existing source and author")
     args = parser.parse_args()
     
-    # Process the queue, if all previous processes have completed
-    # without exception
+    # Configure a BluPenSource
+    bps = BluPenSource(args.config_file)
+    bps.source_do_purge = args.do_purge_src or args.do_purge_all
+    bps.author_do_purge = args.do_purge_all
+
+    # Run one program instance per program configuration
+    qu = QueueUtility()
+    bps_lock_file = open(bps.lock_file_name, 'w')
+    if not qu.lock(bps_lock_file):
+        bps.logger.info("Previous process is running, exiting")
+        sys.exit()
+
+    # Retry incomplete requests, if no other program instance is
+    # running
+    if qu.retry_queue(bps.source_requests_dir):
+        bps.logger.info("Retrying incomplete requests")
+
+    # Read the input request JSON document from 'source/queue', and
+    # write to 'source/did-pop' with status 'doing'
+    inp_file_name, inp_req_data = qu.read_queue(bps.source_requests_dir)
+    out_file_name = os.path.basename(inp_file_name); out_req_data = {}
+    if inp_file_name == "" or inp_req_data == {}:
+        bps.logger.info("Queue is empty")
+        # call(["../scripts/process_queue.sh", "author"])
+        # bps.logger.info("Scheduled author queue processing")
+        sys.exit()
+
+    # Retry request on exceptions
     try:
-
-        # Assume processing is incomplete
-        do_rm_pid_file = False
-
-        # Configure a BluPenSource
-        bps = BluPenSource(args.config_file)
-        bps.source_do_purge = args.do_purge_src or args.do_purge_all
-        bps.author_do_purge = args.do_purge_all
-
-        # Write the PID file, or exit if a previous process is
-        # running, or exited with an exception
-        if not os.path.exists(bps.pid_file_name):
-
-            # Write the PID file
-            pid = str(os.getpid())
-            pid_file = open(bps.pid_file_name, 'w')
-            pid_file.write(pid)
-            pid_file.close()
-            print "{0}: Wrote PID file with PID: {1}".format(datetime.datetime.now(), pid)
-            sys.stdout.flush()
-            
-        else:
-
-            # Exit since a previous process is running, or exited with
-            # an exception
-            print "{0}: Aleady running, or raised exception".format(datetime.datetime.now())
-            sys.stdout.flush()
-            sys.exit()
-
-        # Read the input request JSON document from source/queue
-        qu = QueueUtility()
-        inp_file_name, inp_req_data = qu.read_queue(bps.source_requests_dir)
-        out_file_name = os.path.basename(inp_file_name); out_req_data = {}
-        if inp_file_name == "" or inp_req_data == {}:
-            bps.logger.info("Nothing to do, scheduling author queue processing")
-            call(["../scripts/process_queue.sh", "author"])
-            sys.exit()
 
         # Get source from the specified service
         if inp_req_data['service'] == 'flickr':
@@ -414,26 +403,17 @@ if __name__ == "__main__":
             out_req_data['service'] = 'twitter'
             out_req_data['authors'] = bps.get_source_from_twitter(inp_req_data['words'], bps.twitter_content_dir)
 
-        # Write the input request JSON document to source/did-pop
+        else:
+            bps.logger.warning("Unexpected service: {0}".format(inp_req_data['service']))
+        
+        # Write the input request JSON document to 'source/did-pop' with status 'done'
         qu.write_queue(bps.source_requests_dir, out_file_name, inp_req_data)
 
-        # Write the output request JSON document to author/do-push
-        qu.write_queue(bps.author_requests_dir, out_file_name, out_req_data, status="todo", queue="do-push")
-
-        # Assume processing is complete
-        do_rm_pid_file = True
+        # Write the output request JSON document to 'author/do-push' with status 'todo'
+        qu.write_queue(bps.author_requests_dir, out_file_name, out_req_data, status='todo', queue='do-push')
 
     except Exception as exc:
 
-        # Log exceptions
+        # Write the input request JSON document to 'source/queue' with status 'retry'
+        qu.write_queue(bps.source_requests_dir, out_file_name, inp_req_data, status='retry', queue='queue')
         bps.logger.error(exc)
-        print "{0}: Raised exception: {1}".format(datetime.datetime.now(), exc)
-        sys.stdout.flush()
-            
-    finally:
-
-        # Remove the PID file, if processing is complete
-        if do_rm_pid_file:
-            os.remove(bps.pid_file_name)
-            print "{0}: Removed PID file with PID: {1}".format(datetime.datetime.now(), pid)
-            sys.stdout.flush()
