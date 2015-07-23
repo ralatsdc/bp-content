@@ -383,8 +383,8 @@ if __name__ == "__main__":
     out_file_name = os.path.basename(inp_file_name); out_req_data = {}
     if inp_file_name == "" or inp_req_data == {}:
         bps.logger.info("Queue is empty")
-        # call(["../scripts/process_queue.sh", "author"])
-        # bps.logger.info("Scheduled author queue processing")
+        call(["../scripts/process_queue.sh", "author"])
+        bps.logger.info("Scheduled author queue processing")
         sys.exit()
 
     # Retry request on exceptions
@@ -416,4 +416,5 @@ if __name__ == "__main__":
 
         # Write the input request JSON document to 'source/queue' with status 'retry'
         qu.write_queue(bps.source_requests_dir, out_file_name, inp_req_data, status='retry', queue='queue')
+        bps.logger.info("Retrying: {0}".format(inp_file_name))
         bps.logger.error(exc)

@@ -117,44 +117,33 @@ if __name__ == "__main__":
                         help="update country content")
     args = parser.parse_args()
 
-    # Process the queue, if all previous processes have completed
-    # without exception
+    # Configure a BluPenCollection
+    bpc = BluPenCollection(args.config_file, args.author_config_file, do_update=args.do_update)
+
+    # Run one program instance per program configuration
+    qu = QueueUtility()
+    bpc_lock_file = open(bpc.lock_file_name, 'w')
+    if not qu.lock(bpc_lock_file):
+        bpc.logger.info("Previous process is running, exiting")
+        sys.exit()
+
+    # Retry incomplete requests, if no other program instance is
+    # running
+    if qu.retry_queue(bpc.source_requests_dir):
+        bpc.logger.info("Retrying incomplete requests")
+
+    # Read the input request JSON document from collection/queue
+    qu = QueueUtility()
+    inp_file_name, inp_req_data = qu.read_queue(bpc.collection_requests_dir)
+    out_file_name = os.path.basename(inp_file_name); out_req_data = inp_req_data
+    if inp_file_name == "" or inp_req_data == {}:
+        bpc.logger.info("Queue is empty")
+        # call(["../scripts/update_collections.sh"])
+        # bpc.logger.info("Scheduled collection updating")
+        sys.exit()
+
+    # Retry request on exceptions
     try:
-
-        # Assume processing is incomplete
-        do_rm_pid_file = False
-
-        # Configure a BluPenCollection
-        bpc = BluPenCollection(args.config_file, args.author_config_file, do_update=args.do_update)
-
-        # Write the PID file, or exit if a previous process is
-        # running, or exited with an exception
-        if not os.path.exists(bpc.pid_file_name):
-
-            # Write the PID file
-            pid = str(os.getpid())
-            pid_file = open(bpc.pid_file_name, 'w')
-            pid_file.write(pid)
-            pid_file.close()
-            print "{0}: Wrote PID file with PID: {1}".format(datetime.datetime.now(), pid)
-            sys.stdout.flush()
-
-        else:
-
-            # Exit since a previous process is running, or exited with
-            # an exception
-            print "{0}: Aleady running, or raised exception".format(datetime.datetime.now())
-            sys.stdout.flush()
-            sys.exit()
-
-        # Read the input request JSON document from collection/queue
-        qu = QueueUtility()
-        inp_file_name, inp_req_data = qu.read_queue(bpc.collection_requests_dir)
-        out_file_name = os.path.basename(inp_file_name); out_req_data = inp_req_data
-        if inp_file_name == "" or inp_req_data == {}:
-            bps.logger.info("Nothing to do, scheduling collections updating")
-            call(["../scripts/update_collections.sh"])
-            sys.exit()
 
         # Assemble content for the specified collection
         if inp_req_data['collection'] == 'crisis':
@@ -166,20 +155,9 @@ if __name__ == "__main__":
         # Write the output request JSON document to source/do-push
         # Not required
 
-        # Assume processing is complete
-        do_rm_pid_file = True
-
     except Exception as exc:
 
-        # Log exceptions
+        # Write the input request JSON document to 'collection/queue' with status 'retry'
+        qu.write_queue(bpc.collection_requests_dir, out_file_name, inp_req_data, status='retry', queue='queue')
+        bpc.logger.info("Retrying: {0}".format(inp_file_name))
         bpc.logger.error(exc)
-        print "{0}: Raised exception: {1}".format(datetime.datetime.now(), exc)
-        sys.stdout.flush()
-    
-    finally:
-
-        # Remove the PID file, if processing is complete
-        if do_rm_pid_file:
-            os.remove(bpc.pid_file_name)
-            print "{0}: Removed PID file with PID: {1}".format(datetime.datetime.now(), pid)
-            sys.stdout.flush()

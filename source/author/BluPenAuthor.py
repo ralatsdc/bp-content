@@ -182,45 +182,33 @@ if __name__ == "__main__":
                         help="purge existing author")
     args = parser.parse_args()
 
-    # Process the queue, if all previous processes have completed
-    # without exception
+    # Configure a BluPenAuthor
+    bpa = BluPenAuthor(args.config_file)
+    bpa.do_purge = args.do_purge
+
+    # Run one program instance per program configuration
+    qu = QueueUtility()
+    bpa_lock_file = open(bpa.lock_file_name, 'w')
+    if not qu.lock(bpa_lock_file):
+        bpa.logger.info("Previous process is running, exiting")
+        sys.exit()
+
+    # Retry incomplete requests, if no other program instance is
+    # running
+    if qu.retry_queue(bpa.author_requests_dir):
+        bpa.logger.info("Retrying incomplete requests")
+
+    # Read the input request JSON document from author/queue
+    inp_file_name, inp_req_data = qu.read_queue(bpa.author_requests_dir)
+    out_file_name = os.path.basename(inp_file_name); out_req_data = {}
+    if inp_file_name == "" or inp_req_data == {}:
+        bpa.logger.info("Queue is empty")
+        # call(["../scripts/process_queue.sh", "collection"])
+        # bps.logger.info("Scheduled collection queue processing")
+        sys.exit()
+
+    # Retry request on exceptions
     try:
-
-        # Assume processing is incomplete
-        do_rm_pid_file = False
-
-        # Configure a BluPenAuthor
-        bpa = BluPenAuthor(args.config_file)
-        bpa.do_purge = args.do_purge
-
-        # Write the PID file, or exit if a previous process is
-        # running, or exited with an exception
-        if not os.path.exists(bpa.pid_file_name):
-
-            # Write the PID file
-            pid = str(os.getpid())
-            pid_file = open(bpa.pid_file_name, 'w')
-            pid_file.write(pid)
-            pid_file.close()
-            print "{0}: Wrote PID file with PID: {1}".format(datetime.datetime.now(), pid)
-            sys.stdout.flush()
-
-        else:
-
-            # Exit since a previous process is running, or exited with
-            # an exception
-            print "{0}: Aleady running, or raised exception".format(datetime.datetime.now())
-            sys.stdout.flush()
-            sys.exit()
-
-        # Read the input request JSON document from author/queue
-        qu = QueueUtility()
-        inp_file_name, inp_req_data = qu.read_queue(bpa.author_requests_dir)
-        out_file_name = os.path.basename(inp_file_name); out_req_data = {}
-        if inp_file_name == "" or inp_req_data == {}:
-            bps.logger.info("Nothing to do, scheduling collection queue processing")
-            call(["../scripts/process_queue.sh", "collection"])
-            sys.exit()
 
         # Get author content from the specified service
         if inp_req_data['service'] == 'feed':
@@ -281,20 +269,9 @@ if __name__ == "__main__":
         # Write the output request JSON document to collection/do-push
         # Not required
         
-        # Assume processing is complete
-        do_rm_pid_file = True
-
     except Exception as exc:
 
-        # Log exceptions
+        # Write the input request JSON document to 'author/queue' with status 'retry'
+        qu.write_queue(bpa.author_requests_dir, out_file_name, inp_req_data, status='retry', queue='queue')
+        bps.logger.info("Retrying: {0}".format(inp_file_name))
         bpa.logger.error(exc)
-        print "{0}: Raised exception: {1}".format(datetime.datetime.now(), exc)
-        sys.stdout.flush()
-    
-    finally:
-
-        # Remove the PID file, if processing is complete
-        if do_rm_pid_file:
-            os.remove(bpa.pid_file_name)
-            print "{0}: Removed PID file with PID: {1}".format(datetime.datetime.now(), pid)
-            sys.stdout.flush()
