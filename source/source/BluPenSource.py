@@ -38,10 +38,12 @@ class BluPenSource(object):
         self.config = ConfigParser.SafeConfigParser()
         self.config.read(self.config_file)
 
+        # Assign atributes
         self.lock_file_name = self.config.get("source", "lock_file_name")
 
         self.source_do_purge = self.config.getboolean("source", "do_purge")
         self.source_requests_dir = self.config.get("source", "requests_dir")
+        self.max_retries = self.config.getint("source", "max_retries")
 
         self.add_console_handler = self.config.getboolean("source", "add_console_handler")
         self.add_file_handler = self.config.getboolean("source", "add_file_handler")
@@ -374,7 +376,7 @@ if __name__ == "__main__":
 
     # Retry incomplete requests, if no other program instance is
     # running
-    if qu.retry_queue(bps.source_requests_dir):
+    if qu.retry_queue(bps.author_requests_dir, max_retries=bps.max_retries):
         bps.logger.info("Retrying incomplete requests")
 
     # Read the input request JSON document from 'source/queue', and
@@ -414,7 +416,17 @@ if __name__ == "__main__":
 
     except Exception as exc:
 
-        # Write the input request JSON document to 'source/queue' with status 'retry'
-        qu.write_queue(bps.source_requests_dir, out_file_name, inp_req_data, status='retry', queue='queue')
-        bps.logger.info("Retrying: {0}".format(inp_file_name))
+        # Log the exception
         bps.logger.error(exc)
+
+        # Count retries
+        if not 'num_retries' in inp_req_data.keys():
+            inp_req_data['num_retries'] = 1
+
+        else:
+            inp_req_data['num_retries'] += 1
+                    
+        # Write the input request JSON document to 'source/queue' with status 'retry'
+        if inp_req_data['num_retries'] <= bps.max_retries:
+            qu.write_queue(bps.source_requests_dir, out_file_name, inp_req_data, status='retry', queue='queue')
+            bps.logger.info("Retrying: {0}".format(inp_file_name))

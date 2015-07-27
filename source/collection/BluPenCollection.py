@@ -8,6 +8,7 @@ import datetime
 import logging
 import logging.handlers
 import os
+from subprocess import call
 import sys
 from uuid import uuid4
 
@@ -38,12 +39,15 @@ class BluPenCollection(object):
         self.config.read(self.config_file)
 
         # Assign attributes
+        self.lock_file_name = self.config.get("collection", "lock_file_name")
+
         self.author_config_file = author_config_file
         self.blu_pen_author = BluPenAuthor(self.author_config_file)
 
         self.do_update = do_update
 
         self.collection_requests_dir = self.config.get("collection", "requests_dir")
+        self.max_retries = self.config.getint("collection", "max_retries")
         self.content_dir = self.config.get("collection", "content_dir")
 
         self.source_requests_dir = self.config.get("source", "requests_dir")
@@ -69,8 +73,6 @@ class BluPenCollection(object):
             self.log_level = logging.ERROR
         elif log_level == 'CRITICAL':
             self.log_level = logging.CRITICAL
-
-        self.pid_file_name = self.config.get("collection", "pid_file_name")
 
         # Create a logger
         root = logging.getLogger()
@@ -129,7 +131,7 @@ if __name__ == "__main__":
 
     # Retry incomplete requests, if no other program instance is
     # running
-    if qu.retry_queue(bpc.source_requests_dir):
+    if qu.retry_queue(bpc.author_requests_dir, max_retries=bpc.max_retries):
         bpc.logger.info("Retrying incomplete requests")
 
     # Read the input request JSON document from collection/queue
@@ -138,8 +140,8 @@ if __name__ == "__main__":
     out_file_name = os.path.basename(inp_file_name); out_req_data = inp_req_data
     if inp_file_name == "" or inp_req_data == {}:
         bpc.logger.info("Queue is empty")
-        # call(["../scripts/update_collections.sh"])
-        # bpc.logger.info("Scheduled collection updating")
+        call(["../scripts/update_collections.sh"])
+        bpc.logger.info("Scheduled collection updating")
         sys.exit()
 
     # Retry request on exceptions
@@ -157,7 +159,18 @@ if __name__ == "__main__":
 
     except Exception as exc:
 
-        # Write the input request JSON document to 'collection/queue' with status 'retry'
-        qu.write_queue(bpc.collection_requests_dir, out_file_name, inp_req_data, status='retry', queue='queue')
-        bpc.logger.info("Retrying: {0}".format(inp_file_name))
+        # Log the exception
         bpc.logger.error(exc)
+
+        # Count retries
+        if not 'num_retries' in inp_req_data.keys():
+            inp_req_data['num_retries'] = 1
+
+        else:
+            inp_req_data['num_retries'] += 1
+                    
+        # Write the input request JSON document to 'collection/queue' with status 'retry'
+        if inp_req_data['num_retries'] <= bpc.max_retries:
+            qu.write_queue(bpc.collection_requests_dir, out_file_name, inp_req_data, status='retry', queue='queue')
+            bpc.logger.info("Retrying: {0}".format(inp_file_name))
+        
