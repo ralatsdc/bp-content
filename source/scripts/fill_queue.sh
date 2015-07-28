@@ -94,14 +94,25 @@ fi
 
 # Copy, but do not overwrite, JSON files from 'do-push', or optionally
 # 'did-pop', to 'queue'
-pushd "$REQUESTS_HOME" &> /dev/null
+cwd=`pwd`
+pushd "$REQUESTS_HOME"
+msg=`date "+%Y-%m-%d-%H:%M:%S"`": entering fill_queue.sh"
+echo "$msg" > "$cwd/fill_queue.log"
 if [ $USE_DID_POP == 0 ]; then
-    FILES=`ls $REQUEST_TYPE/do-push/*.json`
+    files=`ls $REQUEST_TYPE/do-push/*.json`
 else
-    FILES=`ls $REQUEST_TYPE/did-pop/*.json`
+    files=`ls $REQUEST_TYPE/did-pop/*.json`
 fi    
-for FILE in $FILES; do
-    cmd="cp -n $FILE $REQUEST_TYPE/queue"
-    echo `date "+%Y-%m-%d-%H:%M:%S"`": $cmd"; $cmd
+for file in $files; do
+    cmd="cp -n $file $REQUEST_TYPE/queue"
+    msg=`date "+%Y-%m-%d-%H:%M:%S"`": $cmd"
+    echo "$msg" >> "$cwd/fill_queue.log"
+    $cmd
 done
-popd &> /dev/null
+msg=`date "+%Y-%m-%d-%H:%M:%S"`": exiting fill_queue.sh"
+echo "$msg" >> "$cwd/fill_queue.log"
+popd
+
+# Notify admin
+msg=`date "+%Y-%m-%d-%H:%M:%S"`": Filled $REQUEST_TYPE queue"
+cat fill_queue.log | mail -s "$msg" raymond.leclair@blue-peninsula.com

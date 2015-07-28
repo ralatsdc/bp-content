@@ -90,3 +90,7 @@ echo `date "+%Y-%m-%d-%H:%M:%S"`": $cmd"; $cmd
 cmd="crontab empty_${REQUEST_TYPE}_queue.cron"
 echo `date "+%Y-%m-%d-%H:%M:%S"`": $cmd"; $cmd
 popd
+
+# Notify admin
+msg=`date "+%Y-%m-%d-%H:%M:%S"`": Scheduled $REQUEST_TYPE process"
+cat "empty_${REQUEST_TYPE}_queue.cron" | mail -s "$msg" raymond.leclair@blue-peninsula.com

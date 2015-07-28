@@ -65,3 +65,7 @@ pushd "$SOURCE_HOME/scripts"
 cmd="crontab update_collections.cron"
 echo `date "+%Y-%m-%d-%H:%M:%S"`": $cmd"; $cmd
 popd
+
+# Notify admin
+msg=`date "+%Y-%m-%d-%H:%M:%S"`": Scheduled collection update"
+cat "update_collections.cron" | mail -s "$msg" raymond.leclair@blue-peninsula.com
