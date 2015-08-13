@@ -1,8 +1,10 @@
 *~
+*.lck
 *.log*
 *.json
 *.out
 *.pyc
+.tern-port
 content/author/feed/*
 content/author/flickr/*
 content/author/instagram/*

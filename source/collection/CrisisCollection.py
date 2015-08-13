@@ -894,11 +894,18 @@ class CrisisCollection(object):
         # == Export collection
 
         # Export assembled collection sources and tags
-        out_file_name = "{0}.json".format(self.collection_country)
-        out_file_path = os.path.join(self.content_dir, out_file_name)
+        out_file_name = "{0}.json".format(
+            self.collection_country)
+        out_file_path = os.path.join(
+            self.content_dir, self.collection_country, out_file_name)
         out_file = codecs.open(out_file_path, encoding='utf-8', mode='w')
         out_file.write(json.dumps(export, ensure_ascii=False, indent=4, separators=(',', ': ')))
         out_file.close()
+        out_file_name_dated = "{0}-{1}.json".format(
+            self.collection_country, datetime.now().strftime('%Y-%m-%d'))
+        out_file_path_dated = os.path.join(
+            self.content_dir, self.collection_country, out_file_name_dated)
+        shutil.copy(out_file_path, out_file_path_dated)
 
     def dump(self, pickle_file_name=None):
         """Dump collection pickle.
