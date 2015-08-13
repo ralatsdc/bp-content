@@ -33,4 +33,4 @@ PYTHONPATH=/home/ubuntu/bp-content/local/lib/python2.7
 CONTENT_HOME=/home/ubuntu/bp-content
 
 # Run source/scripts/process_queue.sh to update collection
-0 0 * * 0 $CONTENT_HOME/source/scripts/process_queue.sh source &>> $CONTENT_HOME/cron.log
+0 0 * * 0 cd $CONTENT_HOME/source/scripts; ./process_queue.sh source &>> $CONTENT_HOME/cron.log

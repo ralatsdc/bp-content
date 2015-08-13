@@ -92,12 +92,18 @@ if [ ! -d "$REQUESTS_HOME/$REQUEST_TYPE/queue" ]; then
     exit 1
 fi
 
+# Check scripts home
+SCRIPTS_HOME="$CONTENT_HOME/source/scripts"
+if [ ! -d "$SCRIPTS_HOME" ]; then
+    echo "$SCRIPTS_HOME is not a directory"
+    exit 1
+fi
+
 # Copy, but do not overwrite, JSON files from 'do-push', or optionally
 # 'did-pop', to 'queue'
-cwd=`pwd`
 pushd "$REQUESTS_HOME"
 msg=`date "+%Y-%m-%d-%H:%M:%S"`": entering fill_queue.sh"
-echo "$msg" > "$cwd/fill_queue.log"
+echo "$msg" > "$SCRIPTS_HOME/fill_queue.log"
 if [ $USE_DID_POP == 0 ]; then
     files=`ls $REQUEST_TYPE/do-push/*.json`
 else
@@ -106,13 +112,13 @@ fi
 for file in $files; do
     cmd="cp -n $file $REQUEST_TYPE/queue"
     msg=`date "+%Y-%m-%d-%H:%M:%S"`": $cmd"
-    echo "$msg" >> "$cwd/fill_queue.log"
+    echo "$msg" >> "$SCRIPTS_HOME/fill_queue.log"
     $cmd
 done
 msg=`date "+%Y-%m-%d-%H:%M:%S"`": exiting fill_queue.sh"
-echo "$msg" >> "$cwd/fill_queue.log"
+echo "$msg" >> "$SCRIPTS_HOME/fill_queue.log"
 popd
 
 # Notify admin
 msg=`date "+%Y-%m-%d-%H:%M:%S"`": Filled $REQUEST_TYPE queue"
-cat fill_queue.log | mail -s "$msg" raymond.leclair@blue-peninsula.com
+cat "$SCRIPTS_HOME/fill_queue.log" | mail -s "$msg" raymond@blue-peninsula.com

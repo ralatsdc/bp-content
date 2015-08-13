@@ -76,21 +76,25 @@ if [ ! -d "$REQUESTS_HOME/$REQUEST_TYPE/queue" ]; then
     exit 1
 fi
 
-# Check source home directory
-SOURCE_HOME="$CONTENT_HOME/source"
-if [ ! -d "$SOURCE_HOME/$REQUEST_TYPE" ]; then
-    echo "$SOURCE_HOME/$REQUEST_TYPE is not a directory"
+# Check scripts home
+SCRIPTS_HOME="$CONTENT_HOME/source/scripts"
+if [ ! -d "$SCRIPTS_HOME" ]; then
+    echo "$SCRIPTS_HOME is not a directory"
     exit 1
 fi
 
+# Work in the scripts home directory
+pushd $SCRIPTS_HOME
+
 # Process request queue
-pushd "$SOURCE_HOME/scripts"
 cmd="./fill_queue.sh $REQUEST_TYPE"
 echo `date "+%Y-%m-%d-%H:%M:%S"`": $cmd"; $cmd
 cmd="crontab empty_${REQUEST_TYPE}_queue.cron"
 echo `date "+%Y-%m-%d-%H:%M:%S"`": $cmd"; $cmd
-popd
 
 # Notify admin
 msg=`date "+%Y-%m-%d-%H:%M:%S"`": Scheduled $REQUEST_TYPE process"
-cat "empty_${REQUEST_TYPE}_queue.cron" | mail -s "$msg" raymond.leclair@blue-peninsula.com
+cat "empty_${REQUEST_TYPE}_queue.cron" | mail -s "$msg" raymond@blue-peninsula.com
+
+# Minimize side effects
+pushd $SCRIPTS_HOME
